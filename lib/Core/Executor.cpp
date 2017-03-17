@@ -60,6 +60,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/TypeBuilder.h"
+#include "llvm/IR/User.h"
 #else
 #include "llvm/Attributes.h"
 #include "llvm/BasicBlock.h"
@@ -88,6 +89,12 @@
 #else
 #include "llvm/IR/CallSite.h"
 #endif
+
+#include "llvm/PassManager.h"
+
+#include <ReachabilityAnalysis.h>
+#include <AAPass.h>
+#include <ModRefAnalysis.h>
 
 #ifdef HAVE_ZLIB_H
 #include "klee/Internal/Support/CompressionStream.h"
@@ -407,7 +414,7 @@ const Module *Executor::setModule(llvm::Module *module,
   assert(!kmodule && module && "can only register one module"); // XXX gross
   
   kmodule = new KModule(module);
-
+  
   // Initialize the context.
 #if LLVM_VERSION_CODE <= LLVM_VERSION(3, 1)
   TargetData *TD = kmodule->targetData;
@@ -420,7 +427,13 @@ const Module *Executor::setModule(llvm::Module *module,
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
   specialFunctionHandler->prepare();
-  kmodule->prepare(opts, interpreterHandler);
+  ra = new ReachabilityAnalysis(module);
+  aa = new AAPass();
+  aa->setPAType(PointerAnalysis::AndersenWaveDiff_WPA);
+  mra = new ModRefAnalysis(kmodule->module, ra, aa);
+  slicer = new Slicer(module, 0, aa, "f");
+  kmodule->prepare(opts, interpreterHandler, ra, aa, mra, slicer);
+  
   specialFunctionHandler->bind();
 
   if (StatsTracker::useStatistics() || userSearcherRequiresMD2U()) {
@@ -982,6 +995,38 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
 
+    if (falseState->isRecoveryState()) {
+      /* a forked recovery state should have it's own depended states */
+      falseState->getDependedStates().clear();
+      /* check consistency with the depended parents */
+      bool isValidFork = false;
+      std::set<ExecutionState *> &dependedStates = trueState->getDependedStates();
+      for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
+        ExecutionState *dependedState = *i;
+        klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState);
+        if (!checkConsistency(*dependedState, *falseState)) {
+          klee_message("terminating inconsistent forked recovery state: %p", falseState);
+          terminateState(*falseState); 
+        } else {
+          /* forked state is consistent with it's originator */
+          ExecutionState *forkedDependedState = new ExecutionState(*dependedState); 
+          assert(forkedDependedState->isSuspended());
+
+          forkedDependedState->setRecoveryState(falseState);
+          falseState->addDependedState(forkedDependedState);
+
+          dependedState->ptreeNode->data = 0;
+          std::pair<PTree::Node*, PTree::Node*> res = processTree->split(dependedState->ptreeNode, forkedDependedState, dependedState);
+          forkedDependedState->ptreeNode = res.first;
+          dependedState->ptreeNode = res.second;
+          isValidFork = true;
+        }
+      }
+      if (!isValidFork) {
+        return StatePair(trueState, 0);
+      }
+    }
+
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
       terminateStateEarly(*trueState, "max-depth exceeded.");
@@ -1330,6 +1375,31 @@ void Executor::executeCall(ExecutionState &state,
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
+    if (state.isNormalState() && f->getName().equals(StringRef("f"))) {
+        /* skip function call */
+        klee_message("skipping function call to %s", f->getName().data());
+
+        /* create snapshot */
+        ExecutionState *snapshot = new ExecutionState(state);
+        state.setSnapshot(snapshot);
+
+        ///* initialize recovery state */
+        //ExecutionState *recoveryState = new ExecutionState(state);
+        //recoveryState->setType(RECOVERY_STATE); 
+        //recoveryState->addDependedState(&state);
+        //recoveryState->setExitInst(state.pc->inst);
+        ///* TODO: update prevPC? */
+        //recoveryState->pc = recoveryState->prevPC;
+
+        //state.ptreeNode->data = 0;
+        //std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
+        //recoveryState->ptreeNode = res.first;
+        //state.ptreeNode = res.second;
+    
+        //state.setRecoveryState(recoveryState);
+        return;
+    }
+
     KFunction *kf = kmodule->functionMap[f];
     state.pushFrame(state.prevPC, kf);
     state.pc = kf->instructions;
@@ -1521,6 +1591,13 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
+  if (state.isRecoveryState() && state.getExitInst() == i) {
+    klee_message("%p: recovery state reached exit instruction", state);
+    notifyDependedStates(state);
+    terminateState(state);
+    return;
+  }
+
   switch (i->getOpcode()) {
     // Control flow
   case Instruction::Ret: {
@@ -1778,6 +1855,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     unsigned numArgs = cs.arg_size();
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
+
+    /* skip slicing annotations */
+    if (f->getName().startswith(StringRef("__crit"))) {
+        break;
+    }
 
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
     if (f && isDebugIntrinsic(f, kmodule))
@@ -2115,6 +2197,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Load: {
+    /* TODO: replace with a better predicate */
+    if (state.isNormalState() && state.getSnapshot() != 0) {
+      if (state.isBlockingLoadResolved() && isBlockingLoad(state, ki)) {
+        state.pc = state.prevPC;
+        RecoveryInfo *ri = getRecoveryInfo(i);
+        startRecoveryState(state, ri);
+        suspendState(state);
+        return;
+      }
+    }
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
     break;
@@ -2566,6 +2658,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
+    /* handle suspended states */
+    for (std::vector<ExecutionState *>::iterator i = suspendedStates.begin(); i != suspendedStates.end(); i++) {
+      searcher->removeState(*i);
+    }
+    suspendedStates.clear();
+    /* handle resumed states */
+    for (std::vector<ExecutionState *>::iterator i = resumedStates.begin(); i != resumedStates.end(); i++) {
+      searcher->addState(*i);
+    }
+    resumedStates.clear();
   }
   
   states.insert(addedStates.begin(), addedStates.end());
@@ -2583,6 +2685,10 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
+    /* TODO: ... */
+    if (es->isNormalState() && es->getRecoveryState() != 0) {
+      es->getRecoveryState()->getDependedStates().erase(es);
+    }
     delete es;
   }
   removedStates.clear();
@@ -2625,7 +2731,7 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
   KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(KI);
 
   if (GetElementPtrInst *gepi = dyn_cast<GetElementPtrInst>(KI->inst)) {
-    computeOffsets(kgepi, gep_type_begin(gepi), gep_type_end(gepi));
+    computeOffsets(kgepi, klee::gep_type_begin(gepi), klee::gep_type_end(gepi));
   } else if (InsertValueInst *ivi = dyn_cast<InsertValueInst>(KI->inst)) {
     computeOffsets(kgepi, iv_type_begin(ivi), iv_type_end(ivi));
     assert(kgepi->indices.empty() && "InsertValue constant offset expected");
@@ -2783,8 +2889,11 @@ void Executor::run(ExecutionState &initialState) {
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
   while (!states.empty() && !haltExecution) {
+    assert(!searcher->empty());
     ExecutionState &state = searcher->selectState();
+    //klee_message("selected state: %p", state);
     KInstruction *ki = state.pc;
+    //ki->inst->print(errs()); errs() << "\n";
     stepInstruction(state);
 
     executeInstruction(state, ki);
@@ -3363,9 +3472,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         } else {
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
+          if (state.isRecoveryState()) {
+            onObjectStateWrite(state, mo, offset, value);
+          }
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
+        if (state.isNormalState()) {
+          onObjectStateRead(state, address, mo, offset, type);
+        }
         
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
@@ -3759,4 +3874,171 @@ Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
 Interpreter *Interpreter::create(const InterpreterOptions &opts,
                                  InterpreterHandler *ih) {
   return new Executor(opts, ih);
+}
+
+bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
+  ModRefAnalysis::LoadToStoreMap::iterator entry = mra->loadToStoreMap.find(ki->inst);
+  if (entry == mra->loadToStoreMap.end()) {
+    return false; 
+  }
+
+  /* resolve address expression */
+  ref<Expr> addressExpr = eval(ki, 0, state).value;
+  if (!isa<ConstantExpr>(addressExpr)) {
+    addressExpr = state.constraints.simplifyExpr(addressExpr);
+    /* TODO: check if address is already constant */
+    addressExpr = toConstant(state, addressExpr, "resolveOne failure");
+  }
+
+  ConstantExpr *ce = dyn_cast<ConstantExpr>(addressExpr);
+  uint64_t address = ce->getZExtValue();
+  if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
+    klee_message("%p: load from %#llx is already resolved", state, address);
+    return false;
+  }
+
+  return true;
+}
+
+RecoveryInfo *Executor::getRecoveryInfo(Instruction *load_inst) {
+  ModRefAnalysis::LoadToStoreMap::iterator entry = mra->loadToStoreMap.find(load_inst);
+  std::set<Instruction *> *store_insts = &entry->second;
+
+  errs() << "LOAD: "; load_inst->print(errs()); errs() << "\n";
+  for (std::set<Instruction *>::iterator i = store_insts->begin(); i != store_insts->end(); i++) {
+    Instruction *store_inst = *i;
+    errs() << "-- STORE: "; store_inst->print(errs()); errs() << "\n";
+  }
+
+  return new RecoveryInfo(load_inst, *store_insts);
+}
+
+void Executor::suspendState(ExecutionState &state) {
+  klee_message("suspending: %p", state);
+  state.setSuspended();
+  suspendedStates.push_back(&state);
+}
+
+void Executor::resumeState(ExecutionState &state) {
+  klee_message("resuming: %p", state);
+  state.setResumed();
+  state.setRecoveryState(0);
+  state.markLoadAsUnresolved();
+  resumedStates.push_back(&state);
+}
+
+void Executor::notifyDependedStates(ExecutionState &recoveryState) {
+  klee_message("%p: notifying depended states", recoveryState);
+  std::set<ExecutionState *> &dependedStates = recoveryState.getDependedStates();
+  for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
+    ExecutionState *dependedState = *i;
+    klee_message("\t%p: notifying depended state: %p", recoveryState, dependedState);
+    checkConsistency(*dependedState, recoveryState);
+    if (states.find(dependedState) == states.end()) {
+      klee_message("adding an implicitly created state: %p", dependedState);
+      dependedState->setResumed();
+      dependedState->setRecoveryState(0);
+      addedStates.push_back(dependedState);
+    } else {
+      resumeState(*dependedState);
+    }
+  }
+}
+
+void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo) {
+  /* get snapshot state */
+  ExecutionState *snapshot = state.getSnapshot();
+
+  /* initialize recovery state */
+  ExecutionState *recoveryState = new ExecutionState(*snapshot);
+  recoveryState->setType(RECOVERY_STATE); 
+  recoveryState->addDependedState(&state);
+  recoveryState->setExitInst(snapshot->pc->inst);
+  /* TODO: update prevPC? */
+  recoveryState->pc = recoveryState->prevPC;
+
+  state.ptreeNode->data = 0;
+  std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
+  recoveryState->ptreeNode = res.first;
+  state.ptreeNode = res.second;
+  
+  state.setRecoveryState(recoveryState);
+
+  /* set recovery information */
+  recoveryState->setRecoveryInfo(recoveryInfo);
+  /* add state */
+  klee_message("adding recovery state: %p", recoveryState); 
+  addedStates.push_back(recoveryState);
+}
+
+void Executor::onObjectStateWrite(ExecutionState &state, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value) {
+  assert(isa<ConstantExpr>(value));
+  assert(isa<ConstantExpr>(offset));
+
+  klee_message("write in state %p: mo = %p, address = %llx", state, mo, mo->address);
+  offset->dump();
+
+  /* get the current instruction */
+  Instruction *store_inst = state.prevPC->inst;
+  assert(store_inst->getOpcode() == Instruction::Store);
+
+  RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
+  if (recoveryInfo->store_insts.find(store_inst) == recoveryInfo->store_insts.end()) {
+    return;
+  }
+
+  std::set<ExecutionState *> dependedStates = state.getDependedStates();
+  for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
+    ExecutionState *dependedState = *i;
+    const ObjectState *os = dependedState->addressSpace.findObject(mo);
+    ObjectState *wos = dependedState->addressSpace.getWriteable(mo, os);
+    wos->write(offset, value);
+    klee_message("copying from %p to %p", state, dependedState);
+  }
+}
+
+void Executor::onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width) {
+  ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
+  assert(ce);
+
+  uint64_t addr = ce->getZExtValue();
+  klee_message("read in state %p: address = %#llx", state, addr);
+  if (!state.isBlockingLoadResolved()) {
+    /* update resolved loads */
+    state.addResolvedAddress(addr);
+    state.markLoadAsResolved();
+  }
+}
+
+void Executor::dumpConstrains(ExecutionState &state) {
+    klee_message("%p constraints:", state);
+    for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
+        ref<Expr> e = *i;
+        e->dump();
+    }
+    klee_message("%p symbolics:", state);
+    for (unsigned int i = 0; i < state.symbolics.size(); i++) {
+        const MemoryObject *mo = state.symbolics[i].first;
+        const Array *array = state.symbolics[i].second;
+        klee_message("mo: %p, array: %p", mo, array);
+    }
+    klee_message("%p array names:", state);
+    for (std::set<std::string>::iterator i = state.arrayNames.begin(); i != state.arrayNames.end(); i++) {
+        std::string name = *i;
+        klee_message("%s", name.data());
+    }
+}
+
+bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryState) {
+    Solver::Validity result;
+    ref<Expr> condition = ConstantExpr::alloc(1, Expr::Bool);
+
+    for (ConstraintManager::constraint_iterator i = recoveryState.constraints.begin(); i != recoveryState.constraints.end(); i++) {
+        ref<Expr> e = *i;
+        condition = AndExpr::create(condition, e);
+    }
+    solver->evaluate(state, condition, result);
+    klee_message("query result: %d", result);
+
+    return result != Solver::False;
 }

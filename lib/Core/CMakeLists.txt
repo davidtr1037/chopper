@@ -45,6 +45,12 @@ endif()
 
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
 target_link_libraries(kleeCore PUBLIC ${LLVM_LIBS})
+target_include_directories(kleeCore PUBLIC
+    /home/david/tau/slicing/se-slicing-3.4
+    /home/david/tau/SVF-port-3.4/include
+    /home/david/tau/dg/src
+    /home/david/tau/dg/tools
+)
 target_link_libraries(kleeCore PRIVATE
   kleeBasic
   kleeModule

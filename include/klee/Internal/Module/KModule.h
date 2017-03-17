@@ -13,6 +13,11 @@
 #include "klee/Config/Version.h"
 #include "klee/Interpreter.h"
 
+#include <ReachabilityAnalysis.h>
+#include <AAPass.h>
+#include <ModRefAnalysis.h>
+#include <Slicer.h>
+
 #include <map>
 #include <set>
 #include <vector>
@@ -125,7 +130,8 @@ namespace klee {
     //
     // FIXME: ihandler should not be here
     void prepare(const Interpreter::ModuleOptions &opts, 
-                 InterpreterHandler *ihandler);
+                 InterpreterHandler *ihandler, 
+                 ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra, Slicer *slicer);
 
     /// Return an id for the given constant, creating a new one if necessary.
     unsigned getConstantID(llvm::Constant *c, KInstruction* ki);

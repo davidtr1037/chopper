@@ -67,6 +67,13 @@ StackFrame::~StackFrame() {
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf) :
+    type(NORMAL_STATE),
+    suspendStatus(false),
+    snapshot(0),
+    recoveryState(0),
+    exitInst(0),
+    recoveryInfo(0),
+
     pc(kf->instructions),
     prevPC(pc),
 
@@ -99,6 +106,15 @@ ExecutionState::~ExecutionState() {
 
 ExecutionState::ExecutionState(const ExecutionState& state):
     fnAliases(state.fnAliases),
+
+    type(state.type),
+    suspendStatus(state.suspendStatus),
+    snapshot(state.snapshot),
+    recoveryState(state.recoveryState),
+    exitInst(state.exitInst),
+    dependedStates(state.dependedStates),
+    recoveryInfo(state.recoveryInfo),
+
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),
@@ -135,6 +151,24 @@ ExecutionState *ExecutionState::branch() {
 
   weight *= .5;
   falseState->weight -= weight;
+
+  if (this->isNormalState()) {
+    assert(this->getRecoveryState() == falseState->getRecoveryState());
+    ExecutionState *recoveryState = this->getRecoveryState();
+    if (recoveryState) {
+      recoveryState->addDependedState(falseState);
+    }
+  } else {
+    //assert(false);
+    //falseState->getDependedStates().clear();
+    //std::set<ExecutionState *> &dependedStates = this->getDependedStates();
+    //for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
+    //  ExecutionState *dependedState = *i;
+    //  ExecutionState *forked = new ExecutionState(*dependedState); 
+    //  forked->setRecoveryState(falseState);
+    //  falseState->addDependedState(forked);
+    //}
+  }
 
   return falseState;
 }

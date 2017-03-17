@@ -22,6 +22,11 @@
 #include "klee/Internal/Support/PrintVersion.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 
+#include <ReachabilityAnalysis.h>
+#include <AAPass.h>
+#include <ModRefAnalysis.h>
+#include <Slicer.h>
+
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
@@ -1488,7 +1493,7 @@ int main(int argc, char **argv, char **envp) {
     }
 
     if (!seeds.empty()) {
-      klee_message("KLEE: using %lu seeds\n", seeds.size());
+      klee_message("KLEE: using %u seeds\n", seeds.size());
       interpreter->useSeeds(&seeds);
     }
     if (RunInDir != "") {
