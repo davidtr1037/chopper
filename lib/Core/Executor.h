@@ -25,6 +25,11 @@
 
 #include "llvm/ADT/Twine.h"
 
+#include <ReachabilityAnalysis.h>
+#include <AAPass.h>
+#include <ModRefAnalysis.h>
+#include <Slicer.h>
+
 #include <vector>
 #include <string>
 #include <map>
@@ -70,8 +75,6 @@ namespace klee {
   class TimingSolver;
   class TreeStreamWriter;
   template<class T> class ref;
-
-
 
   /// \todo Add a context object to keep track of data only live
   /// during an instruction step. Should contain addedStates,
@@ -207,6 +210,14 @@ private:
 
   // @brief buffer to store logs before flushing to file
   llvm::raw_string_ostream debugLogBuffer;
+
+  /* TODO: ... */
+  std::vector<ExecutionState *> suspendedStates;
+  std::vector<ExecutionState *> resumedStates;
+  ReachabilityAnalysis *ra;
+  AAPass *aa;
+  ModRefAnalysis *mra;
+  Slicer *slicer;
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
@@ -440,6 +451,17 @@ private:
   void checkMemoryUsage();
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();
+
+  bool isBlockingLoad(ExecutionState &state, KInstruction *ki);
+  RecoveryInfo *getRecoveryInfo(llvm::Instruction *load_inst);
+  void suspendState(ExecutionState &state);
+  void resumeState(ExecutionState &state);
+  void notifyDependedStates(ExecutionState &recoveryState);
+  void startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo);
+  void onObjectStateWrite(ExecutionState &state, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value);
+  void onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width);
+  void dumpConstrains(ExecutionState &state);
+  bool checkConsistency(ExecutionState &state, ExecutionState &recoveryState);
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,

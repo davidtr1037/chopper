@@ -163,7 +163,7 @@ namespace klee {
     case Instruction::GetElementPtr: {
       ref<ConstantExpr> base = op1->ZExt(Context::get().getPointerWidth());
 
-      for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
+      for (gep_type_iterator ii = klee::gep_type_begin(ce), ie = klee::gep_type_end(ce);
            ii != ie; ++ii) {
         ref<ConstantExpr> addend = 
           ConstantExpr::alloc(0, Context::get().getPointerWidth());

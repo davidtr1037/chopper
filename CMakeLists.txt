@@ -296,8 +296,10 @@ if (USE_CXX11)
 else()
   # This is needed because with GCC 6 the default changed from gnu++98 to
   # gnu++14.
-  add_global_cxx_flag("-std=gnu++98" REQUIRED)
+  add_global_cxx_flag("-std=gnu++11" REQUIRED)
 endif()
+# specific flags for DG
+add_global_cxx_flag("-DHAVE_LLVM -DENABLE_CFG")
 
 ################################################################################
 # Warnings

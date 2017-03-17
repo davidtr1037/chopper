@@ -41,4 +41,10 @@ target_link_libraries(kleaverSolver PRIVATE
   kleaverExpr
   kleeSupport
   ${KLEE_SOLVER_LIBRARIES})
+target_include_directories(kleaverSolver PUBLIC
+    /home/david/tau/slicing/se-slicing-3.4
+    /home/david/tau/SVF-port-3.4/include
+    /home/david/tau/dg/src
+    /home/david/tau/dg/tools
+)
 

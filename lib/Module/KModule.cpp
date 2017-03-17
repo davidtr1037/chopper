@@ -43,6 +43,11 @@
 
 #include <llvm/Transforms/Utils/Cloning.h>
 
+#include <ReachabilityAnalysis.h>
+#include <AAPass.h>
+#include <ModRefAnalysis.h>
+#include <Slicer.h>
+
 #include <sstream>
 
 using namespace llvm;
@@ -199,7 +204,8 @@ void KModule::addInternalFunction(const char* functionName){
 }
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
-                      InterpreterHandler *ih) {
+                      InterpreterHandler *ih,
+                      ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra, Slicer *slicer) {
   LLVMContext &ctx = module->getContext();
 
   // Inject checks prior to optimization... we also perform the
@@ -322,6 +328,13 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     delete f;
   }
 
+  ra->analyze();
+  PassManager passManager;
+  passManager.add(aa);
+  passManager.run(*module);
+  mra->run();
+  //slicer->run();
+ 
   /* Build shadow structures */
 
   infos = new InstructionInfoTable(module);  

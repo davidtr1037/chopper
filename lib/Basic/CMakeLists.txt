@@ -27,3 +27,9 @@ target_link_libraries(kleeBasic PRIVATE
   # of this because `kleaverSolver` depends on `kleeBasic`.
   kleaverSolver
 )
+target_include_directories(kleeBasic PUBLIC
+    /home/david/tau/slicing/se-slicing-3.4
+    /home/david/tau/SVF-port-3.4/include
+    /home/david/tau/dg/src
+    /home/david/tau/dg/tools
+)

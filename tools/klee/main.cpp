@@ -23,6 +23,11 @@
 #include "klee/Interpreter.h"
 #include "klee/Statistics.h"
 
+#include <ReachabilityAnalysis.h>
+#include <AAPass.h>
+#include <ModRefAnalysis.h>
+#include <Slicer.h>
+
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1404,7 +1409,7 @@ int main(int argc, char **argv, char **envp) {
     }
 
     if (!seeds.empty()) {
-      klee_message("KLEE: using %lu seeds\n", seeds.size());
+      klee_message("KLEE: using %u seeds\n", seeds.size());
       interpreter->useSeeds(&seeds);
     }
     if (RunInDir != "") {

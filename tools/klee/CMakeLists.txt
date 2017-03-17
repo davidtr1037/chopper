@@ -14,7 +14,9 @@ set(KLEE_LIBS
   kleeCore
 )
 
-target_link_libraries(klee ${KLEE_LIBS})
+find_library(SLICING Slicing HINTS /home/david/tau/slicing/se-slicing-3.4)
+target_link_libraries(klee ${SLICING} ${KLEE_LIBS})
+#target_link_libraries(klee ${KLEE_LIBS})
 
 install(TARGETS klee RUNTIME DESTINATION bin)
 

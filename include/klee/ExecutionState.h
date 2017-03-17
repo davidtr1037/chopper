@@ -10,6 +10,8 @@
 #ifndef KLEE_EXECUTIONSTATE_H
 #define KLEE_EXECUTIONSTATE_H
 
+#include <llvm/IR/Instruction.h>
+
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Internal/ADT/TreeStream.h"
@@ -61,6 +63,24 @@ struct StackFrame {
   ~StackFrame();
 };
 
+typedef enum {
+    NORMAL_STATE,
+    RECOVERY_STATE,
+} ExecutionStateType;
+
+struct RecoveryInfo {
+    llvm::Instruction *load_inst;
+    std::set<llvm::Instruction *> &store_insts;
+
+    RecoveryInfo(llvm::Instruction *load_inst, std::set<llvm::Instruction *> &store_insts) :
+        load_inst(load_inst),
+        store_insts(store_insts)
+    {
+
+    }
+
+};
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
@@ -71,6 +91,31 @@ private:
   ExecutionState &operator=(const ExecutionState &);
 
   std::map<std::string, std::string> fnAliases;
+
+  ExecutionStateType type;
+
+  /* normal state properties */
+
+  /* a normal state has a suspend status */
+  bool suspendStatus;
+  /* all recovery states must be derived from this state */
+  /* TODO: should be ref<ExecutionState *> */
+  ExecutionState *snapshot;
+  /* a normal state has a unique recovery state */
+  ExecutionState *recoveryState;
+  /* we should know of the current load inst */
+  bool blockingLoadStatus;
+  /* resloved load addresses */
+  std::set<uint64_t> resolvedLoads;
+
+  /* recovery state properties */
+
+  /* a recovery state must stop when reaching this instruction */
+  llvm::Instruction *exitInst;
+  /* a recovery state might have multiple depended states */
+  std::set<ExecutionState *> dependedStates;
+  /* TODO: should be ref<RecoveryInfo> */
+  RecoveryInfo *recoveryInfo;
 
 public:
   // Execution - Control Flow specific
@@ -169,6 +214,122 @@ public:
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
+
+  ExecutionStateType getType() {
+    return type;
+  }
+
+  void setType(ExecutionStateType type) {
+    this->type = type;
+  }
+
+  bool isNormalState() {
+    return type == NORMAL_STATE;
+  }
+
+  bool isRecoveryState() {
+    return type == RECOVERY_STATE;
+  }
+
+  bool isSuspended() {
+    assert(isNormalState());
+    return suspendStatus;
+  }
+
+  bool isResumed() {
+    return !isSuspended();
+  }
+
+  void setSuspended() {
+    assert(isNormalState());
+    suspendStatus = true;
+  }
+
+  void setResumed() {
+    assert(isNormalState());
+    suspendStatus = false;
+  }
+
+  ExecutionState *getSnapshot() {
+    assert(isNormalState());
+    return snapshot;
+  }
+
+  void setSnapshot(ExecutionState *state) {
+    snapshot = state;
+  }
+
+  ExecutionState *getRecoveryState() {
+    assert(isNormalState());
+    return recoveryState;
+  }
+
+  void setRecoveryState(ExecutionState *state) {
+    assert(isNormalState());
+    if (state) {
+      assert(state->isRecoveryState());
+    }
+    recoveryState = state;
+  }
+
+  bool isBlockingLoadResolved() {
+    assert(isNormalState());
+    return blockingLoadStatus;
+  }
+
+  void markLoadAsUnresolved() {
+    assert(isNormalState());
+    blockingLoadStatus = false;
+  }
+
+  void markLoadAsResolved() {
+    assert(isNormalState());
+    blockingLoadStatus = true;
+  }
+
+  std::set<uint64_t> &getResolvedLoads() {
+    assert(isNormalState());
+    return resolvedLoads;
+  }
+
+  void addResolvedAddress(uint64_t address) {
+    assert(isNormalState());
+    resolvedLoads.insert(address);
+  }
+
+  llvm::Instruction *getExitInst() {
+    assert(isRecoveryState());
+    return exitInst;
+  }
+
+  void setExitInst(llvm::Instruction *exitInst) {
+    assert(isRecoveryState());
+    this->exitInst = exitInst;
+  }
+
+  std::set<ExecutionState *> &getDependedStates() {
+    assert(isRecoveryState());
+    return dependedStates;
+  }
+
+  void addDependedState(ExecutionState *state) {
+    assert(isRecoveryState());
+    assert(state->isNormalState());
+
+    assert(dependedStates.find(state) == dependedStates.end());
+    dependedStates.insert(state);
+  }
+
+  RecoveryInfo *getRecoveryInfo() {
+    assert(isRecoveryState());
+    return recoveryInfo;
+  }
+
+  void setRecoveryInfo(RecoveryInfo *recoveryInfo) {
+    assert(isRecoveryState());
+    this->recoveryInfo = recoveryInfo;
+  }
+
 };
 }
 
