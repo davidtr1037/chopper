@@ -28,7 +28,9 @@
 #include <ReachabilityAnalysis.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
-#include <Slicer.h>
+#include <Annotator.h>
+#include <Cloner.h>
+#include <SliceGenerator.h>
 
 #include <vector>
 #include <string>
@@ -219,7 +221,9 @@ private:
   ReachabilityAnalysis *ra;
   AAPass *aa;
   ModRefAnalysis *mra;
-  Slicer *slicer;
+  Annotator *annotator;
+  Cloner *cloner;
+  SliceGenerator *sliceGenerator;
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
@@ -445,12 +449,13 @@ private:
   void doDumpStates();
 
   bool isBlockingLoad(ExecutionState &state, KInstruction *ki);
-  RecoveryInfo *getRecoveryInfo(llvm::Instruction *load_inst);
+  RecoveryInfo *getRecoveryInfo(ExecutionState &state, KInstruction *kinst);
+  void getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, RecoveryInfo *recoveryInfo);
   void suspendState(ExecutionState &state);
   void resumeState(ExecutionState &state);
   void notifyDependedStates(ExecutionState &recoveryState);
   void startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo);
-  void onObjectStateWrite(ExecutionState &state, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value);
+  void onObjectStateWrite(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value);
   void onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width);
   void dumpConstrains(ExecutionState &state);
   bool checkConsistency(ExecutionState &state, ExecutionState &recoveryState);
