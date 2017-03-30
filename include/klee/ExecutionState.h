@@ -69,12 +69,16 @@ typedef enum {
 } ExecutionStateType;
 
 struct RecoveryInfo {
-    llvm::Instruction *load_inst;
-    std::set<llvm::Instruction *> &store_insts;
+    llvm::Instruction *loadInst;
+    uint64_t loadAddr;
+    uint64_t loadSize;
+    uint32_t sliceId;
 
-    RecoveryInfo(llvm::Instruction *load_inst, std::set<llvm::Instruction *> &store_insts) :
-        load_inst(load_inst),
-        store_insts(store_insts)
+    RecoveryInfo() :
+        loadInst(0),
+        loadAddr(0),
+        loadSize(0),
+        sliceId(0)
     {
 
     }
