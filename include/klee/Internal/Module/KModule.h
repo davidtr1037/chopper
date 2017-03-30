@@ -16,7 +16,9 @@
 #include <ReachabilityAnalysis.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
-#include <Slicer.h>
+#include <Annotator.h>
+#include <Cloner.h>
+#include <SliceGenerator.h>
 
 #include <map>
 #include <set>
@@ -120,7 +122,8 @@ namespace klee {
     // FIXME: ihandler should not be here
     void prepare(const Interpreter::ModuleOptions &opts, 
                  InterpreterHandler *ihandler, 
-                 ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra, Slicer *slicer);
+                 ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra,
+                 Annotator *annotator, Cloner *cloner, SliceGenerator *sliceGenerator);
 
     /// Return an id for the given constant, creating a new one if necessary.
     unsigned getConstantID(llvm::Constant *c, KInstruction* ki);

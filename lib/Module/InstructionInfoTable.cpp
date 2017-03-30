@@ -37,6 +37,8 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include <Cloner.h>
+
 #include <map>
 #include <string>
 
@@ -103,7 +105,7 @@ bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
   return false;
 }
 
-InstructionInfoTable::InstructionInfoTable(Module *m) 
+InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner) 
   : dummyString(""), dummyInfo(0, dummyString, 0, 0) {
   unsigned id = 0;
   std::map<const Instruction*, unsigned> lineTable;
@@ -138,6 +140,19 @@ InstructionInfoTable::InstructionInfoTable(Module *m)
       infos.insert(std::make_pair(instr,
                                   InstructionInfo(id++, *file, line,
                                                   assemblyLine)));
+    }
+
+    /* handle cloned functions */
+    Cloner::SliceMap *sliceMap = cloner->getSlices(fnIt);
+    if (sliceMap != 0) {
+      for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
+        Function *cloned = s->second.first;
+        for (inst_iterator it = inst_begin(cloned); it != inst_end(cloned); it++) {
+          /* TODO: use original function debug info */
+          Instruction *inst = &*it;
+          infos.insert(std::make_pair(inst, dummyInfo));
+        }
+      }
     }
   }
 }

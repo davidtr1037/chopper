@@ -10,6 +10,8 @@
 #ifndef KLEE_LIB_INSTRUCTIONINFOTABLE_H
 #define KLEE_LIB_INSTRUCTIONINFOTABLE_H
 
+#include <Cloner.h>
+
 #include <map>
 #include <string>
 #include <set>
@@ -59,7 +61,7 @@ namespace klee {
                                  const std::string *&File, unsigned &Line);
 
   public:
-    InstructionInfoTable(llvm::Module *m);
+    InstructionInfoTable(llvm::Module *m, Cloner *cloner);
     ~InstructionInfoTable();
 
     unsigned getMaxID() const;
