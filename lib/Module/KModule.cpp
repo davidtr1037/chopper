@@ -59,7 +59,9 @@
 #include <ReachabilityAnalysis.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
-#include <Slicer.h>
+#include <Annotator.h>
+#include <Cloner.h>
+#include <SliceGenerator.h>
 
 #include <sstream>
 
@@ -245,8 +247,9 @@ void KModule::addInternalFunction(const char* functionName){
 }
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
-                      InterpreterHandler *ih, 
-                      ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra, Slicer *slicer) {
+                      InterpreterHandler *ih,
+                      ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra,
+                      Annotator *annotator, Cloner *cloner, SliceGenerator *sliceGenerator) {
   if (!MergeAtExit.empty()) {
     Function *mergeFn = module->getFunction("klee_merge");
     if (!mergeFn) {
@@ -444,26 +447,41 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   passManager.add(aa);
   passManager.run(*module);
   mra->run();
-  //slicer->run();
+  annotator->annotate();
+  /* TODO: fix... */
+  cloner->clone("f");
+  sliceGenerator->generate();
  
   /* Build shadow structures */
 
-  infos = new InstructionInfoTable(module);  
+  infos = new InstructionInfoTable(module, cloner);  
   
   for (Module::iterator it = module->begin(), ie = module->end();
        it != ie; ++it) {
     if (it->isDeclaration())
       continue;
 
-    KFunction *kf = new KFunction(it, this);
-    
-    for (unsigned i=0; i<kf->numInstructions; ++i) {
-      KInstruction *ki = kf->instructions[i];
-      ki->info = &infos->getInfo(ki->inst);
+    std::set<KFunction *> pool;
+    pool.insert(new KFunction(it, this));
+
+    Cloner::SliceMap *sliceMap = cloner->getSlices(it);
+    if (sliceMap != 0) {
+      for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
+        Function *cloned = s->second.first;
+        pool.insert(new KFunction(cloned, this));
+      }
     }
 
-    functions.push_back(kf);
-    functionMap.insert(std::make_pair(it, kf));
+    for (std::set<KFunction *>::iterator kfi = pool.begin(); kfi != pool.end(); kfi++) {
+      KFunction *kf = *kfi;
+      for (unsigned i=0; i<kf->numInstructions; ++i) {
+        KInstruction *ki = kf->instructions[i];
+        ki->info = &infos->getInfo(ki->inst);
+      }
+
+      functions.push_back(kf);
+      functionMap.insert(std::make_pair(kf->function, kf));
+    }
   }
 
   /* Compute various interesting properties */
