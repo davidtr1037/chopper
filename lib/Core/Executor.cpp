@@ -79,6 +79,9 @@
 #include <ReachabilityAnalysis.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
+#include <Annotator.h>
+#include <Cloner.h>
+#include <SliceGenerator.h>
 
 #ifdef HAVE_ZLIB_H
 #include "klee/Internal/Support/CompressionStream.h"
@@ -412,9 +415,12 @@ const Module *Executor::setModule(llvm::Module *module,
   ra = new ReachabilityAnalysis(module);
   aa = new AAPass();
   aa->setPAType(PointerAnalysis::AndersenWaveDiff_WPA);
-  mra = new ModRefAnalysis(kmodule->module, ra, aa);
-  slicer = new Slicer(module, 0, aa, "f");
-  kmodule->prepare(opts, interpreterHandler, ra, aa, mra, slicer);
+  mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", "f");
+  annotator = new Annotator(kmodule->module, mra);
+  cloner = new Cloner(module, mra);
+  sliceGenerator = new SliceGenerator(module, aa, mra, cloner, "f");
+  //slicer = new Slicer(module, 0, aa, "f");
+  kmodule->prepare(opts, interpreterHandler, ra, aa, mra, annotator, cloner, sliceGenerator);
   
   specialFunctionHandler->bind();
 
@@ -438,6 +444,8 @@ Executor::~Executor() {
   if (statsTracker)
     delete statsTracker;
   delete solver;
+  /* TODO: is it the right place? */
+  delete cloner;
   delete kmodule;
   while(!timers.empty()) {
     delete timers.back();
@@ -1301,30 +1309,36 @@ void Executor::executeCall(ExecutionState &state,
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
     if (state.isNormalState() && f->getName().equals(StringRef("f"))) {
-        /* skip function call */
-        klee_message("skipping function call to %s", f->getName().data());
+      /* skip function call */
+      klee_message("skipping function call to %s", f->getName().data());
 
-        /* create snapshot */
-        ExecutionState *snapshot = new ExecutionState(state);
-        state.setSnapshot(snapshot);
+      /* create snapshot */
+      ExecutionState *snapshot = new ExecutionState(state);
+      state.setSnapshot(snapshot);
 
-        ///* initialize recovery state */
-        //ExecutionState *recoveryState = new ExecutionState(state);
-        //recoveryState->setType(RECOVERY_STATE); 
-        //recoveryState->addDependedState(&state);
-        //recoveryState->setExitInst(state.pc->inst);
-        ///* TODO: update prevPC? */
-        //recoveryState->pc = recoveryState->prevPC;
+      ///* initialize recovery state */
+      //ExecutionState *recoveryState = new ExecutionState(state);
+      //recoveryState->setType(RECOVERY_STATE); 
+      //recoveryState->addDependedState(&state);
+      //recoveryState->setExitInst(state.pc->inst);
+      ///* TODO: update prevPC? */
+      //recoveryState->pc = recoveryState->prevPC;
 
-        //state.ptreeNode->data = 0;
-        //std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
-        //recoveryState->ptreeNode = res.first;
-        //state.ptreeNode = res.second;
+      //state.ptreeNode->data = 0;
+      //std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
+      //recoveryState->ptreeNode = res.first;
+      //state.ptreeNode = res.second;
     
-        //state.setRecoveryState(recoveryState);
-        return;
+      //state.setRecoveryState(recoveryState);
+      return;
     }
 
+    if (state.isRecoveryState()) {
+      RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
+      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, recoveryInfo->sliceId);
+      Function *cloned = sliceInfo->first;
+      f = cloned;
+    }
     KFunction *kf = kmodule->functionMap[f];
     state.pushFrame(state.prevPC, kf);
     state.pc = kf->instructions;
@@ -2067,9 +2081,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Load: {
     /* TODO: replace with a better predicate */
     if (state.isNormalState() && state.getSnapshot() != 0) {
+      /* TODO: change the name of the predicate to: ... */
       if (state.isBlockingLoadResolved() && isBlockingLoad(state, ki)) {
         state.pc = state.prevPC;
-        RecoveryInfo *ri = getRecoveryInfo(i);
+        RecoveryInfo *ri = getRecoveryInfo(state, ki);
         startRecoveryState(state, ri);
         suspendState(state);
         return;
@@ -2785,7 +2800,9 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
     //klee_message("selected state: %p", state);
     KInstruction *ki = state.pc;
-    //ki->inst->print(errs()); errs() << "\n";
+    if (state.isRecoveryState()) {
+      ki->inst->print(errs()); errs() << "\n";
+    }
     stepInstruction(state);
 
     executeInstruction(state, ki);
@@ -3368,7 +3385,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
           if (state.isRecoveryState()) {
-            onObjectStateWrite(state, mo, offset, value);
+            onObjectStateWrite(state, address, mo, offset, value);
           }
         }          
       } else {
@@ -3872,17 +3889,74 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   return true;
 }
 
-RecoveryInfo *Executor::getRecoveryInfo(Instruction *load_inst) {
-  ModRefAnalysis::LoadToStoreMap::iterator entry = mra->loadToStoreMap.find(load_inst);
-  std::set<Instruction *> *store_insts = &entry->second;
+RecoveryInfo *Executor::getRecoveryInfo(ExecutionState &state, KInstruction *kinst) {
+  Instruction *loadInst = kinst->inst;
+  errs() << "LOAD: "; loadInst->print(errs()); errs() << "\n";
 
-  errs() << "LOAD: "; load_inst->print(errs()); errs() << "\n";
-  for (std::set<Instruction *>::iterator i = store_insts->begin(); i != store_insts->end(); i++) {
-    Instruction *store_inst = *i;
-    errs() << "-- STORE: "; store_inst->print(errs()); errs() << "\n";
+  RecoveryInfo *recoveryInfo = new RecoveryInfo();
+  recoveryInfo->loadInst = loadInst;
+  getLoadAddrInfo(state, kinst, recoveryInfo);
+
+  klee_message(
+    "recovery info: addr = %#llx, size = %llx, slice id = %d",
+    recoveryInfo->loadAddr, recoveryInfo->loadSize, recoveryInfo->sliceId
+  );
+
+  return recoveryInfo;
+}
+
+void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, RecoveryInfo *recoveryInfo) {
+  ObjectPair op;
+  bool success;
+  ConstantExpr *ce;
+
+  ref<Expr> address = eval(kinst, 0, state).value;
+
+  if (SimplifySymIndices) {
+    if (!isa<ConstantExpr>(address)) {
+      address = state.constraints.simplifyExpr(address);
+    }
   }
 
-  return new RecoveryInfo(load_inst, *store_insts);
+  /* execute solver query */
+  solver->setTimeout(coreSolverTimeout);
+  if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
+    address = toConstant(state, address, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
+  }
+  solver->setTimeout(0);
+
+  /* retreive allocation site */
+  if (!success) {
+    klee_message("Unable to resolve allocation site...");
+    assert(false);
+  }
+
+  /* get concrete load address */
+  ce = dyn_cast<ConstantExpr>(address);
+  assert(ce);
+  recoveryInfo->loadAddr = ce->getZExtValue();
+
+  /* get load size */
+  Expr::Width width = getWidthForLLVMType(kinst->inst->getType());
+  recoveryInfo->loadSize = Expr::getMinBytesForWidth(width);
+
+  /* get slice id */
+  const MemoryObject *mo = op.first;
+  ref<Expr> offsetExpr = mo->getOffsetExpr(address);
+  offsetExpr = toConstant(state, offsetExpr, "...");
+  ce = dyn_cast<ConstantExpr>(offsetExpr);
+  assert(ce);
+
+  std::pair<const Value *, uint64_t> allocSite = std::make_pair(mo->allocSite, ce->getZExtValue());
+  ModRefAnalysis::AllocSiteToIdMap::iterator entry = mra->allocSiteToIdMap.find(allocSite);
+  if (entry == mra->allocSiteToIdMap.end()) {
+    /* TODO: this should not happen... */
+    assert(false);
+  }
+
+  uint32_t sliceId = entry->second;
+  recoveryInfo->sliceId = sliceId;
 }
 
 void Executor::suspendState(ExecutionState &state) {
@@ -3938,27 +4012,29 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
 
   /* set recovery information */
   recoveryState->setRecoveryInfo(recoveryInfo);
+
   /* add state */
   klee_message("adding recovery state: %p", recoveryState); 
   addedStates.push_back(recoveryState);
 }
 
-void Executor::onObjectStateWrite(ExecutionState &state, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value) {
-  assert(isa<ConstantExpr>(value));
+void Executor::onObjectStateWrite(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value) {
+  assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
+  assert(isa<ConstantExpr>(value));
+  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
 
   klee_message("write in state %p: mo = %p, address = %llx", state, mo, mo->address);
   offset->dump();
 
-  /* get the current instruction */
-  Instruction *store_inst = state.prevPC->inst;
-  assert(store_inst->getOpcode() == Instruction::Store);
-
   RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
-  if (recoveryInfo->store_insts.find(store_inst) == recoveryInfo->store_insts.end()) {
+  ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
+  uint64_t storeAddr = ce->getZExtValue();
+  if (storeAddr != recoveryInfo->loadAddr) {
     return;
   }
 
+  /* copy data to relevant states... */
   std::set<ExecutionState *> dependedStates = state.getDependedStates();
   for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
     ExecutionState *dependedState = *i;
@@ -3970,11 +4046,13 @@ void Executor::onObjectStateWrite(ExecutionState &state, const MemoryObject *mo,
 }
 
 void Executor::onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width) {
-  ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
-  assert(ce);
+  assert(isa<ConstantExpr>(address));
+  assert(isa<ConstantExpr>(offset));
 
+  ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
   uint64_t addr = ce->getZExtValue();
   klee_message("read in state %p: address = %#llx", state, addr);
+
   if (!state.isBlockingLoadResolved()) {
     /* update resolved loads */
     state.addResolvedAddress(addr);
