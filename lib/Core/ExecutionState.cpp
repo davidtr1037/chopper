@@ -64,10 +64,13 @@ StackFrame::~StackFrame() {
 
 ExecutionState::ExecutionState(KFunction *kf) :
     type(NORMAL_STATE),
+
     suspendStatus(false),
     snapshot(0),
     recoveryState(0),
+
     exitInst(0),
+    dependedState(0),
     recoveryInfo(0),
 
     pc(kf->instructions),
@@ -112,8 +115,9 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     allocationRecord(state.allocationRecord),
     /* recovery state properties */
     exitInst(state.exitInst),
-    dependedStates(state.dependedStates),
+    dependedState(state.dependedState),
     recoveryInfo(state.recoveryInfo),
+    guidingAllocationRecord(state.guidingAllocationRecord),
 
     pc(state.pc),
     prevPC(state.prevPC),
@@ -153,11 +157,9 @@ ExecutionState *ExecutionState::branch() {
   falseState->weight -= weight;
 
   if (this->isNormalState()) {
-    assert(this->getRecoveryState() == falseState->getRecoveryState());
-    ExecutionState *recoveryState = this->getRecoveryState();
-    if (recoveryState) {
-      recoveryState->addDependedState(falseState);
-    }
+    /* TODO remove assertions */
+    assert(this->getRecoveryState() == 0);
+    assert(falseState->getRecoveryState() == 0);
   } else {
     //assert(false);
     //falseState->getDependedStates().clear();
