@@ -108,9 +108,13 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     fnAliases(state.fnAliases),
 
     type(state.type),
+    /* state properties */
     suspendStatus(state.suspendStatus),
     snapshot(state.snapshot),
     recoveryState(state.recoveryState),
+    resolvedLoads(state.resolvedLoads),
+    allocationRecord(state.allocationRecord),
+    /* recovery state properties */
     exitInst(state.exitInst),
     dependedStates(state.dependedStates),
     recoveryInfo(state.recoveryInfo),
@@ -414,4 +418,18 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     out << "\n";
     target = sf.caller;
   }
+}
+
+void ExecutionState::getCallTrace(std::vector<Instruction *> &callTrace) {
+    for (std::vector<StackFrame>::iterator i = stack.begin(); i != stack.end(); i++) {
+        StackFrame sf = *i;
+
+        /* skip the main frame */
+        if (sf.kf->function->getName() == "main") {
+            continue;
+        }
+
+        Instruction *inst = sf.caller->inst;
+        callTrace.push_back(inst);
+    }
 }
