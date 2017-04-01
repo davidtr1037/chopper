@@ -988,31 +988,26 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*falseState, Expr::createIsZero(condition));
 
     if (falseState->isRecoveryState()) {
-      /* a forked recovery state should have it's own depended states */
-      falseState->getDependedStates().clear();
       /* check consistency with the depended parents */
       bool isValidFork = false;
-      std::set<ExecutionState *> &dependedStates = trueState->getDependedStates();
-      for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
-        ExecutionState *dependedState = *i;
-        klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState);
-        if (!checkConsistency(*dependedState, *falseState)) {
-          klee_message("terminating inconsistent forked recovery state: %p", falseState);
-          terminateState(*falseState); 
-        } else {
-          /* forked state is consistent with it's originator */
-          ExecutionState *forkedDependedState = new ExecutionState(*dependedState); 
-          assert(forkedDependedState->isSuspended());
+      ExecutionState *dependedState = trueState->getDependedState();
+      klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState);
+      if (!checkConsistency(*dependedState, *falseState)) {
+        klee_message("terminating inconsistent forked recovery state: %p", falseState);
+        terminateState(*falseState); 
+      } else {
+        /* forked state is consistent with it's originator */
+        ExecutionState *forkedDependedState = new ExecutionState(*dependedState); 
+        assert(forkedDependedState->isSuspended());
 
-          forkedDependedState->setRecoveryState(falseState);
-          falseState->addDependedState(forkedDependedState);
+        forkedDependedState->setRecoveryState(falseState);
+        falseState->setDependedState(forkedDependedState);
 
-          dependedState->ptreeNode->data = 0;
-          std::pair<PTree::Node*, PTree::Node*> res = processTree->split(dependedState->ptreeNode, forkedDependedState, dependedState);
-          forkedDependedState->ptreeNode = res.first;
-          dependedState->ptreeNode = res.second;
-          isValidFork = true;
-        }
+        dependedState->ptreeNode->data = 0;
+        std::pair<PTree::Node*, PTree::Node*> res = processTree->split(dependedState->ptreeNode, forkedDependedState, dependedState);
+        forkedDependedState->ptreeNode = res.first;
+        dependedState->ptreeNode = res.second;
+        isValidFork = true;
       }
       if (!isValidFork) {
         return StatePair(trueState, 0);
@@ -1513,7 +1508,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
   if (state.isRecoveryState() && state.getExitInst() == i) {
     klee_message("%p: recovery state reached exit instruction", state);
-    notifyDependedStates(state);
+    notifyDependedState(state);
     terminateState(state);
     return;
   }
@@ -2578,9 +2573,9 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
-    /* TODO: ... */
     if (es->isNormalState() && es->getRecoveryState() != 0) {
-      es->getRecoveryState()->getDependedStates().erase(es);
+      /* TODO: check what is happening here! */
+      //es->getRecoveryState()->getDependedStates().erase(es);
     }
     delete es;
   }
@@ -3156,12 +3151,12 @@ void Executor::executeAlloc(ExecutionState &state,
     size_t allocationAlignment = getAllocationAlignment(allocSite);
        
     MemoryObject *mo = NULL;
-    //if (state.isRecoveryState() && isDynamicAlloc(state.prevPC->inst)) {
-    //  mo = onDynamicAlloc(state, CE->getZExtValue(), isLocal, state.prevPC->inst);
-    //} else {
+    if (state.isRecoveryState() && isDynamicAlloc(state.prevPC->inst)) {
+      mo = onDynamicAlloc(state, CE->getZExtValue(), isLocal, state.prevPC->inst);
+    } else {
       mo =  memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
                          allocSite, allocationAlignment);
-    //}
+    }
     if (!mo) {
       bindLocal(target, state, 
                 ConstantExpr::alloc(0, Context::get().getPointerWidth()));
@@ -3956,29 +3951,33 @@ void Executor::suspendState(ExecutionState &state) {
   suspendedStates.push_back(&state);
 }
 
-void Executor::resumeState(ExecutionState &state) {
+void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
   klee_message("resuming: %p", state);
   state.setResumed();
   state.setRecoveryState(0);
   state.markLoadAsUnresolved();
-  resumedStates.push_back(&state);
+  if (implicitlyCreated) {
+    klee_message("adding an implicitly created state: %p", state);
+    addedStates.push_back(&state);
+  } else {
+    resumedStates.push_back(&state);
+  }
+
+  /* debug... */
+  state.getAllocationRecord().dump();
 }
 
-void Executor::notifyDependedStates(ExecutionState &recoveryState) {
-  klee_message("%p: notifying depended states", recoveryState);
-  std::set<ExecutionState *> &dependedStates = recoveryState.getDependedStates();
-  for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
-    ExecutionState *dependedState = *i;
-    klee_message("\t%p: notifying depended state: %p", recoveryState, dependedState);
-    checkConsistency(*dependedState, recoveryState);
-    if (states.find(dependedState) == states.end()) {
-      klee_message("adding an implicitly created state: %p", dependedState);
-      dependedState->setResumed();
-      dependedState->setRecoveryState(0);
-      addedStates.push_back(dependedState);
-    } else {
-      resumeState(*dependedState);
-    }
+void Executor::notifyDependedState(ExecutionState &recoveryState) {
+  ExecutionState *dependedState = recoveryState.getDependedState();
+  klee_message("\t%p: notifying depended state: %p", recoveryState, dependedState);
+
+  /* TODO is it needed here? */
+  checkConsistency(*dependedState, recoveryState);
+
+  if (states.find(dependedState) == states.end()) {
+    resumeState(*dependedState, true);
+  } else {
+    resumeState(*dependedState, false);
   }
 }
 
@@ -3989,8 +3988,9 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   /* initialize recovery state */
   ExecutionState *recoveryState = new ExecutionState(*snapshot);
   recoveryState->setType(RECOVERY_STATE); 
-  recoveryState->addDependedState(&state);
+  recoveryState->setDependedState(&state);
   recoveryState->setExitInst(snapshot->pc->inst);
+  recoveryState->setGuidingAllocationRecord(state.getAllocationRecord());
   /* TODO: update prevPC? */
   recoveryState->pc = recoveryState->prevPC;
 
@@ -4025,15 +4025,12 @@ void Executor::onObjectStateWrite(ExecutionState &state, ref<Expr> address, cons
     return;
   }
 
-  /* copy data to relevant states... */
-  std::set<ExecutionState *> dependedStates = state.getDependedStates();
-  for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
-    ExecutionState *dependedState = *i;
-    const ObjectState *os = dependedState->addressSpace.findObject(mo);
-    ObjectState *wos = dependedState->addressSpace.getWriteable(mo, os);
-    wos->write(offset, value);
-    klee_message("copying from %p to %p", state, dependedState);
-  }
+  /* copy data to depended state... */
+  ExecutionState *dependedState = state.getDependedState();
+  const ObjectState *os = dependedState->addressSpace.findObject(mo);
+  ObjectState *wos = dependedState->addressSpace.getWriteable(mo, os);
+  wos->write(offset, value);
+  klee_message("copying from %p to %p", state, dependedState);
 }
 
 void Executor::onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width) {
@@ -4085,25 +4082,29 @@ bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryS
 }
 
 MemoryObject *Executor::onDynamicAlloc(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst) {
+    MemoryObject *mo = NULL;
+
     /* get the context of the allocation instruction */
     std::vector<Instruction *> callTrace;
     state.getCallTrace(callTrace);
     ASContext context(cloner, callTrace, allocInst);
     
-    //std::set<ExecutionState *> &dependedStates = state.getDependedStates();
-    //for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
-    //    ExecutionState *dependedState = *i;    
-    //    AllocationRecord &allocationRecord = dependedState->getAllocationRecord();
-    //    if (allocationRecord.exists(context)) {
-    //        /* getAddr(context) */    
-    //    } else {
-    //        MemoryObject *mo = memory->allocate(size, isLocal, false, allocInst);
-    //        allocationRecord.addAddr(context, mo);
-    //        allocationRecord.dump();
-    //    }
-    //}
+    ExecutionState *dependedState = state.getDependedState();
+    AllocationRecord &allocationRecord = dependedState->getAllocationRecord();
+    if (allocationRecord.exists(context)) {
+        /* the address should be already bound */
+        mo = state.getGuidingAllocationRecord().getAddr(context);
+        klee_message("%p: reusing allocated address: %llx", state, mo->address);
+    } else {
+        mo = memory->allocate(size, isLocal, false, allocInst);
+        /* bind the address to the depended state */
+        bindObjectInState(*dependedState, mo, isLocal);
+        /* TODO: initialize memory? */
+        klee_message("%p: allocating new address: %llx", state, mo->address);
+        allocationRecord.addAddr(context, mo);
+    }
 
-    return NULL;
+    return mo;
 }
 
 bool Executor::isDynamicAlloc(Instruction *allocInst) {

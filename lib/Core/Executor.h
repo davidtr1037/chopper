@@ -460,8 +460,8 @@ private:
   RecoveryInfo *getRecoveryInfo(ExecutionState &state, KInstruction *kinst);
   void getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, RecoveryInfo *recoveryInfo);
   void suspendState(ExecutionState &state);
-  void resumeState(ExecutionState &state);
-  void notifyDependedStates(ExecutionState &recoveryState);
+  void resumeState(ExecutionState &state, bool implicitlyCreated);
+  void notifyDependedState(ExecutionState &recoveryState);
   void startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo);
   void onObjectStateWrite(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value);
   void onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width);
