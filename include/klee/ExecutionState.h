@@ -119,10 +119,12 @@ private:
 
   /* a recovery state must stop when reaching this instruction */
   llvm::Instruction *exitInst;
-  /* a recovery state might have multiple depended states */
-  std::set<ExecutionState *> dependedStates;
+  /* a recovery state has its own depended state */
+  ExecutionState *dependedState;
   /* TODO: should be ref<RecoveryInfo> */
   RecoveryInfo *recoveryInfo;
+  /* we use this record while executing a recovery state  */
+  AllocationRecord guidingAllocationRecord;
 
 public:
   // Execution - Control Flow specific
@@ -314,17 +316,15 @@ public:
     this->exitInst = exitInst;
   }
 
-  std::set<ExecutionState *> &getDependedStates() {
+  ExecutionState *getDependedState() {
     assert(isRecoveryState());
-    return dependedStates;
+    return dependedState;
   }
 
-  void addDependedState(ExecutionState *state) {
+  void setDependedState(ExecutionState *state) {
     assert(isRecoveryState());
     assert(state->isNormalState());
-
-    assert(dependedStates.find(state) == dependedStates.end());
-    dependedStates.insert(state);
+    dependedState = state;
   }
 
   RecoveryInfo *getRecoveryInfo() {
@@ -341,6 +341,14 @@ public:
 
   AllocationRecord &getAllocationRecord() {
     return allocationRecord;
+  }
+
+  AllocationRecord &getGuidingAllocationRecord() {
+    return guidingAllocationRecord;
+  }
+
+  void setGuidingAllocationRecord(AllocationRecord &record) {
+    guidingAllocationRecord = record;
   }
 
 };
