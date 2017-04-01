@@ -340,14 +340,17 @@ public:
   void getCallTrace(std::vector<llvm::Instruction *> &callTrace);
 
   AllocationRecord &getAllocationRecord() {
+    assert(isNormalState());
     return allocationRecord;
   }
 
   AllocationRecord &getGuidingAllocationRecord() {
+    assert(isRecoveryState());
     return guidingAllocationRecord;
   }
 
   void setGuidingAllocationRecord(AllocationRecord &record) {
+    assert(isRecoveryState());
     guidingAllocationRecord = record;
   }
 

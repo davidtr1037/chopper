@@ -1011,10 +1011,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState);
       if (!checkConsistency(*dependedState, *falseState)) {
         klee_message("terminating inconsistent forked recovery state: %p", falseState);
-        terminateState(*falseState); 
+        terminateState(*falseState);
       } else {
         /* forked state is consistent with it's originator */
-        ExecutionState *forkedDependedState = new ExecutionState(*dependedState); 
+        ExecutionState *forkedDependedState = new ExecutionState(*dependedState);
         assert(forkedDependedState->isSuspended());
 
         forkedDependedState->setRecoveryState(falseState);
