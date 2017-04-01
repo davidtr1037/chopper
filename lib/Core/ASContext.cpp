@@ -1,5 +1,4 @@
 #include "klee/ASContext.h"
-#include "klee/ExecutionState.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 
@@ -12,20 +11,19 @@
 using namespace llvm;
 using namespace klee;
 
-ASContext::ASContext(Cloner *cloner, ExecutionState &state, Instruction *allocInst) {
-    for (std::vector<StackFrame>::iterator i = state.stack.begin(); i != state.stack.end(); i++) {
-        StackFrame sf = *i;
-
-        /* skip the main frame */
-        if (sf.kf->function->getName() == "main") {
-            continue;
-        }
-
-        Instruction *inst = sf.caller->inst;
+ASContext::ASContext(Cloner *cloner, std::vector<Instruction *> &callTrace, Instruction *allocInst) {
+    for (std::vector<Instruction *>::iterator i = callTrace.begin(); i != callTrace.end(); i++) {
+        Instruction *inst = *i;
         trace.push_back(getTranslatedInst(cloner, inst));
     }
 
     trace.push_back(getTranslatedInst(cloner, allocInst));
+}
+
+ASContext::ASContext(ASContext &other) :
+    trace(other.trace)    
+{
+    
 }
 
 Instruction *ASContext::getTranslatedInst(Cloner *cloner, Instruction *inst) {
