@@ -14,6 +14,7 @@
 
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
+#include "klee/AllocationRecord.h"
 #include "klee/Internal/ADT/TreeStream.h"
 
 // FIXME: We do not want to be exposing these? :(
@@ -111,6 +112,8 @@ private:
   bool blockingLoadStatus;
   /* resloved load addresses */
   std::set<uint64_t> resolvedLoads;
+  /* we have to remember which allocations were executed */
+  AllocationRecord allocationRecord;
 
   /* recovery state properties */
 
@@ -332,6 +335,12 @@ public:
   void setRecoveryInfo(RecoveryInfo *recoveryInfo) {
     assert(isRecoveryState());
     this->recoveryInfo = recoveryInfo;
+  }
+
+  void getCallTrace(std::vector<llvm::Instruction *> &callTrace);
+
+  AllocationRecord &getAllocationRecord() {
+    return allocationRecord;
   }
 
 };
