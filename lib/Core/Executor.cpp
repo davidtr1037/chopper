@@ -30,6 +30,7 @@
 #include "klee/TimerStatIncrementer.h"
 #include "klee/CommandLine.h"
 #include "klee/Common.h"
+#include "klee/ASContext.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprSMTLIBPrinter.h"
@@ -1312,24 +1313,9 @@ void Executor::executeCall(ExecutionState &state,
       /* skip function call */
       klee_message("skipping function call to %s", f->getName().data());
 
-      /* create snapshot */
+      /* create snapshot, recovery state will be created on demand... */
       ExecutionState *snapshot = new ExecutionState(state);
       state.setSnapshot(snapshot);
-
-      ///* initialize recovery state */
-      //ExecutionState *recoveryState = new ExecutionState(state);
-      //recoveryState->setType(RECOVERY_STATE); 
-      //recoveryState->addDependedState(&state);
-      //recoveryState->setExitInst(state.pc->inst);
-      ///* TODO: update prevPC? */
-      //recoveryState->pc = recoveryState->prevPC;
-
-      //state.ptreeNode->data = 0;
-      //std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
-      //recoveryState->ptreeNode = res.first;
-      //state.ptreeNode = res.second;
-    
-      //state.setRecoveryState(recoveryState);
       return;
     }
 
@@ -3168,9 +3154,14 @@ void Executor::executeAlloc(ExecutionState &state,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
     const llvm::Value *allocSite = state.prevPC->inst;
     size_t allocationAlignment = getAllocationAlignment(allocSite);
-    MemoryObject *mo =
-        memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
+       
+    MemoryObject *mo = NULL;
+    //if (state.isRecoveryState() && isDynamicAlloc(state.prevPC->inst)) {
+    //  mo = onDynamicAlloc(state, CE->getZExtValue(), isLocal, state.prevPC->inst);
+    //} else {
+      mo =  memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
                          allocSite, allocationAlignment);
+    //}
     if (!mo) {
       bindLocal(target, state, 
                 ConstantExpr::alloc(0, Context::get().getPointerWidth()));
@@ -4091,4 +4082,48 @@ bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryS
     klee_message("query result: %d", result);
 
     return result != Solver::False;
+}
+
+MemoryObject *Executor::onDynamicAlloc(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst) {
+    /* get the context of the allocation instruction */
+    std::vector<Instruction *> callTrace;
+    state.getCallTrace(callTrace);
+    ASContext context(cloner, callTrace, allocInst);
+    
+    //std::set<ExecutionState *> &dependedStates = state.getDependedStates();
+    //for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
+    //    ExecutionState *dependedState = *i;    
+    //    AllocationRecord &allocationRecord = dependedState->getAllocationRecord();
+    //    if (allocationRecord.exists(context)) {
+    //        /* getAddr(context) */    
+    //    } else {
+    //        MemoryObject *mo = memory->allocate(size, isLocal, false, allocInst);
+    //        allocationRecord.addAddr(context, mo);
+    //        allocationRecord.dump();
+    //    }
+    //}
+
+    return NULL;
+}
+
+bool Executor::isDynamicAlloc(Instruction *allocInst) {
+    CallInst *callInst = dyn_cast<CallInst>(allocInst);
+    if (!callInst) {
+        return false;
+    }
+
+    Value *calledValue = callInst->getCalledValue();
+    const char *functions[] = {
+        "malloc",
+        "calloc",
+        "realloc",
+    };
+
+    for (unsigned int i = 0; i < sizeof(functions) / sizeof(functions[0]); i++) {
+        if (calledValue->getName() == StringRef(functions[i])) {
+            return true;
+        }
+    }
+
+    return false;
 }
