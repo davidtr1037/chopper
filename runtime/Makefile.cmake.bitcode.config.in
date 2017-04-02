@@ -42,6 +42,7 @@ RM := rm
 CMP := cmp
 
 # Compiler flags
+LLVMCC.ExtraFlags += "-m32"
 LLVMCC.Flags += $(LLVMCC.ExtraFlags) \
 	-I@CMAKE_SOURCE_DIR@/include \
 	-I@CMAKE_BINARY_DIR@/include \

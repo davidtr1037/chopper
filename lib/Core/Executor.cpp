@@ -3152,7 +3152,7 @@ void Executor::executeAlloc(ExecutionState &state,
        
     MemoryObject *mo = NULL;
     if (state.isRecoveryState() && isDynamicAlloc(state.prevPC->inst)) {
-      mo = onDynamicAlloc(state, CE->getZExtValue(), isLocal, state.prevPC->inst);
+      mo = onAllocate(state, CE->getZExtValue(), isLocal, state.prevPC->inst, zeroMemory);
     } else {
       mo =  memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
                          allocSite, allocationAlignment);
@@ -3914,7 +3914,7 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
 
   /* retreive allocation site */
   if (!success) {
-    klee_message("Unable to resolve allocation site...");
+    klee_message("Unable to resolve address...");
     assert(false);
   }
 
@@ -3934,7 +3934,10 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
   ce = dyn_cast<ConstantExpr>(offsetExpr);
   assert(ce);
 
-  std::pair<const Value *, uint64_t> allocSite = std::make_pair(mo->allocSite, ce->getZExtValue());
+  /* translate value... */
+  const Value *translatedValue = cloner->translateValue((Value *)(mo->allocSite));
+  uint64_t offset = ce->getZExtValue();
+  std::pair<const Value *, uint64_t> allocSite = std::make_pair(translatedValue, offset);
   ModRefAnalysis::AllocSiteToIdMap::iterator entry = mra->allocSiteToIdMap.find(allocSite);
   if (entry == mra->allocSiteToIdMap.end()) {
     /* TODO: this should not happen... */
@@ -4081,14 +4084,14 @@ bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryS
     return result != Solver::False;
 }
 
-MemoryObject *Executor::onDynamicAlloc(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst) {
+MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst, bool zeroMemory) {
     MemoryObject *mo = NULL;
 
     /* get the context of the allocation instruction */
     std::vector<Instruction *> callTrace;
     state.getCallTrace(callTrace);
     ASContext context(cloner, callTrace, allocInst);
-    
+
     ExecutionState *dependedState = state.getDependedState();
     AllocationRecord &allocationRecord = dependedState->getAllocationRecord();
     if (allocationRecord.exists(context)) {
@@ -4098,8 +4101,13 @@ MemoryObject *Executor::onDynamicAlloc(ExecutionState &state, uint64_t size, boo
     } else {
         mo = memory->allocate(size, isLocal, false, allocInst);
         /* bind the address to the depended state */
-        bindObjectInState(*dependedState, mo, isLocal);
-        /* TODO: initialize memory? */
+        ObjectState *os = bindObjectInState(*dependedState, mo, isLocal);
+        /* initialize allocated object (in depended state...) */
+        if (zeroMemory) {
+            os->initializeToZero();
+        } else {
+            os->initializeToRandom();
+        }
         klee_message("%p: allocating new address: %llx", state, mo->address);
         allocationRecord.addAddr(context, mo);
     }
