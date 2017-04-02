@@ -459,7 +459,7 @@ private:
   void onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width);
   void dumpConstrains(ExecutionState &state);
   bool checkConsistency(ExecutionState &state, ExecutionState &recoveryState);
-  MemoryObject *onDynamicAlloc(ExecutionState &state, uint64_t size, bool isLocal, llvm::Instruction *allocInst);
+  MemoryObject *onAllocate(ExecutionState &state, uint64_t size, bool isLocal, llvm::Instruction *allocInst, bool zeroMemory);
   bool isDynamicAlloc(llvm::Instruction *allocInst);
 
 public:
