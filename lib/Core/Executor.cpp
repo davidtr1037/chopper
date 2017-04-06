@@ -1043,10 +1043,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
       /* copy constraints if required */
       if (isTrueStateValid) {
-        addConstraint(*dependedState, condition);
+        mergeConstraints(*dependedState, condition);
       }
       if (isFalseStateValid) {
-        addConstraint(*forkedDependedState, Expr::createIsZero(condition));
+        mergeConstraints(*forkedDependedState, Expr::createIsZero(condition));
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
@@ -4064,10 +4064,7 @@ void Executor::onRecoveryStateExit(ExecutionState &state) {
 
 void Executor::notifyDependedState(ExecutionState &recoveryState) {
   ExecutionState *dependedState = recoveryState.getDependedState();
-  klee_message("\t%p: notifying depended state: %p", recoveryState, dependedState);
-
-  /* TODO is it needed here? */
-  checkConsistency(*dependedState, recoveryState);
+  klee_message("%p: notifying depended state %p", recoveryState, dependedState);
 
   if (states.find(dependedState) == states.end()) {
     resumeState(*dependedState, true);
@@ -4088,19 +4085,22 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   recoveryState->setGuidingAllocationRecord(state.getAllocationRecord());
   /* TODO: update prevPC? */
   recoveryState->pc = recoveryState->prevPC;
+  /* set recovery information */
+  recoveryState->setRecoveryInfo(recoveryInfo);
+  /* add accumulated constraints */
+  std::vector<ref<Expr>> &constraints = state.getAccumulatingConstraints();
+  for (std::vector<ref<Expr>>::iterator i = constraints.begin(); i != constraints.end(); i++) {
+    addConstraint(*recoveryState, *i);
+  }
 
+  state.setRecoveryState(recoveryState);
+
+  /* add state */
+  klee_message("adding recovery state: %p", recoveryState); 
   state.ptreeNode->data = 0;
   std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
   recoveryState->ptreeNode = res.first;
   state.ptreeNode = res.second;
-  
-  state.setRecoveryState(recoveryState);
-
-  /* set recovery information */
-  recoveryState->setRecoveryInfo(recoveryInfo);
-
-  /* add state */
-  klee_message("adding recovery state: %p", recoveryState); 
   addedStates.push_back(recoveryState);
 }
 
@@ -4229,4 +4229,10 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
 
 void Executor::terminateDependedState(ExecutionState *dependedState) {
     terminateState(*dependedState);
+}
+
+void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> condition) {
+    assert(dependedState.isNormalState());
+    addConstraint(dependedState, condition);
+    dependedState.addAccumulatingConstraint(condition);
 }
