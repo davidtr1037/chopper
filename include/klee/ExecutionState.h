@@ -114,6 +114,8 @@ private:
   std::set<uint64_t> resolvedLoads;
   /* we have to remember which allocations were executed */
   AllocationRecord allocationRecord;
+  /* used for guiding multiple recovery states */
+  std::vector<ref<Expr>> accumulatingConstraints;
 
   /* recovery state properties */
 
@@ -352,6 +354,14 @@ public:
   void setGuidingAllocationRecord(AllocationRecord &record) {
     assert(isRecoveryState());
     guidingAllocationRecord = record;
+  }
+
+  std::vector<ref<Expr>> &getAccumulatingConstraints() {
+    return accumulatingConstraints;
+  }
+
+  void addAccumulatingConstraint(ref<Expr> condition) {
+    accumulatingConstraints.push_back(condition);
   }
 
 };
