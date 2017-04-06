@@ -418,9 +418,8 @@ const Module *Executor::setModule(llvm::Module *module,
   aa->setPAType(PointerAnalysis::AndersenWaveDiff_WPA);
   mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", "f");
   annotator = new Annotator(kmodule->module, mra);
-  cloner = new Cloner(module, mra);
+  cloner = new Cloner(module, ra, mra);
   sliceGenerator = new SliceGenerator(module, aa, mra, cloner, "f");
-  //slicer = new Slicer(module, 0, aa, "f");
   kmodule->prepare(opts, interpreterHandler, ra, aa, mra, annotator, cloner, sliceGenerator);
   
   specialFunctionHandler->bind();
@@ -987,18 +986,27 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
 
-    if (falseState->isRecoveryState()) {
-      /* check consistency with the depended parents */
-      bool isValidFork = false;
+    if (trueState->isRecoveryState()) {
       ExecutionState *dependedState = trueState->getDependedState();
-      klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState);
-      if (!checkConsistency(*dependedState, *falseState)) {
-        klee_message("terminating inconsistent forked recovery state: %p", falseState);
-        terminateState(*falseState);
+
+      /* check consistency of true state with the depended state */
+      klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", trueState, dependedState);
+      bool isTrueStateValid = false;
+      if (checkConsistency(*dependedState, *trueState)) {
+        isTrueStateValid = true;  
       } else {
+        klee_message("terminating inconsistent forked recovery state (true state): %p", trueState);
+        terminateState(*trueState);
+      }
+
+      /* check consistency of false state with the depended state */
+      klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState);
+      bool isFalseStateValid = false;
+      if (checkConsistency(*dependedState, *falseState)) {
         /* forked state is consistent with it's originator */
         ExecutionState *forkedDependedState = new ExecutionState(*dependedState);
         assert(forkedDependedState->isSuspended());
+        klee_message("forked depended state: %p", forkedDependedState);
 
         forkedDependedState->setRecoveryState(falseState);
         falseState->setDependedState(forkedDependedState);
@@ -1007,13 +1015,28 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         std::pair<PTree::Node*, PTree::Node*> res = processTree->split(dependedState->ptreeNode, forkedDependedState, dependedState);
         forkedDependedState->ptreeNode = res.first;
         dependedState->ptreeNode = res.second;
-        isValidFork = true;
+
+        isFalseStateValid = true;
+      } else {
+        klee_message("terminating inconsistent forked recovery state (false state): %p", falseState);
+        terminateState(*falseState);
       }
-      if (!isValidFork) {
+
+      if (isTrueStateValid && !isFalseStateValid) {
         return StatePair(trueState, 0);
+      }
+      if (!isTrueStateValid && isFalseStateValid) {
+        /* the originating depended state must be terminated... */
+        terminateDependedState(dependedState);
+        return StatePair(0, falseState);
+      }
+      if (!isTrueStateValid && !isFalseStateValid) {
+        /* TODO: check... */
+        assert(false);
       }
     }
 
+    /* TODO: handle termination of recovery states... */
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
       terminateStateEarly(*trueState, "max-depth exceeded.");
@@ -1507,9 +1530,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
   if (state.isRecoveryState() && state.getExitInst() == i) {
-    klee_message("%p: recovery state reached exit instruction", state);
-    notifyDependedState(state);
-    terminateState(state);
+    onRecoveryStateExit(state);
     return;
   }
 
@@ -2545,17 +2566,19 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
-    searcher->update(current, addedStates, removedStates);
     /* handle suspended states */
     for (std::vector<ExecutionState *>::iterator i = suspendedStates.begin(); i != suspendedStates.end(); i++) {
       searcher->removeState(*i);
     }
     suspendedStates.clear();
+
     /* handle resumed states */
     for (std::vector<ExecutionState *>::iterator i = resumedStates.begin(); i != resumedStates.end(); i++) {
       searcher->addState(*i);
     }
     resumedStates.clear();
+
+    searcher->update(current, addedStates, removedStates);
   }
   
   states.insert(addedStates.begin(), addedStates.end());
@@ -2991,6 +3014,9 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
     
+  if (state.isRecoveryState()) {
+    terminateDependedState(state.getDependedState());
+  }
   terminateState(state);
 
   if (shouldExitOn(termReason))
@@ -3278,6 +3304,11 @@ void Executor::executeFree(ExecutionState &state,
                               getAddressInfo(*it->second, address));
       } else {
         it->second->addressSpace.unbindObject(mo);
+        if (it->second->isRecoveryState()) {
+            ExecutionState *dependedState = it->second->getDependedState();
+            dependedState->addressSpace.unbindObject(mo);
+            klee_message("%p: freeing address %llx", dependedState, mo->address);
+        }
         if (target)
           bindLocal(target, *it->second, Expr::createPointer(0));
       }
@@ -3877,7 +3908,7 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
 
 RecoveryInfo *Executor::getRecoveryInfo(ExecutionState &state, KInstruction *kinst) {
   Instruction *loadInst = kinst->inst;
-  errs() << "LOAD: "; loadInst->print(errs()); errs() << "\n";
+  errs() << "blocking load: "; loadInst->print(errs()); errs() << "\n";
 
   RecoveryInfo *recoveryInfo = new RecoveryInfo();
   recoveryInfo->loadInst = loadInst;
@@ -3970,6 +4001,22 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
   state.getAllocationRecord().dump();
 }
 
+void Executor::onRecoveryStateExit(ExecutionState &state) {
+  klee_message("%p: recovery state reached exit instruction", state);
+
+  /* merge constraints */
+  ExecutionState *dependedState = state.getDependedState();
+  klee_message("onRecoveryStateExit: depended state = %p", dependedState);
+  for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
+    ref<Expr> e = *i;
+    dependedState->addConstraint(e);
+  }
+  dumpConstrains(*dependedState);
+
+  notifyDependedState(state);
+  terminateState(state);
+}
+
 void Executor::notifyDependedState(ExecutionState &recoveryState) {
   ExecutionState *dependedState = recoveryState.getDependedState();
   klee_message("\t%p: notifying depended state: %p", recoveryState, dependedState);
@@ -4052,22 +4099,20 @@ void Executor::onObjectStateRead(ExecutionState &state, ref<Expr> address, const
 }
 
 void Executor::dumpConstrains(ExecutionState &state) {
-    klee_message("%p constraints:", state);
+    klee_message("%p: constraints", state);
     for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
         ref<Expr> e = *i;
-        e->dump();
+        errs() << "  -- "; e->dump();
     }
-    klee_message("%p symbolics:", state);
-    for (unsigned int i = 0; i < state.symbolics.size(); i++) {
-        const MemoryObject *mo = state.symbolics[i].first;
-        const Array *array = state.symbolics[i].second;
-        klee_message("mo: %p, array: %p", mo, array);
-    }
-    klee_message("%p array names:", state);
-    for (std::set<std::string>::iterator i = state.arrayNames.begin(); i != state.arrayNames.end(); i++) {
-        std::string name = *i;
-        klee_message("%s", name.data());
-    }
+    //for (unsigned int i = 0; i < state.symbolics.size(); i++) {
+    //    const MemoryObject *mo = state.symbolics[i].first;
+    //    const Array *array = state.symbolics[i].second;
+    //    klee_message("mo: %p, array: %p", mo, array);
+    //}
+    //for (std::set<std::string>::iterator i = state.arrayNames.begin(); i != state.arrayNames.end(); i++) {
+    //    std::string name = *i;
+    //    klee_message("%s", name.data());
+    //}
 }
 
 bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryState) {
@@ -4135,4 +4180,10 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
     }
 
     return false;
+}
+
+void Executor::terminateDependedState(ExecutionState *dependedState) {
+    /* TODO: fix this hack... */
+    resumedStates.push_back(dependedState);
+    terminateState(*dependedState);
 }
