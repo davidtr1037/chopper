@@ -1005,6 +1005,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     if (trueState->isRecoveryState()) {
       ExecutionState *dependedState = trueState->getDependedState();
+      ExecutionState *forkedDependedState = NULL;
 
       /* check consistency of true state with the depended state */
       klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", trueState, dependedState);
@@ -1021,7 +1022,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       bool isFalseStateValid = false;
       if (checkConsistency(*dependedState, *falseState)) {
         /* forked state is consistent with it's originator */
-        ExecutionState *forkedDependedState = new ExecutionState(*dependedState);
+        forkedDependedState = new ExecutionState(*dependedState);
         assert(forkedDependedState->isSuspended());
         klee_message("forked depended state: %p", forkedDependedState);
 
@@ -1033,10 +1034,19 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         forkedDependedState->ptreeNode = res.first;
         dependedState->ptreeNode = res.second;
 
+        addConstraint(*forkedDependedState, Expr::createIsZero(condition));
         isFalseStateValid = true;
       } else {
         klee_message("terminating inconsistent forked recovery state (false state): %p", falseState);
         terminateState(*falseState);
+      }
+
+      /* copy constraints if required */
+      if (isTrueStateValid) {
+        addConstraint(*dependedState, condition);
+      }
+      if (isFalseStateValid) {
+        addConstraint(*forkedDependedState, Expr::createIsZero(condition));
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
@@ -1048,7 +1058,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         return StatePair(0, falseState);
       }
       if (!isTrueStateValid && !isFalseStateValid) {
-        /* TODO: check... */
+        /* TODO: is it possible? */
         assert(false);
       }
     }
@@ -4044,13 +4054,8 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
 void Executor::onRecoveryStateExit(ExecutionState &state) {
   klee_message("%p: recovery state reached exit instruction", state);
 
-  /* merge constraints */
+  /* debug... */
   ExecutionState *dependedState = state.getDependedState();
-  klee_message("onRecoveryStateExit: depended state = %p", dependedState);
-  for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
-    ref<Expr> e = *i;
-    dependedState->addConstraint(e);
-  }
   dumpConstrains(*dependedState);
 
   notifyDependedState(state);
