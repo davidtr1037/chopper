@@ -107,12 +107,15 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     fnAliases(state.fnAliases),
 
     type(state.type),
+
     /* state properties */
     suspendStatus(state.suspendStatus),
     snapshot(state.snapshot),
     recoveryState(state.recoveryState),
+    blockingLoadStatus(state.blockingLoadStatus),
     resolvedLoads(state.resolvedLoads),
     allocationRecord(state.allocationRecord),
+
     /* recovery state properties */
     exitInst(state.exitInst),
     dependedState(state.dependedState),
