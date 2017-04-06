@@ -442,7 +442,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   kleeMergeFn = module->getFunction("klee_merge");
 
-  ra->analyze();
+  ra->run();
   PassManager passManager;
   passManager.add(aa);
   passManager.run(*module);
