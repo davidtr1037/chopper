@@ -2566,6 +2566,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
+    if (!removedStates.empty()) {
+        /* we don't want to pass suspended states to the searcher */
+        std::vector<ExecutionState *> filteredStates;
+        for (std::vector<ExecutionState *>::iterator i = removedStates.begin(); i != removedStates.end(); i++) {
+            ExecutionState *removedState = *i;
+            if (removedState->isNormalState() && removedState->isSuspended()) {
+                continue;
+            }
+            filteredStates.push_back(removedState);
+        }
+        searcher->update(current, addedStates, filteredStates);
+    } else {
+        searcher->update(current, addedStates, removedStates);
+    }
+
     /* handle suspended states */
     for (std::vector<ExecutionState *>::iterator i = suspendedStates.begin(); i != suspendedStates.end(); i++) {
       searcher->removeState(*i);
@@ -2577,8 +2592,6 @@ void Executor::updateStates(ExecutionState *current) {
       searcher->addState(*i);
     }
     resumedStates.clear();
-
-    searcher->update(current, addedStates, removedStates);
   }
   
   states.insert(addedStates.begin(), addedStates.end());
@@ -4183,7 +4196,5 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
 }
 
 void Executor::terminateDependedState(ExecutionState *dependedState) {
-    /* TODO: fix this hack... */
-    resumedStates.push_back(dependedState);
     terminateState(*dependedState);
 }
