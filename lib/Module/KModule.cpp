@@ -331,7 +331,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     delete f;
   }
 
-  ra->analyze();
+  ra->run();
   PassManager passManager;
   passManager.add(aa);
   passManager.run(*module);
