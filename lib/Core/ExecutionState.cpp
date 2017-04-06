@@ -115,6 +115,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     blockingLoadStatus(state.blockingLoadStatus),
     resolvedLoads(state.resolvedLoads),
     allocationRecord(state.allocationRecord),
+    accumulatingConstraints(state.accumulatingConstraints),
 
     /* recovery state properties */
     exitInst(state.exitInst),
