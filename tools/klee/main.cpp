@@ -70,6 +70,11 @@ namespace {
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
   cl::opt<std::string>
+  SlicedFunction("slice",
+               cl::desc("The name of the sliced function"),
+               cl::init(""));
+
+  cl::opt<std::string>
   EntryPoint("entry-point",
                cl::desc("Consider the function with the given name as the entrypoint"),
                cl::init("main"));
@@ -1259,6 +1264,10 @@ int main(int argc, char **argv, char **envp) {
     klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
+  if (!mainModule->getFunction(SlicedFunction)) {
+    klee_error("sliced function '%s' not found in module.", SlicedFunction.c_str());
+  }
+
   // FIXME: Change me to std types.
   int pArgc;
   char **pArgv;
@@ -1306,6 +1315,7 @@ int main(int argc, char **argv, char **envp) {
 
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
+  IOpts.slicedFunction = SlicedFunction;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
     theInterpreter = Interpreter::create(ctx, IOpts, handler);

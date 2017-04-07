@@ -78,9 +78,11 @@ public:
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
+    std::string slicedFunction;
 
-    InterpreterOptions()
-      : MakeConcreteSymbolic(false)
+    InterpreterOptions() : 
+      MakeConcreteSymbolic(false),
+      slicedFunction()
     {}
   };
 

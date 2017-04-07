@@ -337,8 +337,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   passManager.run(*module);
   mra->run();
   annotator->annotate();
-  /* TODO: fix... */
-  cloner->clone("f");
+  cloner->run();
   sliceGenerator->generate();
  
   /* Build shadow structures */
