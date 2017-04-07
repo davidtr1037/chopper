@@ -364,7 +364,8 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
       coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
-      debugInstFile(0), debugLogBuffer(debugBufferString) {
+      debugInstFile(0), debugLogBuffer(debugBufferString),
+      slicedFunction(0) {
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
@@ -434,10 +435,11 @@ const Module *Executor::setModule(llvm::Module *module,
   ra = new ReachabilityAnalysis(module);
   aa = new AAPass();
   aa->setPAType(PointerAnalysis::AndersenWaveDiff_WPA);
-  mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", "f");
+  /* TODO: fix hard coded entry point... */
+  mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", interpreterOpts.slicedFunction);
   annotator = new Annotator(kmodule->module, mra);
   cloner = new Cloner(module, ra, mra);
-  sliceGenerator = new SliceGenerator(module, aa, mra, cloner, "f");
+  sliceGenerator = new SliceGenerator(module, aa, mra, cloner);
   kmodule->prepare(opts, interpreterHandler, ra, aa, mra, annotator, cloner, sliceGenerator);
   
   specialFunctionHandler->bind();
@@ -448,6 +450,9 @@ const Module *Executor::setModule(llvm::Module *module,
                        interpreterHandler->getOutputFilename("assembly.ll"),
                        userSearcherRequiresMD2U());
   }
+
+  /* TODO: will be extended... */
+  slicedFunction = kmodule->module->getFunction(interpreterOpts.slicedFunction);
   
   return module;
 }
@@ -1412,7 +1417,7 @@ void Executor::executeCall(ExecutionState &state,
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
-    if (state.isNormalState() && f->getName().equals(StringRef("f"))) {
+    if (state.isNormalState() && f == slicedFunction) {
       /* skip function call */
       klee_message("skipping function call to %s", f->getName().data());
 
@@ -2727,10 +2732,6 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
-    if (es->isNormalState() && es->getRecoveryState() != 0) {
-      /* TODO: check what is happening here! */
-      //es->getRecoveryState()->getDependedStates().erase(es);
-    }
     delete es;
   }
   removedStates.clear();
@@ -3942,7 +3943,6 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   ref<Expr> addressExpr = eval(ki, 0, state).value;
   if (!isa<ConstantExpr>(addressExpr)) {
     addressExpr = state.constraints.simplifyExpr(addressExpr);
-    /* TODO: check if address is already constant */
     addressExpr = toConstant(state, addressExpr, "resolveOne failure");
   }
 
