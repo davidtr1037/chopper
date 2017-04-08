@@ -1765,7 +1765,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Function *f = getTargetFunction(fp, state);
 
     /* skip slicing annotations */
-    if (f->getName().startswith(StringRef("__crit"))) {
+    if (f && f->getName().startswith(StringRef("__crit"))) {
         break;
     }
 
@@ -3907,6 +3907,7 @@ Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opt
 }
 
 bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
+  klee_message("checking load...");
   ModRefAnalysis::LoadToStoreMap::iterator entry = mra->loadToStoreMap.find(ki->inst);
   if (entry == mra->loadToStoreMap.end()) {
     return false; 
@@ -3981,7 +3982,6 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
   Expr::Width width = getWidthForLLVMType(kinst->inst->getType());
   recoveryInfo->loadSize = Expr::getMinBytesForWidth(width);
 
-  /* get slice id */
   const MemoryObject *mo = op.first;
   ref<Expr> offsetExpr = mo->getOffsetExpr(address);
   offsetExpr = toConstant(state, offsetExpr, "...");
@@ -3991,7 +3991,12 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
   /* translate value... */
   const Value *translatedValue = cloner->translateValue((Value *)(mo->allocSite));
   uint64_t offset = ce->getZExtValue();
-  std::pair<const Value *, uint64_t> allocSite = std::make_pair(translatedValue, offset);
+
+  /* get the precise allocation site */
+  ModRefAnalysis::AllocSite preciseAllocSite = std::make_pair(translatedValue, offset);
+  /* get the allocation site computed by static analysis */
+  ModRefAnalysis::AllocSite allocSite = mra->getApproximateAllocSite(kinst->inst, preciseAllocSite);
+  /* get the corresponding slice id */
   ModRefAnalysis::AllocSiteToIdMap::iterator entry = mra->allocSiteToIdMap.find(allocSite);
   if (entry == mra->allocSiteToIdMap.end()) {
     /* TODO: this should not happen... */
