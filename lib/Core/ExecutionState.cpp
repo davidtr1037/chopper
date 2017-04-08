@@ -72,6 +72,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     suspendStatus(false),
     snapshot(0),
     recoveryState(0),
+    blockingLoadStatus(true),
 
     exitInst(0),
     dependedState(0),
