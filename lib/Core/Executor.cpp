@@ -439,7 +439,7 @@ const Module *Executor::setModule(llvm::Module *module,
   mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", interpreterOpts.slicedFunction);
   annotator = new Annotator(kmodule->module, mra);
   cloner = new Cloner(module, ra, mra);
-  sliceGenerator = new SliceGenerator(module, aa, mra, cloner);
+  sliceGenerator = new SliceGenerator(module, aa, mra, annotator, cloner);
   kmodule->prepare(opts, interpreterHandler, ra, aa, mra, annotator, cloner, sliceGenerator);
   
   specialFunctionHandler->bind();
