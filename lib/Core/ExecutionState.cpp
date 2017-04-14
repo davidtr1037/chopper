@@ -121,6 +121,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     resolvedLoads(state.resolvedLoads),
     allocationRecord(state.allocationRecord),
     accumulatingConstraints(state.accumulatingConstraints),
+    writtenAddresses(state.writtenAddresses),
 
     /* recovery state properties */
     exitInst(state.exitInst),

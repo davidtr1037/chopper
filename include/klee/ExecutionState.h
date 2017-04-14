@@ -116,6 +116,9 @@ private:
   AllocationRecord allocationRecord;
   /* used for guiding multiple recovery states */
   std::vector<ref<Expr>> accumulatingConstraints;
+  /* we need to know if an address was written  */
+  typedef std::map<uint64_t, std::set<size_t> > WrittenAddresses;
+  WrittenAddresses writtenAddresses;
 
   /* recovery state properties */
 
@@ -362,6 +365,36 @@ public:
 
   void addAccumulatingConstraint(ref<Expr> condition) {
     accumulatingConstraints.push_back(condition);
+  }
+
+  void addWrittenAddress(uint64_t address, size_t size) {
+    assert(isNormalState());
+    writtenAddresses[address].insert(size);
+  }
+
+  bool isAddressWritten(uint64_t address, size_t size) {
+    assert(isNormalState());
+    WrittenAddresses::iterator i = writtenAddresses.find(address);
+    if (i == writtenAddresses.end()) {
+      return false;
+    }
+
+    std::set<size_t> &writtenSizes = i->second;
+    if (writtenSizes.size() != 1) {
+      /* TODO: something is wrong.... */
+      assert(false);
+    }
+
+    size_t writtenSize = *(writtenSizes.begin());
+    if (writtenSize != size) {
+      /* TODO: handle... */
+      assert(false);
+    }
+
+    /* cleanup... */
+    writtenAddresses.erase(i);
+
+    return true;
   }
 
 };

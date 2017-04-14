@@ -457,8 +457,28 @@ private:
   void notifyDependedState(ExecutionState &recoveryState);
   void onRecoveryStateExit(ExecutionState &state);
   void startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo);
-  void onObjectStateWrite(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value);
-  void onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width);
+  void onRecoveryStateWrite(
+    ExecutionState &state,
+    ref<Expr> address,
+    const MemoryObject *mo,
+    ref<Expr> offset,
+    ref<Expr> value
+  );
+  void onNormalStateWrite(
+    ExecutionState &state,
+    ref<Expr> address,
+    const MemoryObject *mo,
+    ref<Expr> offset,
+    ref<Expr> value
+  );
+  bool isOverridingStore(KInstruction *kinst);
+  void onObjectStateRead(
+    ExecutionState &state,
+    ref<Expr> address,
+    const MemoryObject *mo,
+    ref<Expr> offset,
+    Expr::Width width
+  );
   void dumpConstrains(ExecutionState &state);
   bool checkConsistency(ExecutionState &state, ExecutionState &recoveryState);
   MemoryObject *onAllocate(ExecutionState &state, uint64_t size, bool isLocal, llvm::Instruction *allocInst, bool zeroMemory);
