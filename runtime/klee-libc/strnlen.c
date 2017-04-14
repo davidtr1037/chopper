@@ -1,4 +1,4 @@
-/*===-- memset.c ----------------------------------------------------------===//
+/*===-- strnlen.c ----------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,11 +7,15 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <stdlib.h>
+#include <string.h>
 
-void *memset(void * dst, int s, size_t count) {
-    char *a = dst;
-    while (count-- > 0)
-      *a++ = s;
-    return dst;
+size_t strnlen(const char *str, size_t max) {
+    const char *p = str;
+
+    while (max && *p) {
+        ++p;
+        --max;
+    }
+
+    return p - str;
 }
