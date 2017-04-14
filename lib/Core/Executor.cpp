@@ -3426,7 +3426,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
           if (state.isRecoveryState()) {
-            onObjectStateWrite(state, address, mo, offset, value);
+            onRecoveryStateWrite(state, address, mo, offset, value);
+          }
+          if (state.isNormalState()) {
+            onNormalStateWrite(state, address, mo, offset, value);
           }
         }          
       } else {
@@ -3920,10 +3923,21 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
     addressExpr = toConstant(state, addressExpr, "resolveOne failure");
   }
 
-  ConstantExpr *ce = dyn_cast<ConstantExpr>(addressExpr);
-  uint64_t address = ce->getZExtValue();
+  uint64_t address = dyn_cast<ConstantExpr>(addressExpr)->getZExtValue();
+  Expr::Width width = getWidthForLLVMType(ki->inst->getType());
+  size_t size = Expr::getMinBytesForWidth(width);
+
+  /* check if already resolved */
   if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
     klee_message("%p: load from %#llx is already resolved", state, address);
+    return false;
+  }
+
+  /* check if someone has written to this location */
+  if (state.isAddressWritten(address, size)) {
+    /* TODO: hack... */
+    state.markLoadAsUnresolved();
+    klee_message("location (%llx, %u) was written, recovery is not required", address, size);
     return false;
   }
 
@@ -4082,7 +4096,13 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   addedStates.push_back(recoveryState);
 }
 
-void Executor::onObjectStateWrite(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, ref<Expr> value) {
+void Executor::onRecoveryStateWrite(
+  ExecutionState &state,
+  ref<Expr> address,
+  const MemoryObject *mo,
+  ref<Expr> offset,
+  ref<Expr> value
+) {
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
   assert(isa<ConstantExpr>(value));
@@ -4106,7 +4126,49 @@ void Executor::onObjectStateWrite(ExecutionState &state, ref<Expr> address, cons
   klee_message("copying from %p to %p", state, dependedState);
 }
 
-void Executor::onObjectStateRead(ExecutionState &state, ref<Expr> address, const MemoryObject *mo, ref<Expr> offset, Expr::Width width) {
+void Executor::onNormalStateWrite(
+  ExecutionState &state,
+  ref<Expr> address,
+  const MemoryObject *mo,
+  ref<Expr> offset,
+  ref<Expr> value
+) {
+  assert(isa<ConstantExpr>(address));
+  assert(isa<ConstantExpr>(offset));
+  assert(isa<ConstantExpr>(value));
+  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
+
+  /* TODO: wirte a better predicate */
+  if (state.getSnapshot() == 0) {
+    return;
+  }
+
+  if (!isOverridingStore(state.prevPC)) {
+    return;
+  }
+
+  uint64_t concreteAddress = dyn_cast<ConstantExpr>(address)->getZExtValue();
+  size_t sizeInBytes = value->getWidth() / 8;
+  assert(sizeInBytes * 8 == value->getWidth());
+
+  /* TODO: don't add if already resolved */
+  state.addWrittenAddress(concreteAddress, sizeInBytes);
+  klee_message("adding written address: (%llx, %u)", concreteAddress, sizeInBytes);
+}
+
+/* checking if a store may override a sliced function stores ... */
+bool Executor::isOverridingStore(KInstruction *kinst) {
+  assert(kinst->inst->getOpcode() == Instruction::Store);
+  return true;
+}
+
+void Executor::onObjectStateRead(
+  ExecutionState &state,
+  ref<Expr> address,
+  const MemoryObject *mo,
+  ref<Expr> offset,
+  Expr::Width width
+) {
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
 
@@ -4127,15 +4189,6 @@ void Executor::dumpConstrains(ExecutionState &state) {
         ref<Expr> e = *i;
         errs() << "  -- "; e->dump();
     }
-    //for (unsigned int i = 0; i < state.symbolics.size(); i++) {
-    //    const MemoryObject *mo = state.symbolics[i].first;
-    //    const Array *array = state.symbolics[i].second;
-    //    klee_message("mo: %p, array: %p", mo, array);
-    //}
-    //for (std::set<std::string>::iterator i = state.arrayNames.begin(); i != state.arrayNames.end(); i++) {
-    //    std::string name = *i;
-    //    klee_message("%s", name.data());
-    //}
 }
 
 bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryState) {
