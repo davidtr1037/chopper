@@ -119,6 +119,8 @@ private:
   /* we need to know if an address was written  */
   typedef std::map<uint64_t, std::set<size_t> > WrittenAddresses;
   WrittenAddresses writtenAddresses;
+  /* TODO: will be removed later... */
+  unsigned int skippedCount;
 
   /* recovery state properties */
 
@@ -395,6 +397,16 @@ public:
     writtenAddresses.erase(i);
 
     return true;
+  }
+
+  unsigned int getSkippedCount() {
+    assert(isNormalState());
+    return skippedCount;
+  }
+
+  void incSkippedCount() {
+    assert(isNormalState());
+    skippedCount++;
   }
 
 };
