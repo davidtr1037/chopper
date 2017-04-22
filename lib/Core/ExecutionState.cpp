@@ -69,11 +69,14 @@ StackFrame::~StackFrame() {
 ExecutionState::ExecutionState(KFunction *kf) :
     type(NORMAL_STATE),
 
+    /* state properties */
     suspendStatus(false),
     snapshot(0),
     recoveryState(0),
     blockingLoadStatus(true),
+    skippedCount(0),
 
+    /* recovery state properties */
     exitInst(0),
     dependedState(0),
     recoveryInfo(0),
@@ -122,6 +125,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     allocationRecord(state.allocationRecord),
     accumulatingConstraints(state.accumulatingConstraints),
     writtenAddresses(state.writtenAddresses),
+    skippedCount(state.skippedCount),
 
     /* recovery state properties */
     exitInst(state.exitInst),
