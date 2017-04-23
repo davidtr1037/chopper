@@ -19,6 +19,8 @@ public:
 
     AllocationRecord(const AllocationRecord &other);
 
+    AllocationRecord &operator=(const AllocationRecord &other);
+
     ~AllocationRecord();
 
     void addAddr(ASContext &context, MemoryObject *mo);
@@ -32,6 +34,10 @@ public:
 private:
     typedef std::pair<ASContext *, std::list<MemoryObject *> > Entry;
     typedef std::vector<Entry> Record;
+
+    void incRefCount();
+
+    void decRefCount();
 
     Entry *find(ASContext &context);
 
