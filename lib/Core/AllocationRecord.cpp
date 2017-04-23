@@ -1,23 +1,52 @@
-#include "klee/AllocationRecord.h"
+#include "Memory.h"
 #include "klee/ASContext.h"
+#include "klee/AllocationRecord.h"
 
 #include <map>
-#include <queue>
+#include <list>
 
 using namespace llvm;
-using namespace klee;
+
+namespace klee {
+
+class MemoryObject;
+
+AllocationRecord::AllocationRecord(const AllocationRecord &other) {
+    for (Record::iterator i = record.begin(); i != record.end(); i++) {
+        Entry &entry = *i;
+        std::list<MemoryObject *> &memoryObjects = entry.second;
+        for (std::list<MemoryObject *>::iterator j = memoryObjects.begin(); j != memoryObjects.end(); j++) {
+            MemoryObject *mo = *j;
+            mo->refCount++;
+        }
+    }
+}
+
+/* TODO: may have some problems with the destructor of ExecutionState (refCount) */
+AllocationRecord::~AllocationRecord() {
+    for (Record::iterator i = record.begin(); i != record.end(); i++) {
+        Entry &entry = *i;
+        std::list<MemoryObject *> &memoryObjects = entry.second;
+        for (std::list<MemoryObject *>::iterator j = memoryObjects.begin(); j != memoryObjects.end(); j++) {
+            MemoryObject *mo = *j;
+            mo->refCount--;
+        }
+    }
+}
 
 void AllocationRecord::addAddr(ASContext &context, MemoryObject *mo) {
     Entry *entry = find(context);
     if (!entry) {
         ASContext *c = new ASContext(context);
-        std::queue<MemoryObject *> q;
-        q.push(mo);
+        std::list<MemoryObject *> q;
+        q.push_back(mo);
         record.push_back(std::make_pair(c, q));
     } else {
-        std::queue<MemoryObject *> &q = entry->second;
-        q.push(mo);
+        std::list<MemoryObject *> &q = entry->second;
+        q.push_back(mo);
     }
+
+    mo->refCount++;
 }
 
 MemoryObject *AllocationRecord::getAddr(ASContext &context) {
@@ -26,13 +55,15 @@ MemoryObject *AllocationRecord::getAddr(ASContext &context) {
         assert(false);
     }
     
-    std::queue<MemoryObject *> &q = entry->second;
+    std::list<MemoryObject *> &q = entry->second;
     if (q.empty()) {
         assert(false);
     }
 
     MemoryObject *mo = q.front();
-    q.pop();
+    q.pop_front();
+
+    mo->refCount--;
 
     return mo;
 }
@@ -60,4 +91,6 @@ void AllocationRecord::dump() {
         c->dump();
         errs() << "size: " << entry.second.size() << "\n";
     }
+}
+
 }
