@@ -11,7 +11,26 @@ namespace klee {
 
 class MemoryObject;
 
-AllocationRecord::AllocationRecord(const AllocationRecord &other) {
+AllocationRecord::AllocationRecord(const AllocationRecord &other) :
+    record(other.record)
+{
+    incRefCount();
+}
+
+AllocationRecord &AllocationRecord::operator=(const AllocationRecord &other) {
+    if (this != &other) {
+        record = other.record;
+        incRefCount();
+    }
+    return *this;
+}
+
+/* TODO: may have some problems with the destructor of ExecutionState (refCount) */
+AllocationRecord::~AllocationRecord() {
+    decRefCount();
+}
+
+void AllocationRecord::incRefCount() {
     for (Record::iterator i = record.begin(); i != record.end(); i++) {
         Entry &entry = *i;
         std::list<MemoryObject *> &memoryObjects = entry.second;
@@ -22,14 +41,17 @@ AllocationRecord::AllocationRecord(const AllocationRecord &other) {
     }
 }
 
-/* TODO: may have some problems with the destructor of ExecutionState (refCount) */
-AllocationRecord::~AllocationRecord() {
+void AllocationRecord::decRefCount() {
     for (Record::iterator i = record.begin(); i != record.end(); i++) {
         Entry &entry = *i;
         std::list<MemoryObject *> &memoryObjects = entry.second;
         for (std::list<MemoryObject *>::iterator j = memoryObjects.begin(); j != memoryObjects.end(); j++) {
             MemoryObject *mo = *j;
+            assert(mo->refCount > 0);
             mo->refCount--;
+            if (mo->refCount == 0) {
+                delete mo;
+            }
         }
     }
 }
@@ -63,6 +85,7 @@ MemoryObject *AllocationRecord::getAddr(ASContext &context) {
     MemoryObject *mo = q.front();
     q.pop_front();
 
+    /* TODO: check reference count... */
     mo->refCount--;
 
     return mo;
