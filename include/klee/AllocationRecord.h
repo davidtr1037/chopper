@@ -17,6 +17,10 @@ public:
 
     }
 
+    AllocationRecord(const AllocationRecord &other);
+
+    ~AllocationRecord();
+
     void addAddr(ASContext &context, MemoryObject *mo);
     
     MemoryObject *getAddr(ASContext &context);
@@ -26,7 +30,7 @@ public:
     void dump();
 
 private:
-    typedef std::pair<ASContext *, std::queue<MemoryObject *> > Entry;
+    typedef std::pair<ASContext *, std::list<MemoryObject *> > Entry;
     typedef std::vector<Entry> Record;
 
     Entry *find(ASContext &context);
