@@ -339,7 +339,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   annotator->annotate();
   cloner->run();
   sliceGenerator->generate();
- 
+  sliceGenerator->dumpSlices();
+
   /* Build shadow structures */
 
   infos = new InstructionInfoTable(module, cloner);  
