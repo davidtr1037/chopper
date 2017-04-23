@@ -33,6 +33,7 @@ class MemoryObject {
   friend class STPBuilder;
   friend class ObjectState;
   friend class ExecutionState;
+  friend class AllocationRecord;
 
 private:
   static int counter;
