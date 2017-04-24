@@ -472,7 +472,7 @@ private:
     ref<Expr> value
   );
   bool isOverridingStore(KInstruction *kinst);
-  void onObjectStateRead(
+  void onNormalStateRead(
     ExecutionState &state,
     ref<Expr> address,
     const MemoryObject *mo,
