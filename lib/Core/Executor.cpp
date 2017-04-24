@@ -434,7 +434,7 @@ const Module *Executor::setModule(llvm::Module *module,
   specialFunctionHandler->prepare();
   ra = new ReachabilityAnalysis(module);
   aa = new AAPass();
-  aa->setPAType(PointerAnalysis::AndersenWaveDiff_WPA);
+  aa->setPAType(PointerAnalysis::Andersen_WPA);
   /* TODO: fix hard coded entry point... */
   mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", interpreterOpts.slicedFunction);
   annotator = new Annotator(kmodule->module, mra);
