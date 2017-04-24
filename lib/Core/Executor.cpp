@@ -1039,7 +1039,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         forkedDependedState->ptreeNode = res.first;
         dependedState->ptreeNode = res.second;
 
-        addConstraint(*forkedDependedState, Expr::createIsZero(condition));
         isFalseStateValid = true;
       } else {
         klee_message("terminating inconsistent forked recovery state (false state): %p", falseState);
