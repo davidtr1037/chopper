@@ -3434,7 +3434,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       } else {
         ref<Expr> result = os->read(offset, type);
         if (state.isNormalState()) {
-          onObjectStateRead(state, address, mo, offset, type);
+          onNormalStateRead(state, address, mo, offset, type);
         }
         
         if (interpreterOpts.MakeConcreteSymbolic)
@@ -4166,25 +4166,31 @@ bool Executor::isOverridingStore(KInstruction *kinst) {
   return true;
 }
 
-void Executor::onObjectStateRead(
+void Executor::onNormalStateRead(
   ExecutionState &state,
   ref<Expr> address,
   const MemoryObject *mo,
   ref<Expr> offset,
   Expr::Width width
 ) {
+  /* TODO: wirte a better predicate */
+  if (state.getSnapshot() == 0) {
+    return;
+  }
+
+  if (state.isBlockingLoadResolved()) {
+    return;
+  }
+
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
 
   ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
   uint64_t addr = ce->getZExtValue();
-  klee_message("read in state %p: address = %#llx", state, addr);
 
-  if (!state.isBlockingLoadResolved()) {
-    /* update resolved loads */
-    state.addResolvedAddress(addr);
-    state.markLoadAsResolved();
-  }
+  /* update resolved loads */
+  state.addResolvedAddress(addr);
+  state.markLoadAsResolved();
 }
 
 void Executor::dumpConstrains(ExecutionState &state) {
