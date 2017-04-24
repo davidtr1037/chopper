@@ -4100,11 +4100,16 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   recoveryState->setType(RECOVERY_STATE); 
   recoveryState->setDependedState(&state);
   recoveryState->setExitInst(snapshot->pc->inst);
+
+  /* pass allocation record to recovery state */
   recoveryState->setGuidingAllocationRecord(state.getAllocationRecord());
+
   /* TODO: update prevPC? */
   recoveryState->pc = recoveryState->prevPC;
+
   /* set recovery information */
   recoveryState->setRecoveryInfo(recoveryInfo);
+
   /* add accumulated constraints */
   std::vector<ref<Expr>> &constraints = state.getAccumulatingConstraints();
   for (std::vector<ref<Expr>>::iterator i = constraints.begin(); i != constraints.end(); i++) {
