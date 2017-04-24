@@ -3345,7 +3345,7 @@ void Executor::executeAlloc(ExecutionState &state,
     bool success = solver->getValue(state, size, example);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
-    
+
     // Try and start with a small example.
     Expr::Width W = example->getWidth();
     while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
@@ -4134,10 +4134,10 @@ void Executor::onRecoveryStateWrite(
   ref<Expr> offset,
   ref<Expr> value
 ) {
+  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
   assert(isa<ConstantExpr>(value));
-  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
 
   klee_message("write in state %p: mo = %p, address = %llx", state, mo, mo->address);
   offset->dump();
@@ -4164,15 +4164,15 @@ void Executor::onNormalStateWrite(
   ref<Expr> offset,
   ref<Expr> value
 ) {
-  assert(isa<ConstantExpr>(address));
-  assert(isa<ConstantExpr>(offset));
-  assert(isa<ConstantExpr>(value));
-  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
-
   /* TODO: wirte a better predicate */
   if (state.getSnapshot() == 0) {
     return;
   }
+
+  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
+  assert(isa<ConstantExpr>(address));
+  assert(isa<ConstantExpr>(offset));
+  //assert(isa<ConstantExpr>(value));
 
   if (!isOverridingStore(state.prevPC)) {
     return;
