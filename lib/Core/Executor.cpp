@@ -1342,13 +1342,25 @@ void Executor::executeCall(ExecutionState &state,
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
     if (state.isNormalState() && f == slicedFunction) {
-      /* skip function call */
-      klee_message("skipping function call to %s", f->getName().data());
+      StackFrame &lastFrame = state.stack.back();
+      /* TODO: add callsite selection feature */
+      //if (lastFrame.kf->function->getName() == StringRef("_asn1_get_octet_string")) {
+      if (true) {
+        /* TODO: will be removed later... */
+        if (state.getSkippedCount() > 1) {
+            /* multiple calls are not supported yet... */
+            assert(false);
+        }
 
-      /* create snapshot, recovery state will be created on demand... */
-      ExecutionState *snapshot = new ExecutionState(state);
-      state.setSnapshot(snapshot);
-      return;
+        /* skip function call */
+        klee_message("skipping function call to %s", f->getName().data());
+        state.incSkippedCount();
+
+        /* create snapshot, recovery state will be created on demand... */
+        ExecutionState *snapshot = new ExecutionState(state);
+        state.setSnapshot(snapshot);
+        return;
+      }
     }
 
     if (state.isRecoveryState()) {
