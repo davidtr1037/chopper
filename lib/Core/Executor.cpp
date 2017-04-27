@@ -47,6 +47,7 @@
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/System/Time.h"
 #include "klee/Internal/System/MemoryUsage.h"
+#include "klee/Internal/Support/Debug.h"
 #include "klee/SolverStats.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -1013,23 +1014,32 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       ExecutionState *forkedDependedState = NULL;
 
       /* check consistency of true state with the depended state */
-      klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", trueState, dependedState);
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", trueState, dependedState)
+      );
       bool isTrueStateValid = false;
       if (checkConsistency(*dependedState, *trueState)) {
         isTrueStateValid = true;  
       } else {
-        klee_message("terminating inconsistent forked recovery state (true state): %p", trueState);
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("terminating inconsistent forked recovery state (true state): %p", trueState)
+        );
         terminateState(*trueState);
       }
 
       /* check consistency of false state with the depended state */
-      klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState);
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState)
+      );
       bool isFalseStateValid = false;
       if (checkConsistency(*dependedState, *falseState)) {
         /* forked state is consistent with it's originator */
         forkedDependedState = new ExecutionState(*dependedState);
         assert(forkedDependedState->isSuspended());
-        klee_message("forked depended state: %p", forkedDependedState);
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("forked depended state: %p", forkedDependedState));
 
         forkedDependedState->setRecoveryState(falseState);
         falseState->setDependedState(forkedDependedState);
@@ -1041,7 +1051,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
         isFalseStateValid = true;
       } else {
-        klee_message("terminating inconsistent forked recovery state (false state): %p", falseState);
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("terminating inconsistent forked recovery state (false state): %p", falseState)
+        );
         terminateState(*falseState);
       }
 
@@ -1428,7 +1441,7 @@ void Executor::executeCall(ExecutionState &state,
         }
 
         /* skip function call */
-        klee_message("skipping function call to %s", f->getName().data());
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("skipping function call to %s", f->getName().data()));
         state.incSkippedCount();
 
         /* create snapshot, recovery state will be created on demand... */
@@ -3446,7 +3459,7 @@ void Executor::executeFree(ExecutionState &state,
         if (it->second->isRecoveryState()) {
             ExecutionState *dependedState = it->second->getDependedState();
             dependedState->addressSpace.unbindObject(mo);
-            klee_message("%p: freeing address %llx", dependedState, mo->address);
+            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %llx", dependedState, mo->address));
         }
         if (target)
           bindLocal(target, *it->second, Expr::createPointer(0));
@@ -3948,7 +3961,7 @@ Interpreter *Interpreter::create(const InterpreterOptions &opts,
 }
 
 bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
-  klee_message("checking load...");
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("checking load..."));
   ModRefAnalysis::LoadToStoreMap::iterator entry = mra->loadToStoreMap.find(ki->inst);
   if (entry == mra->loadToStoreMap.end()) {
     return false; 
@@ -3967,7 +3980,7 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
 
   /* check if already resolved */
   if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
-    klee_message("%p: load from %#llx is already resolved", state, address);
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#llx is already resolved", state, address));
     return false;
   }
 
@@ -3975,7 +3988,10 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   if (state.isAddressWritten(address, size)) {
     /* TODO: hack... */
     state.markLoadAsUnresolved();
-    klee_message("location (%llx, %u) was written, recovery is not required", address, size);
+    DEBUG_WITH_TYPE(
+      DEBUG_BASIC,
+      klee_message("location (%llx, %u) was written, recovery is not required", address, size);
+    );
     return false;
   }
 
@@ -3984,15 +4000,22 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
 
 RecoveryInfo *Executor::getRecoveryInfo(ExecutionState &state, KInstruction *kinst) {
   Instruction *loadInst = kinst->inst;
-  errs() << "blocking load: "; loadInst->print(errs()); errs() << "\n";
+
+  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "blocking load: "; loadInst->print(errs()); errs() << "\n");
+  DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
   RecoveryInfo *recoveryInfo = new RecoveryInfo();
   recoveryInfo->loadInst = loadInst;
   getLoadAddrInfo(state, kinst, recoveryInfo);
 
-  klee_message(
-    "recovery info: addr = %#llx, size = %llx, slice id = %d",
-    recoveryInfo->loadAddr, recoveryInfo->loadSize, recoveryInfo->sliceId
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message(
+      "recovery info: addr = %#llx, size = %llx, slice id = %d",
+      recoveryInfo->loadAddr,
+      recoveryInfo->loadSize,
+      recoveryInfo->sliceId
+    )
   );
 
   return recoveryInfo;
@@ -4021,7 +4044,7 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
 
   /* retreive allocation site */
   if (!success) {
-    klee_message("Unable to resolve address...");
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Unable to resolve address..."));
     assert(false);
   }
 
@@ -4060,18 +4083,18 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
 }
 
 void Executor::suspendState(ExecutionState &state) {
-  klee_message("suspending: %p", state);
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("suspending: %p", state));
   state.setSuspended();
   suspendedStates.push_back(&state);
 }
 
 void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
-  klee_message("resuming: %p", state);
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("resuming: %p", state));
   state.setResumed();
   state.setRecoveryState(0);
   state.markLoadAsUnresolved();
   if (implicitlyCreated) {
-    klee_message("adding an implicitly created state: %p", state);
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding an implicitly created state: %p", state));
     addedStates.push_back(&state);
   } else {
     resumedStates.push_back(&state);
@@ -4082,7 +4105,7 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
 }
 
 void Executor::onRecoveryStateExit(ExecutionState &state) {
-  klee_message("%p: recovery state reached exit instruction", state);
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: recovery state reached exit instruction", state));
 
   /* debug... */
   ExecutionState *dependedState = state.getDependedState();
@@ -4094,7 +4117,7 @@ void Executor::onRecoveryStateExit(ExecutionState &state) {
 
 void Executor::notifyDependedState(ExecutionState &recoveryState) {
   ExecutionState *dependedState = recoveryState.getDependedState();
-  klee_message("%p: notifying depended state %p", recoveryState, dependedState);
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: notifying depended state %p", recoveryState, dependedState));
 
   if (states.find(dependedState) == states.end()) {
     resumeState(*dependedState, true);
@@ -4131,7 +4154,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   state.setRecoveryState(recoveryState);
 
   /* add state */
-  klee_message("adding recovery state: %p", recoveryState); 
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding recovery state: %p", recoveryState));
   state.ptreeNode->data = 0;
   std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
   recoveryState->ptreeNode = res.first;
@@ -4151,8 +4174,16 @@ void Executor::onRecoveryStateWrite(
   assert(isa<ConstantExpr>(offset));
   assert(isa<ConstantExpr>(value));
 
-  klee_message("write in state %p: mo = %p, address = %llx", state, mo, mo->address);
-  offset->dump();
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message(
+      "write in state %p: mo = %p, address = %llx offset = %llx",
+      state,
+      mo,
+      mo->address,
+      dyn_cast<ConstantExpr>(offset)->getZExtValue()
+    )
+  );
 
   RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
   ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
@@ -4166,7 +4197,7 @@ void Executor::onRecoveryStateWrite(
   const ObjectState *os = dependedState->addressSpace.findObject(mo);
   ObjectState *wos = dependedState->addressSpace.getWriteable(mo, os);
   wos->write(offset, value);
-  klee_message("copying from %p to %p", state, dependedState);
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("copying from %p to %p", state, dependedState));
 }
 
 void Executor::onNormalStateWrite(
@@ -4196,7 +4227,10 @@ void Executor::onNormalStateWrite(
 
   /* TODO: don't add if already resolved */
   state.addWrittenAddress(concreteAddress, sizeInBytes);
-  klee_message("adding written address: (%llx, %u)", concreteAddress, sizeInBytes);
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message("adding written address: (%llx, %u)", concreteAddress, sizeInBytes)
+  );
 }
 
 /* checking if a store may override a sliced function stores ... */
@@ -4249,7 +4283,7 @@ bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryS
         condition = AndExpr::create(condition, e);
     }
     solver->evaluate(state, condition, result);
-    klee_message("query result: %d", result);
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
 
     return result != Solver::False;
 }
@@ -4264,10 +4298,14 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
 
     ExecutionState *dependedState = state.getDependedState();
     AllocationRecord &allocationRecord = dependedState->getAllocationRecord();
+    /* TODO: the same context may appear in a loop... */
     if (allocationRecord.exists(context)) {
         /* the address should be already bound */
         mo = state.getGuidingAllocationRecord().getAddr(context);
-        klee_message("%p: reusing allocated address: %llx", state, mo->address);
+        DEBUG_WITH_TYPE(
+            DEBUG_BASIC,
+            klee_message("%p: reusing allocated address: %llx, size: %lld", state, mo->address, size)
+        );
     } else {
         mo = memory->allocate(size, isLocal, false, allocInst);
         /* bind the address to the depended state */
@@ -4278,7 +4316,11 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
         } else {
             os->initializeToRandom();
         }
-        klee_message("%p: allocating new address: %llx", state, mo->address);
+
+        DEBUG_WITH_TYPE(
+            DEBUG_BASIC,
+            klee_message("%p: allocating new address: %llx, size: %lld", state, mo->address, size)
+        );
         allocationRecord.addAddr(context, mo);
     }
 
@@ -4308,6 +4350,7 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
 }
 
 void Executor::terminateDependedState(ExecutionState *dependedState) {
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating depended state %p", dependedState));
     terminateState(*dependedState);
 }
 
