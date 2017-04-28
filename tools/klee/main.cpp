@@ -74,6 +74,11 @@ namespace {
                cl::desc("The name of the sliced function"),
                cl::init(""));
 
+  cl::opt<unsigned int>
+  CallSiteLine("line",
+               cl::desc("The line of the call site"),
+               cl::init(0));
+
   cl::opt<std::string>
   EntryPoint("entry-point",
                cl::desc("Consider the function with the given name as the entrypoint"),
@@ -1316,6 +1321,7 @@ int main(int argc, char **argv, char **envp) {
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   IOpts.slicedFunction = SlicedFunction;
+  IOpts.callSiteLine = CallSiteLine;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
     theInterpreter = Interpreter::create(ctx, IOpts, handler);

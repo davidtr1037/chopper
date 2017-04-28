@@ -79,11 +79,15 @@ public:
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
     std::string slicedFunction;
+    unsigned int callSiteLine;
 
     InterpreterOptions() : 
       MakeConcreteSymbolic(false),
-      slicedFunction()
-    {}
+      slicedFunction(),
+      callSiteLine(0)
+    {
+
+    }
   };
 
 protected:
