@@ -4368,8 +4368,13 @@ bool Executor::filterCallSite(ExecutionState &state, Function *f) {
     Instruction *callInst = state.prevPC->inst;
     const InstructionInfo &info = infoTable->getInfo(callInst);
 
-    /* TODO: add feature... */
-    if (info.line != 872) {
+    unsigned int line = interpreterOpts.callSiteLine;
+    if (line == 0) {
+        /* no specific call site... */
+        return true;
+    }
+
+    if (info.line != line) {
         return false;
     }
 
