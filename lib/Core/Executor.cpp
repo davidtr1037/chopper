@@ -1429,26 +1429,25 @@ void Executor::executeCall(ExecutionState &state,
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
-    if (state.isNormalState() && f == slicedFunction) {
-      StackFrame &lastFrame = state.stack.back();
-      /* TODO: add callsite selection feature */
-      //if (lastFrame.kf->function->getName() == StringRef("_asn1_get_octet_string")) {
-      if (true) {
-        /* TODO: will be removed later... */
-        if (state.getSkippedCount() > 1) {
-            /* multiple calls are not supported yet... */
-            assert(false);
-        }
-
-        /* skip function call */
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("skipping function call to %s", f->getName().data()));
-        state.incSkippedCount();
-
-        /* create snapshot, recovery state will be created on demand... */
-        ExecutionState *snapshot = new ExecutionState(state);
-        state.setSnapshot(snapshot);
-        return;
+    if (state.isNormalState() && filterCallSite(state, f)) {
+      /* TODO: will be removed later... */
+      if (state.getSkippedCount() > 0) {
+        /* multiple calls are not supported yet... */
+        assert(false);
+        //terminateStateOnError(state, "target function called more than once", Unhandled);
+        //return;
       }
+
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("%p: skipping function call to %s", state, f->getName().data())
+      );
+      state.incSkippedCount();
+
+      /* create snapshot, recovery state will be created on demand... */
+      ExecutionState *snapshot = new ExecutionState(state);
+      state.setSnapshot(snapshot);
+      return;
     }
 
     if (state.isRecoveryState()) {
@@ -2960,9 +2959,6 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
     //klee_message("selected state: %p", state);
     KInstruction *ki = state.pc;
-    if (state.isRecoveryState()) {
-      ki->inst->print(errs()); errs() << "\n";
-    }
     stepInstruction(state);
 
     executeInstruction(state, ki);
@@ -4358,4 +4354,21 @@ void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> conditi
     assert(dependedState.isNormalState());
     addConstraint(dependedState, condition);
     dependedState.addAccumulatingConstraint(condition);
+}
+
+bool Executor::filterCallSite(ExecutionState &state, Function *f) {
+    if (f != slicedFunction) {
+        return false;
+    }
+
+    InstructionInfoTable *infoTable = kmodule->infos;
+    Instruction *callInst = state.prevPC->inst;
+    const InstructionInfo &info = infoTable->getInfo(callInst);
+
+    /* TODO: add feature... */
+    if (info.line != 872) {
+        return false;
+    }
+
+    return true;
 }
