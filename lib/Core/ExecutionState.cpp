@@ -75,6 +75,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     recoveryState(0),
     blockingLoadStatus(true),
     skippedCount(0),
+    recoveryCount(0),
 
     /* recovery state properties */
     exitInst(0),
@@ -126,6 +127,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     accumulatingConstraints(state.accumulatingConstraints),
     writtenAddresses(state.writtenAddresses),
     skippedCount(state.skippedCount),
+    recoveryCount(state.recoveryCount),
 
     /* recovery state properties */
     exitInst(state.exitInst),
