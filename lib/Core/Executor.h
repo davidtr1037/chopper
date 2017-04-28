@@ -485,6 +485,7 @@ private:
   bool isDynamicAlloc(llvm::Instruction *allocInst);
   void terminateDependedState(ExecutionState *dependedState);
   void mergeConstraints(ExecutionState &dependedState, ref<Expr> condition);
+  bool filterCallSite(ExecutionState &state, llvm::Function *f);
 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
