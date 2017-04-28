@@ -121,6 +121,8 @@ private:
   WrittenAddresses writtenAddresses;
   /* TODO: will be removed later... */
   unsigned int skippedCount;
+  /* TODO: will be removed later... */
+  unsigned int recoveryCount;
 
   /* recovery state properties */
 
@@ -407,6 +409,16 @@ public:
   void incSkippedCount() {
     assert(isNormalState());
     skippedCount++;
+  }
+
+  unsigned int getRecoveryCount() {
+    assert(isNormalState());
+    return recoveryCount;
+  }
+
+  void incRecoveryCount() {
+    assert(isNormalState());
+    recoveryCount++;
   }
 
 };

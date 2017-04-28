@@ -4129,6 +4129,9 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   recoveryState->ptreeNode = res.first;
   state.ptreeNode = res.second;
   addedStates.push_back(recoveryState);
+
+  /* statistics */
+  state.incRecoveryCount();
 }
 
 void Executor::onRecoveryStateWrite(
