@@ -1,6 +1,8 @@
 #include "Memory.h"
 #include "klee/ASContext.h"
 #include "klee/AllocationRecord.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Support/Debug.h"
 
 #include <map>
 #include <list>
@@ -107,12 +109,15 @@ AllocationRecord::Entry *AllocationRecord::find(ASContext &context) {
 }
 
 void AllocationRecord::dump() {
-    errs() << "allocation record:\n";
-    for (Record::iterator i = record.begin(); i != record.end(); i++) {
-        Entry &entry = *i;
-        ASContext *c = entry.first;
-        c->dump();
-        errs() << "size: " << entry.second.size() << "\n";
+    if (record.empty()) {
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("allocation record is empty"));
+    } else {
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("allocation record:"));
+        for (Record::iterator i = record.begin(); i != record.end(); i++) {
+            Entry &entry = *i;
+            ASContext *c = entry.first;
+            c->dump();
+        }
     }
 }
 
