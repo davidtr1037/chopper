@@ -1,6 +1,8 @@
 #include "klee/ASContext.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Support/Debug.h"
 
 #include "llvm/IR/Instruction.h"
 
@@ -47,12 +49,12 @@ Instruction *ASContext::getTranslatedInst(Cloner *cloner, Instruction *inst) {
 }
 
 void ASContext::dump() {
-    errs() << "allocation site context:\n";
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("allocation site context:"));
     for (std::vector<Instruction *>::iterator i = trace.begin(); i != trace.end(); i++) {
         Instruction *inst = *i;
         Function *f = inst->getParent()->getParent();
-        errs() << "  -- " << f->getName() << ":";
-        inst->dump();        
+        DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "  -- " << f->getName() << ":");
+        DEBUG_WITH_TYPE(DEBUG_BASIC, inst->dump());
     }
 }
 
