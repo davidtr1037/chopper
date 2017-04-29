@@ -224,6 +224,8 @@ private:
   Cloner *cloner;
   SliceGenerator *sliceGenerator;
 
+  unsigned int errorCount;
+
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
   

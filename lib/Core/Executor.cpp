@@ -346,7 +346,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString),
-      slicedFunction(0) {
+      slicedFunction(0),
+      errorCount(0) {
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
@@ -3025,6 +3026,9 @@ void Executor::terminateStateOnError(ExecutionState &state,
   
   if (EmitAllErrors ||
       emittedErrors.insert(std::make_pair(lastInst, message)).second) {
+    if (shouldExitOn(termReason)) {
+      errorCount++;
+    }
     if (ii.file != "") {
       klee_message("ERROR: %s:%d: %s", ii.file.c_str(), ii.line, message.c_str());
     } else {
@@ -3063,8 +3067,12 @@ void Executor::terminateStateOnError(ExecutionState &state,
   }
   terminateState(state);
 
-  if (shouldExitOn(termReason))
-    haltExecution = true;
+  if (shouldExitOn(termReason)) {
+    unsigned int maxCount = interpreterOpts.maxErrorCount;
+    if (maxCount == 0 || maxCount == errorCount) {
+      haltExecution = true;
+    }
+  }
 }
 
 // XXX shoot me
