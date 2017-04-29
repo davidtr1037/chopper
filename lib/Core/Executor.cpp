@@ -1439,24 +1439,41 @@ void Executor::executeCall(ExecutionState &state,
         //return;
       }
 
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("%p: skipping function call to %s", state, f->getName().data())
-      );
-      state.incSkippedCount();
-
       /* create snapshot, recovery state will be created on demand... */
       ExecutionState *snapshot = new ExecutionState(state);
       state.setSnapshot(snapshot);
-      return;
+
+      if (canSkipCallSite(state, f)) {
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("%p: skipping function call to %s", state, f->getName().data())
+        );
+        state.incSkippedCount();
+        return;
+      }
+
+      /* execute the ret-slice without creating a recovery state */
+      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("executing ret-slice directly"));
+      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, mra->retSliceId);
+      Function *retSlice = sliceInfo->first;
+      f = retSlice;
     }
 
+    /* TODO: fix this mess... */
     if (state.isRecoveryState()) {
       RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
       Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, recoveryInfo->sliceId);
       Function *cloned = sliceInfo->first;
       f = cloned;
+      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting slice..."));
     }
+    if (state.isNormalState() && state.isExecutingRetSlice()) {
+      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, mra->retSliceId);
+      Function *cloned = sliceInfo->first;
+      f = cloned;
+      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting ret-slice..."));
+    }
+
     KFunction *kf = kmodule->functionMap[f];
     state.pushFrame(state.prevPC, kf);
     state.pc = kf->instructions;
