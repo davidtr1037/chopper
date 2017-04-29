@@ -4389,3 +4389,18 @@ bool Executor::filterCallSite(ExecutionState &state, Function *f) {
 
     return true;
 }
+
+bool Executor::canSkipCallSite(ExecutionState &state, Function *f) {
+    if (f->getReturnType()->isVoidTy()) {
+        return true;
+    }
+
+    CallInst *callInst = dyn_cast<CallInst>(state.prevPC->inst);
+    Value *returnValue = dyn_cast<Value>(callInst);
+
+    if (returnValue->hasNUses(0)) {
+        return true;
+    }
+
+    return false;
+}
