@@ -4167,6 +4167,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
 
   /* statistics */
   state.incRecoveryCount();
+  interpreterHandler->incRecoveryStatesCount();
 }
 
 void Executor::onRecoveryStateWrite(
