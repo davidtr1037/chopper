@@ -2253,7 +2253,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     /* TODO: replace with a better predicate */
-    if (state.isNormalState() && state.getSnapshot() != 0) {
+    if (state.isNormalState() && state.hasSkippedCalls()) {
       /* TODO: change the name of the predicate to: ... */
       if (state.isBlockingLoadResolved() && isBlockingLoad(state, ki)) {
         state.pc = state.prevPC;
@@ -4216,7 +4216,7 @@ void Executor::onNormalStateWrite(
   ref<Expr> value
 ) {
   /* TODO: wirte a better predicate */
-  if (state.getSnapshot() == 0) {
+  if (!state.hasSkippedCalls()) {
     return;
   }
 
@@ -4255,7 +4255,7 @@ void Executor::onNormalStateRead(
   Expr::Width width
 ) {
   /* TODO: wirte a better predicate */
-  if (state.getSnapshot() == 0) {
+  if (!state.hasSkippedCalls()) {
     return;
   }
 
