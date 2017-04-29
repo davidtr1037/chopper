@@ -157,9 +157,18 @@ InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner)
       for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
         Function *cloned = s->second.first;
         for (inst_iterator it = inst_begin(cloned); it != inst_end(cloned); it++) {
-          /* TODO: use original function debug info */
+          /* translate cloned instruction */
           Instruction *inst = &*it;
-          infos.insert(std::make_pair(inst, dummyInfo));
+          Value *value = cloner->translateValue(inst);
+          Instruction *origInst = dyn_cast<Instruction>(value);
+          if (origInst) {
+            /* add original instruction information */
+            const InstructionInfo &info = getInfo(origInst);
+            infos.insert(std::make_pair(inst, info));
+          } else {
+            /* instruction information not available (probably due to slicer insertions) */
+            infos.insert(std::make_pair(inst, dummyInfo));
+          }
         }
       }
     }
