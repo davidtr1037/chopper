@@ -496,6 +496,7 @@ private:
   void terminateDependedState(ExecutionState *dependedState);
   void mergeConstraints(ExecutionState &dependedState, ref<Expr> condition);
   bool filterCallSite(ExecutionState &state, llvm::Function *f);
+  bool canSkipCallSite(ExecutionState &state, llvm::Function *f);
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
