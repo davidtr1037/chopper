@@ -79,6 +79,7 @@ public:
     unsigned MakeConcreteSymbolic;
     std::string slicedFunction;
     unsigned int callSiteLine;
+    unsigned int maxErrorCount;
 
     InterpreterOptions() : 
       MakeConcreteSymbolic(false),

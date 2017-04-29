@@ -94,6 +94,11 @@ namespace {
                cl::desc("The line of the call site"),
                cl::init(0));
 
+  cl::opt<unsigned int>
+  MaxErrorCount("max-error-count",
+               cl::desc("max error count before exit"),
+               cl::init(0));
+
   cl::opt<std::string>
   EntryPoint("entry-point",
                cl::desc("Consider the function with the given name as the entrypoint"),
@@ -1406,6 +1411,7 @@ int main(int argc, char **argv, char **envp) {
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   IOpts.slicedFunction = SlicedFunction;
   IOpts.callSiteLine = CallSiteLine;
+  IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
     theInterpreter = Interpreter::create(IOpts, handler);
