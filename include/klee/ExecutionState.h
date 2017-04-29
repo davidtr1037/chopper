@@ -20,6 +20,7 @@
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
 #include "klee/Internal/Module/KInstIterator.h"
+#include "klee/Internal/Module/KModule.h"
 
 #include <map>
 #include <set>
@@ -419,6 +420,17 @@ public:
   void incRecoveryCount() {
     assert(isNormalState());
     recoveryCount++;
+  }
+
+  bool isExecutingRetSlice() {
+    assert(isNormalState());
+    StackFrame &sf = stack.back();
+    return sf.kf->isCloned;
+  }
+
+  bool hasSkippedCalls() {
+    assert(isNormalState());
+    return getSnapshot() != 0 && !isExecutingRetSlice();
   }
 
 };

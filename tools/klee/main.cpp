@@ -259,7 +259,7 @@ public:
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
 
-  unsigned getRecoveryStatesCount() { 
+  unsigned getRecoveryStatesCount() {
     return m_recoveryStatesCount;
   }
   void incRecoveryStatesCount() {
