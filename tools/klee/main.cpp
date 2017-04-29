@@ -243,6 +243,7 @@ private:
   unsigned m_numTotalTests;     // Number of tests received from the interpreter
   unsigned m_numGeneratedTests; // Number of tests successfully generated
   unsigned m_pathsExplored; // number of paths explored so far
+  unsigned m_recoveryStatesCount; // number of recovery states
 
   // used for writing .ktest files
   int m_argc;
@@ -257,6 +258,13 @@ public:
   unsigned getNumTestCases() { return m_numGeneratedTests; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
   void incPathsExplored() { m_pathsExplored++; }
+
+  unsigned getRecoveryStatesCount() { 
+    return m_recoveryStatesCount;
+  }
+  void incRecoveryStatesCount() {
+    m_recoveryStatesCount++;
+  }
 
   void setInterpreter(Interpreter *i);
 
@@ -280,9 +288,16 @@ public:
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
-    : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0), m_infoFile(0),
-      m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
-      m_pathsExplored(0), m_argc(argc), m_argv(argv) {
+  : m_interpreter(0),
+    m_pathWriter(0),
+    m_symPathWriter(0),
+    m_infoFile(0),
+    m_outputDirectory(),
+    m_testIndex(0),
+    m_pathsExplored(0),
+    m_recoveryStatesCount(0),
+    m_argc(argc),
+    m_argv(argv) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
@@ -1502,6 +1517,8 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumPathsExplored() << "\n";
   stats << "KLEE: done: generated tests = "
         << handler->getNumTestCases() << "\n";
+  stats << "KLEE: done: recovery states = "
+        << handler->getRecoveryStatesCount() << "\n";
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
