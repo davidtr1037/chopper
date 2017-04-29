@@ -357,7 +357,9 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     if (sliceMap != 0) {
       for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
         Function *cloned = s->second.first;
-        pool.insert(new KFunction(cloned, this));
+        KFunction *kcloned = new KFunction(cloned, this);
+        kcloned->isCloned = true;
+        pool.insert(kcloned);
       }
     }
 
@@ -449,7 +451,8 @@ KFunction::KFunction(llvm::Function *_function,
   : function(_function),
     numArgs(function->arg_size()),
     numInstructions(0),
-    trackCoverage(true) {
+    trackCoverage(true),
+    isCloned(false) {
   for (llvm::Function::iterator bbit = function->begin(), 
          bbie = function->end(); bbit != bbie; ++bbit) {
     BasicBlock *bb = &*bbit;
