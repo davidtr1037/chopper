@@ -585,6 +585,15 @@ else()
 endif()
 
 ################################################################################
+# Slicing Library
+################################################################################
+if (SLICING_ROOT_DIR)
+    message(STATUS "Slicing library root directory: ${SLICING_ROOT_DIR}")
+else()
+    message(FATAL_ERROR "set SLICING_ROOT_DIR")
+endif()
+
+################################################################################
 # Generate `config.h`
 ################################################################################
 configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/config.h.cmin

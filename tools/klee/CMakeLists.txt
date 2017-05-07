@@ -14,7 +14,7 @@ set(KLEE_LIBS
   kleeCore
 )
 
-find_library(SLICING Slicing HINTS /home/david/tau/slicing/se-slicing-3.4)
+find_library(SLICING Slicing HINTS ${SLICING_ROOT_DIR})
 target_link_libraries(klee ${SLICING} ${KLEE_LIBS})
 #target_link_libraries(klee ${KLEE_LIBS})
 
