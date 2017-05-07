@@ -1,6 +1,6 @@
 KLEE/Slicing Project
 =============================
-Extension of KLEE (http://klee.github.io).
+An extension of KLEE (http://klee.github.io).
 
 ## Build
 Build the Slicing Library:
