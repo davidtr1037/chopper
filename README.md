@@ -24,3 +24,20 @@ cmake \
     -DSLICING_ROOT_DIR=<SLICING_PROJECT_DIR> \
     <KLEE_ROOT_DIR>
 ```
+
+## Usage Example
+Let's look at the following program:
+```
+
+```
+
+Compile the program:
+```
+clang -m32 main.c -o main.bc
+opt -mem2reg main.bc -o main.bc (required for better pointer analysis)
+```
+
+Run KLEE:
+```
+klee -libc=klee -search=dfs -slice=<function_name> main.bc
+```
