@@ -69,3 +69,6 @@ Run KLEE (static analysis related debug messages are written to stdout):
 ```
 klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
+
+Notes:
+*  Currently, the supported search heuristics are: dfs, bfs
