@@ -160,9 +160,9 @@ InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner)
           /* translate cloned instruction */
           Instruction *inst = &*it;
           Value *value = cloner->translateValue(inst);
-          Instruction *origInst = dyn_cast<Instruction>(value);
-          if (origInst) {
+          if (value) {
             /* add original instruction information */
+            Instruction *origInst = dyn_cast<Instruction>(value);
             const InstructionInfo &info = getInfo(origInst);
             infos.insert(std::make_pair(inst, info));
           } else {
