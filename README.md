@@ -72,5 +72,6 @@ klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
 
 Notes:
+* For choosing a specific call site of the sliced function, add ```-line=<line_number>```.
 * For debugging the mechanism, add ```-debug-only=basic```.
 * Currently, the supported search heuristics are: dfs, bfs.
