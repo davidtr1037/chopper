@@ -27,17 +27,45 @@ cmake \
 
 ## Usage Example
 Let's look at the following program:
-```
+```C
+#include <stdio.h>
 
+#include <klee/klee.h>
+
+typedef struct {
+    int x;
+    int y;
+} object_t;
+
+void f(object_t *o) {
+    o->x = 0;
+    o->y = 0;
+}
+
+int main(int argc, char *argv[]) {
+    object_t o;
+    int k;
+
+    klee_make_symbolic(&k, sizeof(k), "k");
+
+    f(&o);
+    if (k > 0) {
+        printf("%d\n", o.x);
+    } else {
+        printf("%d\n", o.y);
+    }
+
+    return 0;
+}
 ```
 
 Compile the program:
 ```
-clang -m32 main.c -o main.bc
+clang -m32 -c -g -emit-llvm main.c -o main.bc
 opt -mem2reg main.bc -o main.bc (required for better pointer analysis)
 ```
 
-Run KLEE:
+Run KLEE (static analysis related debug messages are written to stdout):
 ```
-klee -libc=klee -search=dfs -slice=<function_name> main.bc
+klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
