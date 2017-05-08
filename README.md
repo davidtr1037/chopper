@@ -72,4 +72,5 @@ klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
 
 Notes:
-*  Currently, the supported search heuristics are: dfs, bfs
+* For debugging the mechanism, add the ```-debug-only-basic``` switch.
+* Currently, the supported search heuristics are: dfs, bfs.
