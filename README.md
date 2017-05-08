@@ -67,6 +67,7 @@ opt -mem2reg main.bc -o main.bc (required for better pointer analysis)
 
 Run KLEE (static analysis related debug messages are written to stdout):
 ```
+export LD_LIBRARY_PATH=<DG_BUILD_DIR>/src
 klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
 
