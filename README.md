@@ -75,5 +75,4 @@ Notes:
 * For choosing a specific call site of the sliced function, add ```-line=<line_number>```.
 * For debugging the mechanism, add ```-debug-only=basic```.
 * Currently, the supported search heuristics are: dfs, bfs.
-* Currently, only klee-libc is supported:
-** some file should be recompiled with `-O1` to avoid vector instructions (memcpy.c, memset.c)
+* Currently, only klee-libc is supported. Some files (memcpy.c, memset.c) should be recompiled with `-O1` to avoid vector instructions.
