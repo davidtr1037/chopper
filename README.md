@@ -76,4 +76,4 @@ Notes:
 * For debugging the mechanism, add ```-debug-only=basic```.
 * Currently, the supported search heuristics are: dfs, bfs.
 * Currently, only klee-libc is supported:
-- some file shoule be recompiled with `-O1` to avoid vector instructions (memcpy.c, memset.c)
+** some file should be recompiled with `-O1` to avoid vector instructions (memcpy.c, memset.c)
