@@ -2658,8 +2658,12 @@ void Executor::updateStates(ExecutionState *current) {
        it != ie; ++it) {
     ExecutionState *es = *it;
     std::set<ExecutionState*>::iterator it2 = states.find(es);
-    assert(it2!=states.end());
-    states.erase(it2);
+    if (it2 == states.end()) {
+      /* TODO: find a better solution... */
+      assert(es->isNormalState() && es->isSuspended());
+    } else {
+      states.erase(it2);
+    }
     std::map<ExecutionState*, std::vector<SeedInfo> >::iterator it3 = 
       seedMap.find(es);
     if (it3 != seedMap.end())
@@ -4170,7 +4174,7 @@ void Executor::onRecoveryStateWrite(
   assert(state.prevPC->inst->getOpcode() == Instruction::Store);
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
-  assert(isa<ConstantExpr>(value));
+  //assert(isa<ConstantExpr>(value));
 
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
@@ -4265,11 +4269,11 @@ void Executor::onNormalStateRead(
 }
 
 void Executor::dumpConstrains(ExecutionState &state) {
-    klee_message("%p: constraints", state);
-    for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
-        ref<Expr> e = *i;
-        errs() << "  -- "; e->dump();
-    }
+    //klee_message("constraints (state = %p):", state);
+    //for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
+    //    ref<Expr> e = *i;
+    //    errs() << "  -- "; e->dump();
+    //}
 }
 
 bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryState) {
