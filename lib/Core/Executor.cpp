@@ -2659,7 +2659,7 @@ void Executor::updateStates(ExecutionState *current) {
     ExecutionState *es = *it;
     std::set<ExecutionState*>::iterator it2 = states.find(es);
     if (it2 == states.end()) {
-      /* TODO: find a better solution... */
+      /* TODO: trying to handle removal of suspended states. Find a better solution... */
       assert(es->isNormalState() && es->isSuspended());
     } else {
       states.erase(it2);
@@ -4217,6 +4217,7 @@ void Executor::onNormalStateWrite(
   assert(state.prevPC->inst->getOpcode() == Instruction::Store);
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
+  /* TODO: check the writing of symbolic values */
   //assert(isa<ConstantExpr>(value));
 
   if (!isOverridingStore(state.prevPC)) {
@@ -4269,11 +4270,11 @@ void Executor::onNormalStateRead(
 }
 
 void Executor::dumpConstrains(ExecutionState &state) {
-    //klee_message("constraints (state = %p):", state);
-    //for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
-    //    ref<Expr> e = *i;
-    //    errs() << "  -- "; e->dump();
-    //}
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("constraints (state = %p):", state));
+  for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
+      ref<Expr> e = *i;
+      DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "  -- "; e->dump());
+  }
 }
 
 bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryState) {
