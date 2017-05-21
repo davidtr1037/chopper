@@ -28,8 +28,8 @@ target_link_libraries(kleeBasic PRIVATE
   kleaverSolver
 )
 target_include_directories(kleeBasic PUBLIC
-    /home/david/tau/slicing/se-slicing-3.4
-    /home/david/tau/SVF-port-3.4/include
-    /home/david/tau/dg/src
-    /home/david/tau/dg/tools
+    ${SLICING_ROOT_DIR}
+    ${SVF_ROOT_DIR}/include
+    ${DG_ROOT_DIR}/src
+    ${DG_ROOT_DIR}/tools
 )
