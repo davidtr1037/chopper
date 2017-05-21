@@ -21,9 +21,16 @@ cmake \
     -DENABLE_UNIT_TESTS=OFF \
     -DKLEE_RUNTIME_BUILD_TYPE=Release+Asserts \
     -DENABLE_SYSTEM_TESTS=ON \
+    -DSVF_ROOT_DIR=<SVF_PROJECT_DIR> \
+    -DDG_ROOT_DIR=<DG_PROJECT_DIR> \
     -DSLICING_ROOT_DIR=<SLICING_PROJECT_DIR> \
     <KLEE_ROOT_DIR>
+export LD_LIBRARY_PATH=<DG_BUILD_DIR>/src
+make
 ```
+
+Notes:
+* Use llvm-config from the Autoconf build
 
 ## Usage Example
 Let's look at the following program:
