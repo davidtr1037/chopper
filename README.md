@@ -30,7 +30,8 @@ make
 ```
 
 Notes:
-* Use llvm-config from the Autoconf build
+* Currently, the porject must be compiled for 32-bit
+* Use llvm-config from the Autoconf build (LLVM 3.4)
 
 ## Usage Example
 Let's look at the following program:
