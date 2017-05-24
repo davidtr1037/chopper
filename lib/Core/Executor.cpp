@@ -1371,7 +1371,7 @@ void Executor::executeCall(ExecutionState &state,
       if (canSkipCallSite(state, f)) {
         DEBUG_WITH_TYPE(
           DEBUG_BASIC,
-          klee_message("%p: skipping function call to %s", state, f->getName().data())
+          klee_message("%p: skipping function call to %s", &state, f->getName().data())
         );
         state.incSkippedCount();
         return;
@@ -3978,7 +3978,7 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
 
   /* check if already resolved */
   if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#llx is already resolved", state, address));
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#llx is already resolved", &state, address));
     return false;
   }
 
@@ -4081,18 +4081,18 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
 }
 
 void Executor::suspendState(ExecutionState &state) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("suspending: %p", state));
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("suspending: %p", &state));
   state.setSuspended();
   suspendedStates.push_back(&state);
 }
 
 void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("resuming: %p", state));
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("resuming: %p", &state));
   state.setResumed();
   state.setRecoveryState(0);
   state.markLoadAsUnresolved();
   if (implicitlyCreated) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding an implicitly created state: %p", state));
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding an implicitly created state: %p", &state));
     addedStates.push_back(&state);
   } else {
     resumedStates.push_back(&state);
@@ -4103,7 +4103,7 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
 }
 
 void Executor::onRecoveryStateExit(ExecutionState &state) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: recovery state reached exit instruction", state));
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: recovery state reached exit instruction", &state));
 
   /* debug... */
   ExecutionState *dependedState = state.getDependedState();
@@ -4115,7 +4115,7 @@ void Executor::onRecoveryStateExit(ExecutionState &state) {
 
 void Executor::notifyDependedState(ExecutionState &recoveryState) {
   ExecutionState *dependedState = recoveryState.getDependedState();
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: notifying depended state %p", recoveryState, dependedState));
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: notifying depended state %p", &recoveryState, dependedState));
 
   if (states.find(dependedState) == states.end()) {
     resumeState(*dependedState, true);
@@ -4180,7 +4180,7 @@ void Executor::onRecoveryStateWrite(
     DEBUG_BASIC,
     klee_message(
       "write in state %p: mo = %p, address = %llx offset = %llx",
-      state,
+      &state,
       mo,
       mo->address,
       dyn_cast<ConstantExpr>(offset)->getZExtValue()
@@ -4199,7 +4199,7 @@ void Executor::onRecoveryStateWrite(
   const ObjectState *os = dependedState->addressSpace.findObject(mo);
   ObjectState *wos = dependedState->addressSpace.getWriteable(mo, os);
   wos->write(offset, value);
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("copying from %p to %p", state, dependedState));
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("copying from %p to %p", &state, dependedState));
 }
 
 void Executor::onNormalStateWrite(
@@ -4270,7 +4270,7 @@ void Executor::onNormalStateRead(
 }
 
 void Executor::dumpConstrains(ExecutionState &state) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("constraints (state = %p):", state));
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("constraints (state = %p):", &state));
   for (ConstraintManager::constraint_iterator i = state.constraints.begin(); i != state.constraints.end(); i++) {
       ref<Expr> e = *i;
       DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "  -- "; e->dump());
@@ -4307,7 +4307,7 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
         mo = state.getGuidingAllocationRecord().getAddr(context);
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
-            klee_message("%p: reusing allocated address: %llx, size: %lld", state, mo->address, size)
+            klee_message("%p: reusing allocated address: %llx, size: %lld", &state, mo->address, size)
         );
     } else {
         mo = memory->allocate(size, isLocal, false, allocInst);
@@ -4322,7 +4322,7 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
 
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
-            klee_message("%p: allocating new address: %llx, size: %lld", state, mo->address, size)
+            klee_message("%p: allocating new address: %llx, size: %lld", &state, mo->address, size)
         );
         allocationRecord.addAddr(context, mo);
     }
