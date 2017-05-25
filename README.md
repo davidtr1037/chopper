@@ -8,6 +8,7 @@ Build the Slicing Library:
 
 Build KLEE:
 ```
+git checkout single-call
 mkdir klee_build
 cd klee_build
 cmake \
