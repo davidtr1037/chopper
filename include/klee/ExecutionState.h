@@ -124,6 +124,8 @@ private:
   unsigned int skippedCount;
   /* TODO: will be removed later... */
   unsigned int recoveryCount;
+  /* TODO: add doc... */
+  uint32_t directRetSliceId;
 
   /* recovery state properties */
 
@@ -431,6 +433,16 @@ public:
   bool hasSkippedCalls() {
     assert(isNormalState());
     return getSnapshot() != 0 && !isExecutingRetSlice();
+  }
+
+  uint32_t getDirectRetSliceId() {
+    assert(isNormalState());
+    return directRetSliceId;
+  }
+
+  void setDirectRetSliceId(uint32_t id) {
+    assert(isNormalState());
+    directRetSliceId = id;
   }
 
 };

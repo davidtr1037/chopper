@@ -1454,7 +1454,9 @@ void Executor::executeCall(ExecutionState &state,
 
       /* execute the ret-slice without creating a recovery state */
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("executing ret-slice directly"));
-      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, mra->retSliceId);
+      uint32_t retSliceId = mra->getRetSliceId(f);
+      state.setDirectRetSliceId(retSliceId);
+      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, retSliceId);
       Function *retSlice = sliceInfo->first;
       f = retSlice;
     }
@@ -1468,7 +1470,7 @@ void Executor::executeCall(ExecutionState &state,
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting slice..."));
     }
     if (state.isNormalState() && state.isExecutingRetSlice()) {
-      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, mra->retSliceId);
+      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, state.getDirectRetSliceId());
       Function *cloned = sliceInfo->first;
       f = cloned;
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting ret-slice..."));
