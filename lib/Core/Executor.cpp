@@ -419,8 +419,12 @@ const Module *Executor::setModule(llvm::Module *module,
   ra = new ReachabilityAnalysis(module);
   aa = new AAPass();
   aa->setPAType(PointerAnalysis::Andersen_WPA);
+
+  std::vector<std::string> targets;
+  targets.push_back(interpreterOpts.slicedFunction);
+
   /* TODO: fix hard coded entry point... */
-  mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", interpreterOpts.slicedFunction);
+  mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", targets);
   annotator = new Annotator(kmodule->module, mra);
   cloner = new Cloner(module, ra, mra);
   sliceGenerator = new SliceGenerator(module, aa, mra, annotator, cloner);
@@ -3962,9 +3966,8 @@ Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opt
 
 bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("checking load..."));
-  ModRefAnalysis::LoadToStoreMap::iterator entry = mra->loadToStoreMap.find(ki->inst);
-  if (entry == mra->loadToStoreMap.end()) {
-    return false; 
+  if (!mra->mayBlock(ki->inst)) {
+    return false;
   }
 
   /* resolve address expression */
@@ -4069,11 +4072,19 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
 
   /* get the precise allocation site */
   ModRefAnalysis::AllocSite preciseAllocSite = std::make_pair(translatedValue, offset);
+
   /* get the allocation site computed by static analysis */
-  ModRefAnalysis::AllocSite allocSite = mra->getApproximateAllocSite(kinst->inst, preciseAllocSite);
+  std::set<ModRefAnalysis::ModInfo> approximateModInfos;
+  mra->getApproximateModInfos(kinst->inst, preciseAllocSite, approximateModInfos);
+
+  /* TODO: this assumption must hold when we have a single call */
+  assert(approximateModInfos.size() == 1);
+  ModRefAnalysis::ModInfo modInfo = *approximateModInfos.begin();
+
   /* get the corresponding slice id */
-  ModRefAnalysis::AllocSiteToIdMap::iterator entry = mra->allocSiteToIdMap.find(allocSite);
-  if (entry == mra->allocSiteToIdMap.end()) {
+  ModRefAnalysis::ModInfoToIdMap modInfoToIdMap = mra->getModInfoToIdMap();
+  ModRefAnalysis::ModInfoToIdMap::iterator entry = modInfoToIdMap.find(modInfo);
+  if (entry == modInfoToIdMap.end()) {
     /* TODO: this should not happen... */
     assert(false);
   }
