@@ -72,6 +72,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     blockingLoadStatus(true),
     skippedCount(0),
     recoveryCount(0),
+    directRetSliceId(0),
 
     /* recovery state properties */
     exitInst(0),
@@ -124,6 +125,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     writtenAddresses(state.writtenAddresses),
     skippedCount(state.skippedCount),
     recoveryCount(state.recoveryCount),
+    directRetSliceId(state.directRetSliceId),
 
     /* recovery state properties */
     exitInst(state.exitInst),
