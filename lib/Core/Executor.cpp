@@ -366,7 +366,6 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString),
-      slicedFunction(0),
       errorCount(0) {
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
@@ -438,8 +437,12 @@ const Module *Executor::setModule(llvm::Module *module,
   aa = new AAPass();
   aa->setPAType(PointerAnalysis::Andersen_WPA);
 
+  /* build target functions */
   std::vector<std::string> targets;
-  targets.push_back(interpreterOpts.slicedFunction);
+  std::vector<SlicedFunction> functions = interpreterOpts.slicedFunctions;
+  for (std::vector<SlicedFunction>::iterator i = functions.begin(); i != functions.end(); i++) {
+    targets.push_back(i->name);
+  }
 
   /* TODO: fix hard coded entry point... */
   mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", targets);
@@ -457,9 +460,11 @@ const Module *Executor::setModule(llvm::Module *module,
                        userSearcherRequiresMD2U());
   }
 
-  /* TODO: will be extended... */
-  slicedFunction = kmodule->module->getFunction(interpreterOpts.slicedFunction);
-  
+  for (std::vector<SlicedFunction>::iterator i = functions.begin(); i != functions.end(); i++) {
+    Function *f = kmodule->module->getFunction(i->name);
+    slicedFunctions.push_back(f);
+  }
+
   return module;
 }
 
@@ -4404,23 +4409,23 @@ void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> conditi
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
-    if (f != slicedFunction) {
-        return false;
-    }
+    //if (f != slicedFunction) {
+    //    return false;
+    //}
 
-    InstructionInfoTable *infoTable = kmodule->infos;
-    Instruction *callInst = state.prevPC->inst;
-    const InstructionInfo &info = infoTable->getInfo(callInst);
+    //InstructionInfoTable *infoTable = kmodule->infos;
+    //Instruction *callInst = state.prevPC->inst;
+    //const InstructionInfo &info = infoTable->getInfo(callInst);
 
-    unsigned int line = interpreterOpts.callSiteLine;
-    if (line == 0) {
-        /* no specific call site... */
-        return true;
-    }
+    //unsigned int line = interpreterOpts.callSiteLine;
+    //if (line == 0) {
+    //    /* no specific call site... */
+    //    return true;
+    //}
 
-    if (info.line != line) {
-        return false;
-    }
+    //if (info.line != line) {
+    //    return false;
+    //}
 
     return true;
 }
