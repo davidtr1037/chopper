@@ -4382,9 +4382,9 @@ void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> conditi
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
-    //if (f != slicedFunction) {
-    //    return false;
-    //}
+    if (std::find(slicedFunctions.begin(), slicedFunctions.end(), f) == slicedFunctions.end()) {
+        return false;
+    }
 
     //InstructionInfoTable *infoTable = kmodule->infos;
     //Instruction *callInst = state.prevPC->inst;
