@@ -216,7 +216,7 @@ private:
   /* TODO: ... */
   std::vector<ExecutionState *> suspendedStates;
   std::vector<ExecutionState *> resumedStates;
-  llvm::Function *slicedFunction;
+  std::vector<llvm::Function *> slicedFunctions;
   ReachabilityAnalysis *ra;
   AAPass *aa;
   ModRefAnalysis *mra;

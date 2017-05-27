@@ -73,6 +73,19 @@ public:
 	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
   };
 
+  struct SlicedFunction {
+    std::string name;
+    /* TODO: change to lines? */
+    unsigned int line;
+
+    SlicedFunction(std::string name, unsigned int line) :
+      name(name), line(line)
+    {
+
+    }
+
+  };
+
   /// InterpreterOptions - Options varying the runtime behavior during
   /// interpretation.
   struct InterpreterOptions {
@@ -80,14 +93,12 @@ public:
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
-    std::string slicedFunction;
-    unsigned int callSiteLine;
+    std::vector<SlicedFunction> slicedFunctions;
     unsigned int maxErrorCount;
 
     InterpreterOptions() : 
       MakeConcreteSymbolic(false),
-      slicedFunction(),
-      callSiteLine(0)
+      maxErrorCount(0)
     {
 
     }
