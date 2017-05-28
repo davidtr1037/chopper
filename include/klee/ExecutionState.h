@@ -87,6 +87,27 @@ struct RecoveryInfo {
 
 };
 
+struct Snapshot {
+    /* TODO: should be ref<ExecutionState *> */
+    ExecutionState *state;
+    llvm::Function *f;
+
+    /* TODO: is it required? */
+    Snapshot() :
+        state(0),
+        f(0)
+    {
+
+    };
+
+    Snapshot(ExecutionState *state, llvm::Function *f) :
+        state(state),
+        f(f)
+    {
+
+    };
+};
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
@@ -105,8 +126,8 @@ private:
   /* a normal state has a suspend status */
   bool suspendStatus;
   /* all recovery states must be derived from this state */
-  /* TODO: should be ref<ExecutionState *> */
-  ExecutionState *snapshot;
+  /* TODO: should be a reference? */
+  std::vector<Snapshot> snapshots;
   /* a normal state has a unique recovery state */
   ExecutionState *recoveryState;
   /* we should know of the current load inst */
@@ -271,13 +292,14 @@ public:
     suspendStatus = false;
   }
 
-  ExecutionState *getSnapshot() {
+  std::vector<Snapshot> &getSnapshots() {
     assert(isNormalState());
-    return snapshot;
+    return snapshots;
   }
 
-  void setSnapshot(ExecutionState *state) {
-    snapshot = state;
+  void addSnapshot(Snapshot snapshot) {
+    assert(isNormalState());
+    snapshots.push_back(snapshot);
   }
 
   ExecutionState *getRecoveryState() {
@@ -432,7 +454,7 @@ public:
 
   bool hasSkippedCalls() {
     assert(isNormalState());
-    return getSnapshot() != 0 && !isExecutingRetSlice();
+    return ((getSnapshots().size() > 1) || (getSnapshots().size() == 1 && !isExecutingRetSlice()));
   }
 
   uint32_t getDirectRetSliceId() {
@@ -446,6 +468,7 @@ public:
   }
 
 };
+
 }
 
 #endif

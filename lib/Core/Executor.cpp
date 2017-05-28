@@ -1440,17 +1440,8 @@ void Executor::executeCall(ExecutionState &state,
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
     if (state.isNormalState() && filterCallSite(state, f)) {
-      /* TODO: will be removed later... */
-      if (state.getSkippedCount() > 0) {
-        /* multiple calls are not supported yet... */
-        assert(false);
-        //terminateStateOnError(state, "target function called more than once", Unhandled);
-        //return;
-      }
-
       /* create snapshot, recovery state will be created on demand... */
-      ExecutionState *snapshot = new ExecutionState(state);
-      state.setSnapshot(snapshot);
+      state.addSnapshot(Snapshot(new ExecutionState(state), f));
 
       if (canSkipCallSite(state, f)) {
         DEBUG_WITH_TYPE(
