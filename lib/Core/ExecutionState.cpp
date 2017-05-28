@@ -67,7 +67,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
 
     /* state properties */
     suspendStatus(false),
-    snapshot(0),
     recoveryState(0),
     blockingLoadStatus(true),
     skippedCount(0),
@@ -116,7 +115,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 
     /* state properties */
     suspendStatus(state.suspendStatus),
-    snapshot(state.snapshot),
+    snapshots(state.snapshots),
     recoveryState(state.recoveryState),
     blockingLoadStatus(state.blockingLoadStatus),
     resolvedLoads(state.resolvedLoads),
