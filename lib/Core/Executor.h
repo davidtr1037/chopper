@@ -460,13 +460,11 @@ private:
   void doDumpStates();
 
   bool isBlockingLoad(ExecutionState &state, KInstruction *ki);
-  //RecoveryInfo *getRecoveryInfo(ExecutionState &state, KInstruction *kinst);
   void getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *kinst,
     std::vector<RecoveryInfo *> &result
   );
-  //void getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, RecoveryInfo *recoveryInfo);
   void getLoadInfo(
     ExecutionState &state,
     KInstruction *kinst,

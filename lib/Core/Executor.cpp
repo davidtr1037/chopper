@@ -4162,14 +4162,25 @@ void Executor::notifyDependedState(ExecutionState &recoveryState) {
 }
 
 void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo) {
-  /* get snapshot state */
-  ExecutionState *snapshot = state.getSnapshot();
+  ExecutionState *snapshotState = NULL;
+
+  /* find the corresponding snapshot state */
+  std::vector<Snapshot> snapshots = state.getSnapshots();
+  for (std::vector<Snapshot>::iterator i = snapshots.begin(); i != snapshots.end(); i++) {
+    /* TODO: change to reference? */
+    Snapshot s = *i;
+    if (s.f == recoveryInfo->f) {
+      snapshotState = s.state;
+    }
+  }
+
+  assert(snapshotState);
 
   /* initialize recovery state */
-  ExecutionState *recoveryState = new ExecutionState(*snapshot);
+  ExecutionState *recoveryState = new ExecutionState(*snapshotState);
   recoveryState->setType(RECOVERY_STATE); 
   recoveryState->setDependedState(&state);
-  recoveryState->setExitInst(snapshot->pc->inst);
+  recoveryState->setExitInst(snapshotState->pc->inst);
 
   /* pass allocation record to recovery state */
   recoveryState->setGuidingAllocationRecord(state.getAllocationRecord());
