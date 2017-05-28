@@ -452,8 +452,20 @@ private:
   void doDumpStates();
 
   bool isBlockingLoad(ExecutionState &state, KInstruction *ki);
-  RecoveryInfo *getRecoveryInfo(ExecutionState &state, KInstruction *kinst);
-  void getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, RecoveryInfo *recoveryInfo);
+  //RecoveryInfo *getRecoveryInfo(ExecutionState &state, KInstruction *kinst);
+  void getAllRecoveryInfo(
+    ExecutionState &state,
+    KInstruction *kinst,
+    std::vector<RecoveryInfo *> &result
+  );
+  //void getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, RecoveryInfo *recoveryInfo);
+  void getLoadInfo(
+    ExecutionState &state,
+    KInstruction *kinst,
+    uint64_t &loadAddr,
+    uint64_t &loadSize,
+    ModRefAnalysis::AllocSite &allocSite
+  );
   void suspendState(ExecutionState &state);
   void resumeState(ExecutionState &state, bool implicitlyCreated);
   void notifyDependedState(ExecutionState &recoveryState);

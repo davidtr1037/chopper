@@ -2276,7 +2276,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       /* TODO: change the name of the predicate to: ... */
       if (state.isBlockingLoadResolved() && isBlockingLoad(state, ki)) {
         state.pc = state.prevPC;
-        RecoveryInfo *ri = getRecoveryInfo(state, ki);
+
+        /* find which slices should be executed... */
+        std::vector<RecoveryInfo *> recoveryInfos;
+        getAllRecoveryInfo(state, ki, recoveryInfos);
+
+        /* TODO: fix later */
+        assert(recoveryInfos.size() == 1);
+        RecoveryInfo *ri = *recoveryInfos.begin();
+
         startRecoveryState(state, ri);
         suspendState(state);
         return;
@@ -4024,30 +4032,69 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   return true;
 }
 
-RecoveryInfo *Executor::getRecoveryInfo(ExecutionState &state, KInstruction *kinst) {
-  Instruction *loadInst = kinst->inst;
+void Executor::getAllRecoveryInfo(
+    ExecutionState &state,
+    KInstruction *kinst,
+    std::vector<RecoveryInfo *> &result
+) {
+  Instruction *loadInst;
+  uint64_t loadAddr;
+  uint64_t loadSize;
+  ModRefAnalysis::AllocSite preciseAllocSite;
+
+  loadInst = kinst->inst;
+  getLoadInfo(state, kinst, loadAddr, loadSize, preciseAllocSite);
 
   DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "blocking load: "; loadInst->print(errs()); errs() << "\n");
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
-  RecoveryInfo *recoveryInfo = new RecoveryInfo();
-  recoveryInfo->loadInst = loadInst;
-  getLoadAddrInfo(state, kinst, recoveryInfo);
+  /* get the allocation site computed by static analysis */
+  std::set<ModRefAnalysis::ModInfo> approximateModInfos;
+  mra->getApproximateModInfos(kinst->inst, preciseAllocSite, approximateModInfos);
 
-  DEBUG_WITH_TYPE(
-    DEBUG_BASIC,
-    klee_message(
-      "recovery info: addr = %#llx, size = %llx, slice id = %d",
-      recoveryInfo->loadAddr,
-      recoveryInfo->loadSize,
-      recoveryInfo->sliceId
-    )
-  );
+  std::set<ModRefAnalysis::ModInfo>::iterator i;
+  for (i = approximateModInfos.begin(); i != approximateModInfos.end(); i++) {
+    ModRefAnalysis::ModInfo modInfo = *i;
 
-  return recoveryInfo;
+    /* get the corresponding slice id */
+    ModRefAnalysis::ModInfoToIdMap modInfoToIdMap = mra->getModInfoToIdMap();
+    ModRefAnalysis::ModInfoToIdMap::iterator entry = modInfoToIdMap.find(modInfo);
+    if (entry == modInfoToIdMap.end()) {
+      /* TODO: this should not happen... */
+      assert(false);
+    }
+
+    uint32_t sliceId = entry->second;
+
+    /* initialize... */
+    RecoveryInfo *recoveryInfo = new RecoveryInfo();
+    recoveryInfo->loadInst = loadInst;
+    recoveryInfo->loadAddr = loadAddr;
+    recoveryInfo->loadSize = loadSize;
+    recoveryInfo->sliceId = sliceId;
+    recoveryInfo->f = modInfo.first;
+
+    result.push_back(recoveryInfo);
+
+    DEBUG_WITH_TYPE(
+      DEBUG_BASIC,
+      klee_message(
+        "recovery info: addr = %#llx, size = %llx, slice id = %d",
+        recoveryInfo->loadAddr,
+        recoveryInfo->loadSize,
+        recoveryInfo->sliceId
+      )
+    );
+  }
 }
 
-void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, RecoveryInfo *recoveryInfo) {
+void Executor::getLoadInfo(
+    ExecutionState &state,
+    KInstruction *kinst,
+    uint64_t &loadAddr,
+    uint64_t &loadSize,
+    ModRefAnalysis::AllocSite &allocSite
+) {
   ObjectPair op;
   bool success;
   ConstantExpr *ce;
@@ -4068,21 +4115,21 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
   }
   solver->setTimeout(0);
 
-  /* retreive allocation site */
   if (!success) {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Unable to resolve address..."));
     assert(false);
   }
 
-  /* get concrete load address */
+  /* get load address */
   ce = dyn_cast<ConstantExpr>(address);
   assert(ce);
-  recoveryInfo->loadAddr = ce->getZExtValue();
+  loadAddr = ce->getZExtValue();
 
   /* get load size */
   Expr::Width width = getWidthForLLVMType(kinst->inst->getType());
-  recoveryInfo->loadSize = Expr::getMinBytesForWidth(width);
+  loadSize = Expr::getMinBytesForWidth(width);
 
+  /* get allocation site value and offset */
   const MemoryObject *mo = op.first;
   ref<Expr> offsetExpr = mo->getOffsetExpr(address);
   offsetExpr = toConstant(state, offsetExpr, "...");
@@ -4094,26 +4141,7 @@ void Executor::getLoadAddrInfo(ExecutionState &state, KInstruction *kinst, Recov
   uint64_t offset = ce->getZExtValue();
 
   /* get the precise allocation site */
-  ModRefAnalysis::AllocSite preciseAllocSite = std::make_pair(translatedValue, offset);
-
-  /* get the allocation site computed by static analysis */
-  std::set<ModRefAnalysis::ModInfo> approximateModInfos;
-  mra->getApproximateModInfos(kinst->inst, preciseAllocSite, approximateModInfos);
-
-  /* TODO: this assumption must hold when we have a single call */
-  assert(approximateModInfos.size() == 1);
-  ModRefAnalysis::ModInfo modInfo = *approximateModInfos.begin();
-
-  /* get the corresponding slice id */
-  ModRefAnalysis::ModInfoToIdMap modInfoToIdMap = mra->getModInfoToIdMap();
-  ModRefAnalysis::ModInfoToIdMap::iterator entry = modInfoToIdMap.find(modInfo);
-  if (entry == modInfoToIdMap.end()) {
-    /* TODO: this should not happen... */
-    assert(false);
-  }
-
-  uint32_t sliceId = entry->second;
-  recoveryInfo->sliceId = sliceId;
+  allocSite = std::make_pair(translatedValue, offset);
 }
 
 void Executor::suspendState(ExecutionState &state) {
