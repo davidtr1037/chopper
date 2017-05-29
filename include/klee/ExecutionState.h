@@ -75,16 +75,21 @@ struct RecoveryInfo {
     llvm::Instruction *loadInst;
     uint64_t loadAddr;
     uint64_t loadSize;
-    uint32_t sliceId;
     /* TODO: a bit strange that it is here, will be fixed later */
     llvm::Function *f;
+    uint32_t sliceId;
+    /* TODO: a bit strange that it is here, will be fixed later */
+    ExecutionState *snapshot;
+    unsigned int snapshotIndex;
 
     RecoveryInfo() :
         loadInst(0),
         loadAddr(0),
         loadSize(0),
+        f(0),
         sliceId(0),
-        f(0)
+        snapshot(0),
+        snapshotIndex(0)
     {
 
     }
