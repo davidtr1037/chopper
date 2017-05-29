@@ -4026,21 +4026,21 @@ void Executor::handleBlockingLoad(ExecutionState &state, KInstruction *ki) {
   state.pc = state.prevPC;
 
   /* find which slices should be executed... */
-  std::vector<RecoveryInfo *> recoveryInfos;
+  std::queue<RecoveryInfo *> &recoveryInfos = state.getPendingRecoveryInfos();
   getAllRecoveryInfo(state, ki, recoveryInfos);
 
-  /* TODO: fix later */
-  assert(recoveryInfos.size() == 1);
-  RecoveryInfo *ri = *recoveryInfos.begin();
-
+  RecoveryInfo *ri = state.getPendingRecoveryInfo();
   startRecoveryState(state, ri);
-  suspendState(state);
+
+  if (!state.isSuspended()) {
+    suspendState(state);
+  }
 }
 
 void Executor::getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *kinst,
-    std::vector<RecoveryInfo *> &result
+    std::queue<RecoveryInfo *> &result
 ) {
   Instruction *loadInst;
   uint64_t loadAddr;
@@ -4057,40 +4057,61 @@ void Executor::getAllRecoveryInfo(
   std::set<ModRefAnalysis::ModInfo> approximateModInfos;
   mra->getApproximateModInfos(kinst->inst, preciseAllocSite, approximateModInfos);
 
-  std::set<ModRefAnalysis::ModInfo>::iterator i;
-  for (i = approximateModInfos.begin(); i != approximateModInfos.end(); i++) {
-    ModRefAnalysis::ModInfo modInfo = *i;
+  unsigned int snapshotIndex = 0;
+  std::vector<Snapshot> &snapshots = state.getSnapshots();
+  for (std::vector<Snapshot>::iterator i = snapshots.begin(); i != snapshots.end(); i++) {
+    Function *snapshotFunction = i->f;
 
-    /* get the corresponding slice id */
-    ModRefAnalysis::ModInfoToIdMap modInfoToIdMap = mra->getModInfoToIdMap();
-    ModRefAnalysis::ModInfoToIdMap::iterator entry = modInfoToIdMap.find(modInfo);
-    if (entry == modInfoToIdMap.end()) {
-      /* TODO: this should not happen... */
-      assert(false);
+    std::set<ModRefAnalysis::ModInfo>::iterator j;
+    for (j = approximateModInfos.begin(); j != approximateModInfos.end(); j++) {
+      ModRefAnalysis::ModInfo modInfo = *j;
+      if (modInfo.first != snapshotFunction) {
+        /* the function of the snapshot must match the modifier */
+        continue;
+      }
+
+      /* get the corresponding slice id */
+      ModRefAnalysis::ModInfoToIdMap &modInfoToIdMap = mra->getModInfoToIdMap();
+      ModRefAnalysis::ModInfoToIdMap::iterator entry = modInfoToIdMap.find(modInfo);
+      if (entry == modInfoToIdMap.end()) {
+        /* TODO: this should not happen... */
+        assert(false);
+      }
+
+      uint32_t sliceId = entry->second;
+
+      /* initialize... */
+      RecoveryInfo *recoveryInfo = new RecoveryInfo();
+      recoveryInfo->loadInst = loadInst;
+      recoveryInfo->loadAddr = loadAddr;
+      recoveryInfo->loadSize = loadSize;
+      recoveryInfo->f = modInfo.first;
+      recoveryInfo->sliceId = sliceId;
+      recoveryInfo->snapshot = i->state;
+      recoveryInfo->snapshotIndex = snapshotIndex;
+
+      result.push(recoveryInfo);
+
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message(
+          "recovery info: addr = %#llx, size = %llx, function: %s, slice id = %d, snapshot index = %d",
+          recoveryInfo->loadAddr,
+          recoveryInfo->loadSize,
+          recoveryInfo->f->getName().data(),
+          recoveryInfo->sliceId,
+          recoveryInfo->snapshotIndex
+        )
+      );
+
+      /* TODO: validate that each snapshot corresponds to at most one modifier */
+      break;
     }
 
-    uint32_t sliceId = entry->second;
-
-    /* initialize... */
-    RecoveryInfo *recoveryInfo = new RecoveryInfo();
-    recoveryInfo->loadInst = loadInst;
-    recoveryInfo->loadAddr = loadAddr;
-    recoveryInfo->loadSize = loadSize;
-    recoveryInfo->sliceId = sliceId;
-    recoveryInfo->f = modInfo.first;
-
-    result.push_back(recoveryInfo);
-
-    DEBUG_WITH_TYPE(
-      DEBUG_BASIC,
-      klee_message(
-        "recovery info: addr = %#llx, size = %llx, slice id = %d",
-        recoveryInfo->loadAddr,
-        recoveryInfo->loadSize,
-        recoveryInfo->sliceId
-      )
-    );
+    snapshotIndex++;
   }
+
+  assert(!result.empty());
 }
 
 void Executor::getLoadInfo(
@@ -4178,7 +4199,13 @@ void Executor::onRecoveryStateExit(ExecutionState &state) {
   ExecutionState *dependedState = state.getDependedState();
   dumpConstrains(*dependedState);
 
-  notifyDependedState(state);
+  if (dependedState->hasPendingRecoveryInfo()) {
+    /* fire up the next recovery state */
+    RecoveryInfo *ri = dependedState->getPendingRecoveryInfo();
+    startRecoveryState(*dependedState, ri);
+  } else {
+    notifyDependedState(state);
+  }
   terminateState(state);
 }
 
@@ -4232,7 +4259,14 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   state.setRecoveryState(recoveryState);
 
   /* add state */
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding recovery state: %p", recoveryState));
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message(
+      "adding recovery state: %p (snapshot index = %d)",
+      recoveryState,
+      recoveryInfo->snapshotIndex
+    )
+  );
   state.ptreeNode->data = 0;
   std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
   recoveryState->ptreeNode = res.first;
