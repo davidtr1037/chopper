@@ -1441,6 +1441,7 @@ void Executor::executeCall(ExecutionState &state,
     // from just an instruction (unlike LLVM).
     if (state.isNormalState() && filterCallSite(state, f)) {
       /* create snapshot, recovery state will be created on demand... */
+      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding snapshot (index = %d)", state.getSnapshots().size()));
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
 
       if (canSkipCallSite(state, f)) {
@@ -2275,18 +2276,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (state.isNormalState() && state.hasSkippedCalls()) {
       /* TODO: change the name of the predicate to: ... */
       if (state.isBlockingLoadResolved() && isBlockingLoad(state, ki)) {
-        state.pc = state.prevPC;
-
-        /* find which slices should be executed... */
-        std::vector<RecoveryInfo *> recoveryInfos;
-        getAllRecoveryInfo(state, ki, recoveryInfos);
-
-        /* TODO: fix later */
-        assert(recoveryInfos.size() == 1);
-        RecoveryInfo *ri = *recoveryInfos.begin();
-
-        startRecoveryState(state, ri);
-        suspendState(state);
+        handleBlockingLoad(state, ki);
         return;
       }
     }
@@ -4030,6 +4020,21 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   }
 
   return true;
+}
+
+void Executor::handleBlockingLoad(ExecutionState &state, KInstruction *ki) {
+  state.pc = state.prevPC;
+
+  /* find which slices should be executed... */
+  std::vector<RecoveryInfo *> recoveryInfos;
+  getAllRecoveryInfo(state, ki, recoveryInfos);
+
+  /* TODO: fix later */
+  assert(recoveryInfos.size() == 1);
+  RecoveryInfo *ri = *recoveryInfos.begin();
+
+  startRecoveryState(state, ri);
+  suspendState(state);
 }
 
 void Executor::getAllRecoveryInfo(
