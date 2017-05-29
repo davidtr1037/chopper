@@ -460,6 +460,7 @@ private:
   void doDumpStates();
 
   bool isBlockingLoad(ExecutionState &state, KInstruction *ki);
+  void handleBlockingLoad(ExecutionState &state, KInstruction *ki);
   void getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *kinst,
