@@ -151,6 +151,10 @@ private:
   unsigned int recoveryCount;
   /* TODO: add doc... */
   uint32_t directRetSliceId;
+  /* TODO: add doc... */
+  /* we use this to determine which recovery states must be run */
+  /* TODO: not sure if queue is the best data structure for this... */
+  std::queue<RecoveryInfo *> pendingRecoveryInfos;
 
   /* recovery state properties */
 
@@ -469,6 +473,20 @@ public:
   void setDirectRetSliceId(uint32_t id) {
     assert(isNormalState());
     directRetSliceId = id;
+  }
+
+  std::queue<RecoveryInfo *> &getPendingRecoveryInfos() {
+    return pendingRecoveryInfos;
+  }
+
+  RecoveryInfo *getPendingRecoveryInfo() {
+    RecoveryInfo *ri = pendingRecoveryInfos.front();
+    pendingRecoveryInfos.pop();
+    return ri;
+  }
+
+  bool hasPendingRecoveryInfo() {
+    return !pendingRecoveryInfos.empty();
   }
 
 };
