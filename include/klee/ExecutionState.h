@@ -128,7 +128,7 @@ private:
 
   std::map<std::string, std::string> fnAliases;
 
-  ExecutionStateType type;
+  unsigned int type;
 
   /* normal state properties */
 
@@ -270,20 +270,16 @@ public:
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
 
-  ExecutionStateType getType() {
-    return type;
-  }
-
   void setType(ExecutionStateType type) {
-    this->type = type;
+    this->type |= (1 << type);
   }
 
   bool isNormalState() {
-    return type == NORMAL_STATE;
+    return (type & (1 << NORMAL_STATE)) != 0;
   }
 
   bool isRecoveryState() {
-    return type == RECOVERY_STATE;
+    return (type & (1 << RECOVERY_STATE)) != 0;
   }
 
   bool isSuspended() {
