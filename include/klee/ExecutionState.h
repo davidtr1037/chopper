@@ -65,10 +65,8 @@ struct StackFrame {
   ~StackFrame();
 };
 
-typedef enum {
-    NORMAL_STATE,
-    RECOVERY_STATE,
-} ExecutionStateType;
+#define NORMAL_STATE (1 << 0)
+#define RECOVERY_STATE (1 << 1)
 
 struct RecoveryInfo {
     /* TODO: is it required? */
@@ -270,16 +268,16 @@ public:
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
 
-  void setType(ExecutionStateType type) {
-    this->type |= (1 << type);
+  void setType(int type) {
+    this->type = type;
   }
 
   bool isNormalState() {
-    return (type & (1 << NORMAL_STATE)) != 0;
+    return (type & NORMAL_STATE) != 0;
   }
 
   bool isRecoveryState() {
-    return (type & (1 << RECOVERY_STATE)) != 0;
+    return (type & RECOVERY_STATE) != 0;
   }
 
   bool isSuspended() {

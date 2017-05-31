@@ -67,6 +67,7 @@ StackFrame::~StackFrame() {
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf) :
+    /* TODO: fix? */
     type(NORMAL_STATE),
 
     /* state properties */
@@ -174,20 +175,11 @@ ExecutionState *ExecutionState::branch() {
   weight *= .5;
   falseState->weight -= weight;
 
+  /* TODO remove assertions */
   if (this->isNormalState()) {
-    /* TODO remove assertions */
-    assert(this->getRecoveryState() == 0);
-    assert(falseState->getRecoveryState() == 0);
+    assert(falseState->isNormalState());
   } else {
-    //assert(false);
-    //falseState->getDependedStates().clear();
-    //std::set<ExecutionState *> &dependedStates = this->getDependedStates();
-    //for (std::set<ExecutionState *>::iterator i = dependedStates.begin(); i != dependedStates.end(); i++) {
-    //  ExecutionState *dependedState = *i;
-    //  ExecutionState *forked = new ExecutionState(*dependedState); 
-    //  forked->setRecoveryState(falseState);
-    //  falseState->addDependedState(forked);
-    //}
+    assert(falseState->isRecoveryState());
   }
 
   return falseState;
