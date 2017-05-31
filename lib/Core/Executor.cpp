@@ -4172,8 +4172,8 @@ void Executor::onRecoveryStateExit(ExecutionState &state) {
   ExecutionState *dependedState = state.getDependedState();
   dumpConstrains(*dependedState);
 
+  /* check if we need to run another recovery state */
   if (dependedState->hasPendingRecoveryInfo()) {
-    /* fire up the next recovery state */
     RecoveryInfo *ri = dependedState->getPendingRecoveryInfo();
     startRecoveryState(*dependedState, ri);
   } else {

@@ -125,6 +125,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     skippedCount(state.skippedCount),
     recoveryCount(state.recoveryCount),
     directRetSliceId(state.directRetSliceId),
+    pendingRecoveryInfos(state.pendingRecoveryInfos),
 
     /* recovery state properties */
     exitInst(state.exitInst),
