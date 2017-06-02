@@ -1439,7 +1439,8 @@ void Executor::executeCall(ExecutionState &state,
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
-    if (state.isNormalState() && filterCallSite(state, f)) {
+    /* TODO: make it more readable... */
+    if (state.isNormalState() && !state.isRecoveryState() && filterCallSite(state, f)) {
       /* create snapshot, recovery state will be created on demand... */
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding snapshot (index = %d)", state.getSnapshots().size()));
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
