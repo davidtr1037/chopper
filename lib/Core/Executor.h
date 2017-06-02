@@ -459,8 +459,9 @@ private:
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();
 
-  bool isBlockingLoad(ExecutionState &state, KInstruction *ki);
-  void handleBlockingLoad(ExecutionState &state, KInstruction *ki);
+  bool isPotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki);
+  bool isResolvingRequired(ExecutionState &state, KInstruction *ki);
+  bool handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki);
   void getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *kinst,
