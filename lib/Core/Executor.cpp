@@ -4010,6 +4010,13 @@ bool Executor::handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction
   /* find which slices should be executed... */
   std::queue<RecoveryInfo *> &recoveryInfos = state.getPendingRecoveryInfos();
   getAllRecoveryInfo(state, ki, recoveryInfos);
+  if (recoveryInfos.empty()) {
+    /* we are not dependent on previously skipped functions */
+    return false;
+  }
+
+  /* TODO: move to another place? */
+  state.pc = state.prevPC;
 
   RecoveryInfo *ri = state.getPendingRecoveryInfo();
   startRecoveryState(state, ri);
@@ -4017,6 +4024,8 @@ bool Executor::handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction
   if (!state.isSuspended()) {
     suspendState(state);
   }
+
+  return true;
 }
 
 void Executor::getAllRecoveryInfo(
@@ -4094,7 +4103,7 @@ void Executor::getAllRecoveryInfo(
     snapshotIndex++;
   }
 
-  assert(!result.empty());
+  //assert(!result.empty());
 }
 
 void Executor::getLoadInfo(
