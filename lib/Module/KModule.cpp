@@ -368,6 +368,15 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       for (unsigned i=0; i<kf->numInstructions; ++i) {
         KInstruction *ki = kf->instructions[i];
         ki->info = &infos->getInfo(ki->inst);
+        ki->isCloned = kf->isCloned;
+        ki->origInst = NULL;
+        if (kf->isCloned) {
+          Value *origValue = cloner->translateValue(ki->inst);
+          if (origValue) {
+            /* TODO: some instructions can't be translated (RET, ...) */
+            ki->origInst = dyn_cast<llvm::Instruction>(origValue);
+          }
+        }
       }
 
       functions.push_back(kf);

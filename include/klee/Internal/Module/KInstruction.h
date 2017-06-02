@@ -42,11 +42,22 @@ namespace klee {
     /// Destination register index.
     unsigned dest;
 
+    /* TODO: add doc... */
+    bool isCloned;
+    /* TODO: add doc... */
+    llvm::Instruction *origInst;
+
   public:
     virtual ~KInstruction();
     void printFileLine(llvm::raw_ostream &) const;
     std::string printFileLine() const;
 
+    llvm::Instruction *getOrigInst() {
+      if (isCloned) {
+        return origInst;
+      }
+      return inst;
+    }
   };
 
   struct KGEPInstruction : KInstruction {
