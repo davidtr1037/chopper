@@ -137,6 +137,7 @@ private:
   /* a normal state has a unique recovery state */
   ExecutionState *recoveryState;
   /* we should know of the current load inst */
+  /* TODO: rename/re-implement */
   bool blockingLoadStatus;
   /* resloved load addresses */
   std::set<uint64_t> resolvedLoads;
@@ -320,16 +321,19 @@ public:
     recoveryState = state;
   }
 
+  /* TODO: rename/re-implement */
   bool isBlockingLoadResolved() {
     assert(isNormalState());
     return blockingLoadStatus;
   }
 
+  /* TODO: rename/re-implement */
   void markLoadAsUnresolved() {
     assert(isNormalState());
     blockingLoadStatus = false;
   }
 
+  /* TODO: rename/re-implement */
   void markLoadAsResolved() {
     assert(isNormalState());
     blockingLoadStatus = true;
@@ -454,11 +458,13 @@ public:
   bool isExecutingRetSlice() {
     assert(isNormalState());
     StackFrame &sf = stack.back();
-    return sf.kf->isCloned;
+    KFunction *kf = sf.kf;
+    return kf->isCloned && kf->isRetSlice;
   }
 
-  bool hasSkippedCalls() {
+  bool isInDependentMode() {
     assert(isNormalState());
+    /* TODO: add doc... */
     return ((getSnapshots().size() > 1) || (getSnapshots().size() == 1 && !isExecutingRetSlice()));
   }
 
