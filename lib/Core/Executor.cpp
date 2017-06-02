@@ -2276,9 +2276,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     /* TODO: replace with a better predicate */
     if (state.isNormalState() && state.hasSkippedCalls()) {
       /* TODO: change the name of the predicate to: ... */
-      if (state.isBlockingLoadResolved() && isBlockingLoad(state, ki)) {
-        handleBlockingLoad(state, ki);
-        return;
+      if (state.isBlockingLoadResolved() && isPotentiallyBlockingLoad(state, ki)) {
+        bool isBlocking = handlePotentiallyBlockingLoad(state, ki);
+        if (isBlocking) {
+          return;
+        }
       }
     }
     ref<Expr> base = eval(ki, 0, state).value;
@@ -3986,12 +3988,20 @@ Interpreter *Interpreter::create(const InterpreterOptions &opts,
   return new Executor(opts, ih);
 }
 
-bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("checking load..."));
+bool Executor::isPotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki) {
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: checking load...", &state));
   if (!mra->mayBlock(ki->getOrigInst())) {
     return false;
   }
 
+  if (!isResolvingRequired(state, ki)) {
+    return false;
+  }
+
+  return true;
+}
+
+bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
   /* resolve address expression */
   ref<Expr> addressExpr = eval(ki, 0, state).value;
   if (!isa<ConstantExpr>(addressExpr)) {
@@ -4023,9 +4033,7 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   return true;
 }
 
-void Executor::handleBlockingLoad(ExecutionState &state, KInstruction *ki) {
-  state.pc = state.prevPC;
-
+bool Executor::handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki) {
   /* find which slices should be executed... */
   std::queue<RecoveryInfo *> &recoveryInfos = state.getPendingRecoveryInfos();
   getAllRecoveryInfo(state, ki, recoveryInfos);
@@ -4052,7 +4060,7 @@ void Executor::getAllRecoveryInfo(
   loadInst = ki->inst;
   getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite);
 
-  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "blocking load: "; loadInst->print(errs()); errs() << "\n");
+  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "potentially blocking load: "; loadInst->print(errs()); errs() << "\n");
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
   /* get the allocation site computed by static analysis */
