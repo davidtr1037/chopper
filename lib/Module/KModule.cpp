@@ -347,18 +347,31 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   
   for (Module::iterator it = module->begin(), ie = module->end();
        it != ie; ++it) {
-    if (it->isDeclaration())
+    Function *f = it;
+    if (f->isDeclaration()) {
       continue;
+    }
 
     std::set<KFunction *> pool;
-    pool.insert(new KFunction(it, this));
+    pool.insert(new KFunction(f, this));
 
-    Cloner::SliceMap *sliceMap = cloner->getSlices(it);
+    Cloner::SliceMap *sliceMap = cloner->getSlices(f);
     if (sliceMap != 0) {
+      bool hasReturnValue = !f->getReturnType()->isVoidTy();
+      uint32_t retSliceId = 0;
+      if (hasReturnValue) {
+        retSliceId = mra->getRetSliceId(f);
+      }
+
       for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
+        uint32_t id = s->first;
         Function *cloned = s->second.first;
+
         KFunction *kcloned = new KFunction(cloned, this);
         kcloned->isCloned = true;
+        if (hasReturnValue) {
+          kcloned->isRetSlice = (id == retSliceId);
+        }
         pool.insert(kcloned);
       }
     }
@@ -461,7 +474,8 @@ KFunction::KFunction(llvm::Function *_function,
     numArgs(function->arg_size()),
     numInstructions(0),
     trackCoverage(true),
-    isCloned(false) {
+    isCloned(false),
+    isRetSlice(false) {
   for (llvm::Function::iterator bbit = function->begin(), 
          bbie = function->end(); bbit != bbie; ++bbit) {
     BasicBlock *bb = &*bbit;
