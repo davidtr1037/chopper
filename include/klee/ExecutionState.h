@@ -132,8 +132,7 @@ private:
 
   /* a normal state has a suspend status */
   bool suspendStatus;
-  /* all recovery states must be derived from this state */
-  /* TODO: should be a reference? */
+  /* history of taken snapshots, which are uses to create recovery states */
   std::vector<Snapshot> snapshots;
   /* a normal state has a unique recovery state */
   ExecutionState *recoveryState;
@@ -154,7 +153,6 @@ private:
   unsigned int recoveryCount;
   /* TODO: add doc... */
   uint32_t directRetSliceId;
-  /* TODO: add doc... */
   /* we use this to determine which recovery states must be run */
   /* TODO: not sure if queue is the best data structure for this... */
   std::queue<RecoveryInfo *> pendingRecoveryInfos;
