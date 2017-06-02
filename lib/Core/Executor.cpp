@@ -4249,6 +4249,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     Snapshot s = *i;
     if (s.f == recoveryInfo->f) {
       snapshotState = s.state;
+      /* TODO: break? */
     }
   }
 
@@ -4262,12 +4263,6 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   } else {
     /* in this case, a recovery state may depend on previous skipped functions */
     recoveryState->setType(NORMAL_STATE | RECOVERY_STATE);
-
-    /* remove the snapshots which were taken after the current snapshot */
-    unsigned int snapshotCount = state.getSnapshots().size();
-    for (unsigned int i = recoveryInfo->snapshotIndex + 1; i < snapshotCount; i++) {
-      recoveryState->getSnapshots().pop_back();
-    }
 
     /* initialize... */
     recoveryState->setResumed();
