@@ -38,8 +38,20 @@ namespace klee {
     /// Destination register index.
     unsigned dest;
 
+    /* TODO: add doc... */
+    bool isCloned;
+    /* TODO: add doc... */
+    llvm::Instruction *origInst;
+
   public:
     virtual ~KInstruction(); 
+
+    llvm::Instruction *getOrigInst() {
+      if (isCloned) {
+        return origInst;
+      }
+      return inst;
+    }
   };
 
   struct KGEPInstruction : KInstruction {
