@@ -4211,7 +4211,31 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
 
   /* initialize recovery state */
   ExecutionState *recoveryState = new ExecutionState(*snapshotState);
-  recoveryState->setType(RECOVERY_STATE); 
+  if (recoveryInfo->snapshotIndex == 0) {
+    /* a recovery state which is created from the first snapshot has no dependencies */
+    recoveryState->setType(RECOVERY_STATE);
+  } else {
+    /* in this case, a recovery state may depend on previous skipped functions */
+    recoveryState->setType(NORMAL_STATE | RECOVERY_STATE);
+
+    /* remove the snapshots which were taken after the current snapshot */
+    unsigned int snapshotCount = state.getSnapshots().size();
+    for (unsigned int i = recoveryInfo->snapshotIndex + 1; i < snapshotCount; i++) {
+      recoveryState->getSnapshots().pop_back();
+    }
+
+    /* initialize... */
+    recoveryState->setResumed();
+    recoveryState->setRecoveryState(0);
+    recoveryState->markLoadAsResolved();
+    recoveryState->getResolvedLoads().clear();
+    /* TODO: handle allocationRecord */
+    recoveryState->getGuidingConstraints().clear();
+    /* TODO: handle writtenAddresses */
+    /* this should be empty */
+    assert(recoveryState->getPendingRecoveryInfos().empty());
+  }
+
   recoveryState->setDependedState(&state);
   recoveryState->setExitInst(snapshotState->pc->inst);
 
