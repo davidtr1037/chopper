@@ -125,7 +125,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     blockingLoadStatus(state.blockingLoadStatus),
     resolvedLoads(state.resolvedLoads),
     allocationRecord(state.allocationRecord),
-    accumulatingConstraints(state.accumulatingConstraints),
+    guidingConstraints(state.guidingConstraints),
     writtenAddresses(state.writtenAddresses),
     skippedCount(state.skippedCount),
     recoveryCount(state.recoveryCount),

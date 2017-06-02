@@ -144,7 +144,7 @@ private:
   /* we have to remember which allocations were executed */
   AllocationRecord allocationRecord;
   /* used for guiding multiple recovery states */
-  std::vector<ref<Expr>> accumulatingConstraints;
+  std::vector<ref<Expr>> guidingConstraints;
   /* we need to know if an address was written  */
   typedef std::map<uint64_t, std::set<size_t> > WrittenAddresses;
   WrittenAddresses writtenAddresses;
@@ -395,12 +395,12 @@ public:
     guidingAllocationRecord = record;
   }
 
-  std::vector<ref<Expr>> &getAccumulatingConstraints() {
-    return accumulatingConstraints;
+  std::vector<ref<Expr>> &getGuidingConstraints() {
+    return guidingConstraints;
   }
 
-  void addAccumulatingConstraint(ref<Expr> condition) {
-    accumulatingConstraints.push_back(condition);
+  void addGuidingConstraint(ref<Expr> condition) {
+    guidingConstraints.push_back(condition);
   }
 
   void addWrittenAddress(uint64_t address, size_t size) {

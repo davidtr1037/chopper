@@ -4251,7 +4251,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   recoveryState->setRecoveryInfo(recoveryInfo);
 
   /* add accumulated constraints */
-  std::vector<ref<Expr>> &constraints = state.getAccumulatingConstraints();
+  std::vector<ref<Expr>> &constraints = state.getGuidingConstraints();
   for (std::vector<ref<Expr>>::iterator i = constraints.begin(); i != constraints.end(); i++) {
     addConstraint(*recoveryState, *i);
   }
@@ -4474,7 +4474,7 @@ void Executor::terminateDependedState(ExecutionState *dependedState) {
 void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> condition) {
     assert(dependedState.isNormalState());
     addConstraint(dependedState, condition);
-    dependedState.addAccumulatingConstraint(condition);
+    dependedState.addGuidingConstraint(condition);
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
