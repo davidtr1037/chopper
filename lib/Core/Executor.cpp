@@ -2273,9 +2273,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::Load: {
-    /* TODO: replace with a better predicate */
-    if (state.isNormalState() && state.hasSkippedCalls()) {
-      /* TODO: change the name of the predicate to: ... */
+    if (state.isNormalState() && state.isInDependentMode()) {
       if (state.isBlockingLoadResolved() && isPotentiallyBlockingLoad(state, ki)) {
         bool isBlocking = handlePotentiallyBlockingLoad(state, ki);
         if (isBlocking) {
@@ -4361,8 +4359,7 @@ void Executor::onNormalStateWrite(
   ref<Expr> offset,
   ref<Expr> value
 ) {
-  /* TODO: wirte a better predicate */
-  if (!state.hasSkippedCalls()) {
+  if (!state.isInDependentMode()) {
     return;
   }
 
@@ -4401,8 +4398,7 @@ void Executor::onNormalStateRead(
   ref<Expr> offset,
   Expr::Width width
 ) {
-  /* TODO: wirte a better predicate */
-  if (!state.hasSkippedCalls()) {
+  if (!state.isInDependentMode()) {
     return;
   }
 
