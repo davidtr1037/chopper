@@ -3960,7 +3960,7 @@ Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opt
 
 bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("checking load..."));
-  if (!mra->mayBlock(ki->inst)) {
+  if (!mra->mayBlock(ki->getOrigInst())) {
     return false;
   }
 
@@ -4012,7 +4012,7 @@ void Executor::handleBlockingLoad(ExecutionState &state, KInstruction *ki) {
 
 void Executor::getAllRecoveryInfo(
     ExecutionState &state,
-    KInstruction *kinst,
+    KInstruction *ki,
     std::queue<RecoveryInfo *> &result
 ) {
   Instruction *loadInst;
@@ -4020,15 +4020,16 @@ void Executor::getAllRecoveryInfo(
   uint64_t loadSize;
   ModRefAnalysis::AllocSite preciseAllocSite;
 
-  loadInst = kinst->inst;
-  getLoadInfo(state, kinst, loadAddr, loadSize, preciseAllocSite);
+  /* TODO: decide which value to pass... */
+  loadInst = ki->inst;
+  getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite);
 
   DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "blocking load: "; loadInst->print(errs()); errs() << "\n");
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
   /* get the allocation site computed by static analysis */
   std::set<ModRefAnalysis::ModInfo> approximateModInfos;
-  mra->getApproximateModInfos(kinst->inst, preciseAllocSite, approximateModInfos);
+  mra->getApproximateModInfos(ki->getOrigInst(), preciseAllocSite, approximateModInfos);
 
   unsigned int snapshotIndex = 0;
   std::vector<Snapshot> &snapshots = state.getSnapshots();
@@ -4089,7 +4090,7 @@ void Executor::getAllRecoveryInfo(
 
 void Executor::getLoadInfo(
     ExecutionState &state,
-    KInstruction *kinst,
+    KInstruction *ki,
     uint64_t &loadAddr,
     uint64_t &loadSize,
     ModRefAnalysis::AllocSite &allocSite
@@ -4098,7 +4099,7 @@ void Executor::getLoadInfo(
   bool success;
   ConstantExpr *ce;
 
-  ref<Expr> address = eval(kinst, 0, state).value;
+  ref<Expr> address = eval(ki, 0, state).value;
 
   if (SimplifySymIndices) {
     if (!isa<ConstantExpr>(address)) {
@@ -4125,7 +4126,7 @@ void Executor::getLoadInfo(
   loadAddr = ce->getZExtValue();
 
   /* get load size */
-  Expr::Width width = getWidthForLLVMType(kinst->inst->getType());
+  Expr::Width width = getWidthForLLVMType(ki->inst->getType());
   loadSize = Expr::getMinBytesForWidth(width);
 
   /* get allocation site value and offset */
@@ -4324,8 +4325,8 @@ void Executor::onNormalStateWrite(
 }
 
 /* checking if a store may override a sliced function stores ... */
-bool Executor::isOverridingStore(KInstruction *kinst) {
-  assert(kinst->inst->getOpcode() == Instruction::Store);
+bool Executor::isOverridingStore(KInstruction *ki) {
+  assert(ki->inst->getOpcode() == Instruction::Store);
   return true;
 }
 
