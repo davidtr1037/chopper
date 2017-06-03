@@ -4524,25 +4524,24 @@ void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> conditi
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
-    if (std::find(slicedFunctions.begin(), slicedFunctions.end(), f) == slicedFunctions.end()) {
-        return false;
-    }
-
-    //InstructionInfoTable *infoTable = kmodule->infos;
-    //Instruction *callInst = state.prevPC->inst;
-    //const InstructionInfo &info = infoTable->getInfo(callInst);
-
-    //unsigned int line = interpreterOpts.callSiteLine;
-    //if (line == 0) {
-    //    /* no specific call site... */
-    //    return true;
-    //}
-
-    //if (info.line != line) {
+    //if (std::find(slicedFunctions.begin(), slicedFunctions.end(), f) == slicedFunctions.end()) {
     //    return false;
     //}
 
-    return true;
+    const std::vector<SlicedFunction> &functions = interpreterOpts.slicedFunctions;
+    for (auto i = functions.begin(); i != functions.end(); i++) {
+        const SlicedFunction &sf = *i;
+        if (sf.name == f->getName().str()) {
+            Instruction *callInst = state.prevPC->inst;
+            const InstructionInfo &info = kmodule->infos->getInfo(callInst);
+
+            if (sf.line == 0 || sf.line == info.line) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 bool Executor::canSkipCallSite(ExecutionState &state, Function *f) {

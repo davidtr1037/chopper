@@ -1187,17 +1187,41 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 }
 #endif
 
-void parseSlicingParameter(Module *module, std::string parameter, std::vector<std::string> &result) {
+bool parseSlicingToken(std::string token, std::string &fname, unsigned int &line) {
+    std::istringstream stream(token);
+    std::string lineToken;
+
+    line = 0;
+
+    if (std::getline(stream, fname, ':')) {
+        if (std::getline(stream, lineToken, ':')) {
+            /* TODO: handle errors */
+            line = strtol(lineToken.c_str(), NULL, 10);
+        }
+    }
+
+    return true;
+}
+
+void parseSlicingParameter(
+    Module *module,
+    std::string parameter,
+    std::vector<Interpreter::SlicedFunction> &result
+) {
     std::istringstream stream(parameter);
     std::string token;
+    std::string fname;
+    unsigned int line;
 
     while (std::getline(stream, token, ',')) {
-        std::string fname = std::string(token);
-        if (!module->getFunction(token)) {
-          klee_error("sliced function '%s' not found in module.", token.c_str());
+        if (!parseSlicingToken(token, fname, line)) {
+            klee_error("invalid slicing parameter: %s", token.c_str());
+        }
+        if (!module->getFunction(fname)) {
+          klee_error("sliced function '%s' not found in module.", fname.c_str());
         }
 
-        result.push_back(token);
+        result.push_back(Interpreter::SlicedFunction(fname, line));
     }
 }
 
@@ -1381,7 +1405,7 @@ int main(int argc, char **argv, char **envp) {
     klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
-  std::vector<std::string> slicedFunctions;
+  std::vector<Interpreter::SlicedFunction> slicedFunctions;
   parseSlicingParameter(mainModule, SlicingParameter, slicedFunctions);
 
   // FIXME: Change me to std types.
@@ -1431,9 +1455,7 @@ int main(int argc, char **argv, char **envp) {
 
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
-  for (std::vector<std::string>::iterator i = slicedFunctions.begin(); i != slicedFunctions.end(); i++) {
-    IOpts.slicedFunctions.push_back(Interpreter::SlicedFunction(*i, 0));
-  }
+  IOpts.slicedFunctions = slicedFunctions;
   IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
