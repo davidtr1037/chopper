@@ -73,6 +73,7 @@ public:
 	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
   };
 
+  /* TODO: rename to SlicedFunctionParameter */
   struct SlicedFunction {
     std::string name;
     /* TODO: change to lines? */

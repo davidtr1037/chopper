@@ -442,11 +442,6 @@ const Module *Executor::setModule(llvm::Module *module,
                        userSearcherRequiresMD2U());
   }
 
-  for (std::vector<SlicedFunction>::iterator i = functions.begin(); i != functions.end(); i++) {
-    Function *f = kmodule->module->getFunction(i->name);
-    slicedFunctions.push_back(f);
-  }
-
   return module;
 }
 
@@ -4497,10 +4492,6 @@ void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> conditi
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
-    //if (std::find(slicedFunctions.begin(), slicedFunctions.end(), f) == slicedFunctions.end()) {
-    //    return false;
-    //}
-
     const std::vector<SlicedFunction> &functions = interpreterOpts.slicedFunctions;
     for (auto i = functions.begin(); i != functions.end(); i++) {
         const SlicedFunction &sf = *i;
