@@ -1381,7 +1381,11 @@ void Executor::executeCall(ExecutionState &state,
 
       /* execute the ret-slice without creating a recovery state */
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("executing ret-slice directly"));
-      uint32_t retSliceId = mra->getRetSliceId(f);
+      uint32_t retSliceId;
+      if (!mra->getRetSliceId(f, retSliceId)) {
+        /* TODO: this should not happen */
+        assert(false);
+      }
       state.setDirectRetSliceId(retSliceId);
       Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, retSliceId);
       Function *retSlice = sliceInfo->first;

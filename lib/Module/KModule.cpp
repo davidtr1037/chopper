@@ -357,11 +357,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
     Cloner::SliceMap *sliceMap = cloner->getSlices(f);
     if (sliceMap != 0) {
-      bool hasReturnValue = !f->getReturnType()->isVoidTy();
       uint32_t retSliceId = 0;
-      if (hasReturnValue) {
-        retSliceId = mra->getRetSliceId(f);
-      }
+      bool hasRetSlice = mra->getRetSliceId(f, retSliceId);
 
       for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
         uint32_t id = s->first;
@@ -369,7 +366,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
         KFunction *kcloned = new KFunction(cloned, this);
         kcloned->isCloned = true;
-        if (hasReturnValue) {
+        if (hasRetSlice) {
           kcloned->isRetSlice = (id == retSliceId);
         }
         pool.insert(kcloned);
