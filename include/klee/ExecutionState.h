@@ -387,6 +387,11 @@ public:
     return allocationRecord;
   }
 
+  void setAllocationRecord(AllocationRecord &record) {
+    assert(isNormalState());
+    allocationRecord = record;
+  }
+
   AllocationRecord &getGuidingAllocationRecord() {
     assert(isRecoveryState());
     return guidingAllocationRecord;
