@@ -2145,6 +2145,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (state.isBlockingLoadResolved() && isPotentiallyBlockingLoad(state, ki)) {
         bool isBlocking = handlePotentiallyBlockingLoad(state, ki);
         if (isBlocking) {
+          /* TODO: break? */
           return;
         }
       }
@@ -4036,7 +4037,7 @@ void Executor::getAllRecoveryInfo(
   uint64_t loadSize;
   ModRefAnalysis::AllocSite preciseAllocSite;
 
-  /* TODO: decide which value to pass... */
+  /* TODO: decide which value to pass (original, cloned) */
   loadInst = ki->inst;
   getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite);
 
@@ -4100,8 +4101,6 @@ void Executor::getAllRecoveryInfo(
 
     snapshotIndex++;
   }
-
-  //assert(!result.empty());
 }
 
 void Executor::getLoadInfo(
