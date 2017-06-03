@@ -4206,6 +4206,11 @@ void Executor::notifyDependedState(ExecutionState &recoveryState) {
   ExecutionState *dependedState = recoveryState.getDependedState();
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: notifying depended state %p", &recoveryState, dependedState));
 
+  if (recoveryState.isNormalState()) {
+    /* the allocation record of the recovery states contains the allocation record of the depended state */
+    dependedState->setAllocationRecord(recoveryState.getAllocationRecord());
+  }
+
   if (states.find(dependedState) == states.end()) {
     resumeState(*dependedState, true);
   } else {
@@ -4243,7 +4248,8 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     recoveryState->setRecoveryState(0);
     recoveryState->markLoadAsResolved();
     recoveryState->getResolvedLoads().clear();
-    /* TODO: handle allocationRecord */
+    /* this state may create another recovery state, so it must hold the allocation record */
+    recoveryState->setAllocationRecord(state.getAllocationRecord());
     recoveryState->getGuidingConstraints().clear();
     /* TODO: handle writtenAddresses */
     /* this should be empty */
@@ -4449,6 +4455,9 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
             klee_message("%p: allocating new address: %llx, size: %lld", &state, mo->address, size)
         );
         allocationRecord.addAddr(context, mo);
+        if (state.isNormalState()) {
+          state.getAllocationRecord().addAddr(context, mo);
+        }
     }
 
     return mo;

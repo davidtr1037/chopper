@@ -28,6 +28,7 @@ ASContext::ASContext(ASContext &other) :
     
 }
 
+/* TODO: use the translatedValue API? */
 Instruction *ASContext::getTranslatedInst(Cloner *cloner, Instruction *inst) {
     /* get function */
     Function *f = inst->getParent()->getParent();
