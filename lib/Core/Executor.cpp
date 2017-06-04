@@ -3191,11 +3191,17 @@ void Executor::terminateStateOnError(ExecutionState &state,
 
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
-    
+
+  ExecutionState *dependedState = NULL;
   if (state.isRecoveryState()) {
-    terminateDependedState(state.getDependedState());
+    dependedState = state.getDependedState();
+    assert(dependedState);
   }
   terminateState(state);
+
+  if (dependedState) {
+    terminateDependedState(dependedState);
+  }
 
   if (shouldExitOn(termReason)) {
     unsigned int maxCount = interpreterOpts.maxErrorCount;
@@ -4508,8 +4514,22 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
 }
 
 void Executor::terminateDependedState(ExecutionState *dependedState) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating depended state %p", dependedState));
-    terminateState(*dependedState);
+    ExecutionState *next = NULL;
+
+    /* recursive termination... */
+    do {
+        if (dependedState->isRecoveryState()) {
+            next = dependedState->getDependedState();
+            assert(next);
+        } else {
+            next = NULL;
+        }
+
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating depended state %p", dependedState));
+        terminateState(*dependedState);
+
+        dependedState = next;
+    } while (dependedState);
 }
 
 void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> condition) {
