@@ -1187,16 +1187,22 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 }
 #endif
 
-bool parseSlicingToken(std::string token, std::string &fname, unsigned int &line) {
-    std::istringstream stream(token);
-    std::string lineToken;
+bool parseSlicedFunctionOption(std::string option, std::string &fname, unsigned int &line) {
+    std::istringstream stream(option);
+    std::string token;
+    char *endptr;
 
     line = 0;
 
-    if (std::getline(stream, fname, ':')) {
-        if (std::getline(stream, lineToken, ':')) {
+    if (std::getline(stream, token, ':')) {
+        fname = token;
+        if (std::getline(stream, token, ':')) {
             /* TODO: handle errors */
-            line = strtol(lineToken.c_str(), NULL, 10);
+            const char *s = token.c_str();
+            line = strtol(s, &endptr, 10);
+            if ((errno == ERANGE) || (endptr == s) || (*endptr != '\0')) {
+                return false;
+            }
         }
     }
 
@@ -1206,7 +1212,7 @@ bool parseSlicingToken(std::string token, std::string &fname, unsigned int &line
 void parseSlicingParameter(
     Module *module,
     std::string parameter,
-    std::vector<Interpreter::SlicedFunction> &result
+    std::vector<Interpreter::SlicedFunctionOption> &result
 ) {
     std::istringstream stream(parameter);
     std::string token;
@@ -1214,14 +1220,14 @@ void parseSlicingParameter(
     unsigned int line;
 
     while (std::getline(stream, token, ',')) {
-        if (!parseSlicingToken(token, fname, line)) {
+        if (!parseSlicedFunctionOption(token, fname, line)) {
             klee_error("invalid slicing parameter: %s", token.c_str());
         }
         if (!module->getFunction(fname)) {
           klee_error("sliced function '%s' not found in module.", fname.c_str());
         }
 
-        result.push_back(Interpreter::SlicedFunction(fname, line));
+        result.push_back(Interpreter::SlicedFunctionOption(fname, line));
     }
 }
 
@@ -1405,8 +1411,8 @@ int main(int argc, char **argv, char **envp) {
     klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
-  std::vector<Interpreter::SlicedFunction> slicedFunctions;
-  parseSlicingParameter(mainModule, SlicingParameter, slicedFunctions);
+  std::vector<Interpreter::SlicedFunctionOption> slicingOptions;
+  parseSlicingParameter(mainModule, SlicingParameter, slicingOptions);
 
   // FIXME: Change me to std types.
   int pArgc;
@@ -1455,7 +1461,7 @@ int main(int argc, char **argv, char **envp) {
 
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
-  IOpts.slicedFunctions = slicedFunctions;
+  IOpts.slicingOptions = slicingOptions;
   IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =

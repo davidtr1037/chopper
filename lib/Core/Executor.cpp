@@ -439,8 +439,8 @@ const Module *Executor::setModule(llvm::Module *module,
 
   /* build target functions */
   std::vector<std::string> targets;
-  std::vector<SlicedFunction> functions = interpreterOpts.slicedFunctions;
-  for (std::vector<SlicedFunction>::iterator i = functions.begin(); i != functions.end(); i++) {
+  const std::vector<SlicedFunctionOption> &slicingOptions = interpreterOpts.slicingOptions;
+  for (auto i = slicingOptions.begin(); i != slicingOptions.end(); i++) {
     targets.push_back(i->name);
   }
 
@@ -4519,14 +4519,14 @@ void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> conditi
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
-    const std::vector<SlicedFunction> &functions = interpreterOpts.slicedFunctions;
-    for (auto i = functions.begin(); i != functions.end(); i++) {
-        const SlicedFunction &sf = *i;
-        if (sf.name == f->getName().str()) {
+    const std::vector<SlicedFunctionOption> &options = interpreterOpts.slicingOptions;
+    for (auto i = options.begin(); i != options.end(); i++) {
+        const SlicedFunctionOption &option = *i;
+        if (option.name == f->getName().str()) {
             Instruction *callInst = state.prevPC->inst;
             const InstructionInfo &info = kmodule->infos->getInfo(callInst);
 
-            if (sf.line == 0 || sf.line == info.line) {
+            if (option.line == 0 || option.line == info.line) {
                 return true;
             }
         }
