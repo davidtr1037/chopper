@@ -496,6 +496,7 @@ private:
   bool checkConsistency(ExecutionState &state, ExecutionState &recoveryState);
   MemoryObject *onAllocate(ExecutionState &state, uint64_t size, bool isLocal, llvm::Instruction *allocInst, bool zeroMemory);
   bool isDynamicAlloc(llvm::Instruction *allocInst);
+  void onExecuteFree(ExecutionState *state, const MemoryObject *mo);
   void terminateDependedState(ExecutionState *dependedState);
   void mergeConstraints(ExecutionState &dependedState, ref<Expr> condition);
   bool filterCallSite(ExecutionState &state, llvm::Function *f);

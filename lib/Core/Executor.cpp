@@ -3489,9 +3489,7 @@ void Executor::executeFree(ExecutionState &state,
       } else {
         it->second->addressSpace.unbindObject(mo);
         if (it->second->isRecoveryState()) {
-            ExecutionState *dependedState = it->second->getDependedState();
-            dependedState->addressSpace.unbindObject(mo);
-            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %llx", dependedState, mo->address));
+            onExecuteFree(it->second, mo);
         }
         if (target)
           bindLocal(target, *it->second, Expr::createPointer(0));
@@ -4469,6 +4467,7 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
         );
     } else {
         mo = memory->allocate(size, isLocal, false, allocInst);
+        /* TODO: update recursively... */
         /* bind the address to the depended state */
         ObjectState *os = bindObjectInState(*dependedState, mo, isLocal);
         /* initialize allocated object (in depended state...) */
@@ -4511,6 +4510,13 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
     }
 
     return false;
+}
+
+void Executor::onExecuteFree(ExecutionState *state, const MemoryObject *mo) {
+    ExecutionState *dependedState = state->getDependedState();
+    /* TODO: update recursively... */
+    dependedState->addressSpace.unbindObject(mo);
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %llx", dependedState, mo->address));
 }
 
 void Executor::terminateDependedState(ExecutionState *dependedState) {
