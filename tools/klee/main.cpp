@@ -1488,7 +1488,7 @@ int main(int argc, char **argv, char **envp) {
     }
 
     if (!seeds.empty()) {
-      klee_message("KLEE: using %u seeds\n", seeds.size());
+      klee_message("KLEE: using %zu seeds\n", seeds.size());
       interpreter->useSeeds(&seeds);
     }
     if (RunInDir != "") {

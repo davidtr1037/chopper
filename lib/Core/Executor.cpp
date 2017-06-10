@@ -1362,7 +1362,7 @@ void Executor::executeCall(ExecutionState &state,
     /* TODO: make it more readable... */
     if (state.isNormalState() && !state.isRecoveryState() && filterCallSite(state, f)) {
       /* create snapshot, recovery state will be created on demand... */
-      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding snapshot (index = %d)", state.getSnapshots().size()));
+      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding snapshot (index = %lu)", state.getSnapshots().size()));
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
 
       if (canSkipCallSite(state, f)) {
@@ -3990,7 +3990,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
 
   /* check if already resolved */
   if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#llx is already resolved", &state, address));
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#lx is already resolved", &state, address));
     return false;
   }
 
@@ -4000,7 +4000,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
     state.markLoadAsUnresolved();
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
-      klee_message("location (%llx, %u) was written, recovery is not required", address, size);
+      klee_message("location (%lx, %zu) was written, recovery is not required", address, size);
     );
     return false;
   }
@@ -4089,7 +4089,7 @@ void Executor::getAllRecoveryInfo(
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
         klee_message(
-          "recovery info: addr = %#llx, size = %llx, function: %s, slice id = %d, snapshot index = %d",
+          "recovery info: addr = %#lx, size = %lx, function: %s, slice id = %u, snapshot index = %u",
           recoveryInfo->loadAddr,
           recoveryInfo->loadSize,
           recoveryInfo->f->getName().data(),
@@ -4279,7 +4279,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message(
-      "adding recovery state: %p (snapshot index = %d)",
+      "adding recovery state: %p (snapshot index = %u)",
       recoveryState,
       recoveryInfo->snapshotIndex
     )
@@ -4310,7 +4310,7 @@ void Executor::onRecoveryStateWrite(
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message(
-      "write in state %p: mo = %p, address = %llx offset = %llx",
+      "write in state %p: mo = %p, address = %lx offset = %lx",
       &state,
       mo,
       mo->address,
@@ -4362,7 +4362,7 @@ void Executor::onNormalStateWrite(
   state.addWrittenAddress(concreteAddress, sizeInBytes);
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    klee_message("adding written address: (%llx, %u)", concreteAddress, sizeInBytes)
+    klee_message("adding written address: (%lx, %zu)", concreteAddress, sizeInBytes)
   );
 }
 
@@ -4436,7 +4436,7 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
         mo = state.getGuidingAllocationRecord().getAddr(context);
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
-            klee_message("%p: reusing allocated address: %llx, size: %lld", &state, mo->address, size)
+            klee_message("%p: reusing allocated address: %lx, size: %lu", &state, mo->address, size)
         );
     } else {
         mo = memory->allocate(size, isLocal, false, allocInst);
@@ -4452,7 +4452,7 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
 
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
-            klee_message("%p: allocating new address: %llx, size: %lld", &state, mo->address, size)
+            klee_message("%p: allocating new address: %lx, size: %lu", &state, mo->address, size)
         );
         allocationRecord.addAddr(context, mo);
         if (state.isNormalState()) {
@@ -4489,7 +4489,7 @@ void Executor::onExecuteFree(ExecutionState *state, const MemoryObject *mo) {
     ExecutionState *dependedState = state->getDependedState();
     /* TODO: update recursively... */
     dependedState->addressSpace.unbindObject(mo);
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %llx", dependedState, mo->address));
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %lx", dependedState, mo->address));
 }
 
 void Executor::terminateDependedState(ExecutionState *dependedState) {
