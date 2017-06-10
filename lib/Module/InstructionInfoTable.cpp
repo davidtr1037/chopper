@@ -154,6 +154,11 @@ InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner)
           if (value) {
             /* add original instruction information */
             Instruction *origInst = dyn_cast<Instruction>(value);
+            if (!origInst) {
+                /* TODO: something is wrong with the cloner mapping */
+                assert(false);
+            }
+
             const InstructionInfo &info = getInfo(origInst);
             infos.insert(std::make_pair(inst, info));
           } else {
