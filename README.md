@@ -11,9 +11,7 @@ Build KLEE:
 git checkout single-call
 mkdir klee_build
 cd klee_build
-cmake \
-    -DCMAKE_C_FLAGS="-m32 -g" \
-    -DCMAKE_CXX_FLAGS="-m32 -g" \
+CXXFLAGS="-fno-rtti" cmake \
     -DENABLE_SOLVER_STP=ON \
     -DENABLE_POSIX_RUNTIME=ON \
     -DENABLE_KLEE_UCLIBC=ON \
@@ -26,7 +24,7 @@ cmake \
     -DDG_ROOT_DIR=<DG_PROJECT_DIR> \
     -DSLICING_ROOT_DIR=<SLICING_PROJECT_DIR> \
     <KLEE_ROOT_DIR>
-export LD_LIBRARY_PATH=<DG_BUILD_DIR>/src
+export LD_LIBRARY_PATH=<SVF_BUILD_DIR>/lib:<SVF_BUILD_DIR>/lib/CUDD:<DG_BUILD_DIR>/src
 make
 ```
 
@@ -70,13 +68,13 @@ int main(int argc, char *argv[]) {
 
 Compile the program:
 ```
-clang -m32 -c -g -emit-llvm main.c -o main.bc
+clang -c -g -emit-llvm main.c -o main.bc
 opt -mem2reg main.bc -o main.bc (required for better pointer analysis)
 ```
 
 Run KLEE (static analysis related debug messages are written to stdout):
 ```
-export LD_LIBRARY_PATH=<DG_BUILD_DIR>/src
+export LD_LIBRARY_PATH=<SVF_BUILD_DIR>/lib:<SVF_BUILD_DIR>/lib/CUDD:<DG_BUILD_DIR>/src
 klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
 
