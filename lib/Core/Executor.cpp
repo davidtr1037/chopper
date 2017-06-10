@@ -3494,7 +3494,7 @@ void Executor::executeFree(ExecutionState &state,
         if (it->second->isRecoveryState()) {
             ExecutionState *dependedState = it->second->getDependedState();
             dependedState->addressSpace.unbindObject(mo);
-            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %llx", dependedState, mo->address));
+            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %lx", dependedState, mo->address));
         }
         if (target)
           bindLocal(target, *it->second, Expr::createPointer(0));
@@ -4014,7 +4014,7 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
 
   /* check if already resolved */
   if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#llx is already resolved", &state, address));
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#lx is already resolved", &state, address));
     return false;
   }
 
@@ -4024,7 +4024,7 @@ bool Executor::isBlockingLoad(ExecutionState &state, KInstruction *ki) {
     state.markLoadAsUnresolved();
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
-      klee_message("location (%llx, %u) was written, recovery is not required", address, size);
+      klee_message("location (%lx, %zu) was written, recovery is not required", address, size);
     );
     return false;
   }
@@ -4045,7 +4045,7 @@ RecoveryInfo *Executor::getRecoveryInfo(ExecutionState &state, KInstruction *kin
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message(
-      "recovery info: addr = %#llx, size = %llx, slice id = %d",
+      "recovery info: addr = %#lx, size = %lx, slice id = %u",
       recoveryInfo->loadAddr,
       recoveryInfo->loadSize,
       recoveryInfo->sliceId
@@ -4223,7 +4223,7 @@ void Executor::onRecoveryStateWrite(
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message(
-      "write in state %p: mo = %p, address = %llx offset = %llx",
+      "write in state %p: mo = %p, address = %lx offset = %lx",
       &state,
       mo,
       mo->address,
@@ -4276,7 +4276,7 @@ void Executor::onNormalStateWrite(
   state.addWrittenAddress(concreteAddress, sizeInBytes);
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    klee_message("adding written address: (%llx, %u)", concreteAddress, sizeInBytes)
+    klee_message("adding written address: (%lx, %zu)", concreteAddress, sizeInBytes)
   );
 }
 
@@ -4351,7 +4351,7 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
         mo = state.getGuidingAllocationRecord().getAddr(context);
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
-            klee_message("%p: reusing allocated address: %llx, size: %lld", &state, mo->address, size)
+            klee_message("%p: reusing allocated address: %lx, size: %ld", &state, mo->address, size)
         );
     } else {
         mo = memory->allocate(size, isLocal, false, allocInst);
@@ -4366,7 +4366,7 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
 
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
-            klee_message("%p: allocating new address: %llx, size: %lld", &state, mo->address, size)
+            klee_message("%p: allocating new address: %lx, size: %ld", &state, mo->address, size)
         );
         allocationRecord.addAddr(context, mo);
     }
