@@ -29,7 +29,6 @@ make
 ```
 
 Notes:
-* Currently, the porject must be compiled for 32-bit
 * Use llvm-config from the Autoconf build (LLVM 3.4)
 
 ## Usage Example
@@ -79,7 +78,7 @@ klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
 
 Notes:
-* For choosing a specific call site of the sliced function, add ```-line=<line_number>```.
+* For choosing a specific call site of the sliced function, add ```-slice=<function>:<line>```.
 * For debugging the mechanism, add ```-debug-only=basic```.
 * Currently, the supported search heuristics are: dfs, bfs.
 * Currently, only klee-libc is supported. Some files (memcpy.c, memset.c) should be recompiled with `-O1` to avoid vector instructions.
