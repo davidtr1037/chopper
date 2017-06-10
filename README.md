@@ -29,7 +29,7 @@ make
 ```
 
 Notes:
-* Use llvm-config from the Autoconf build (LLVM 3.4)
+* Use llvm-config from the CMake build (LLVM 3.4)
 
 ## Usage Example
 Let's look at the following program:
