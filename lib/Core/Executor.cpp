@@ -3258,7 +3258,7 @@ void Executor::executeAlloc(ExecutionState &state,
        
     MemoryObject *mo = NULL;
     if (state.isRecoveryState() && isDynamicAlloc(state.prevPC->inst)) {
-      mo = onAllocate(state, CE->getZExtValue(), isLocal, state.prevPC->inst, zeroMemory);
+      mo = onExecuteAlloc(state, CE->getZExtValue(), isLocal, state.prevPC->inst, zeroMemory);
     } else {
       mo =  memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
                          allocSite, allocationAlignment);
@@ -4187,9 +4187,8 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
 void Executor::onRecoveryStateExit(ExecutionState &state) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: recovery state reached exit instruction", &state));
 
-  /* debug... */
   ExecutionState *dependedState = state.getDependedState();
-  dumpConstrains(*dependedState);
+  //dumpConstrains(*dependedState);
 
   /* check if we need to run another recovery state */
   if (dependedState->hasPendingRecoveryInfo()) {
@@ -4420,7 +4419,7 @@ bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryS
     return result != Solver::False;
 }
 
-MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst, bool zeroMemory) {
+MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst, bool zeroMemory) {
     MemoryObject *mo = NULL;
 
     /* get the context of the allocation instruction */
@@ -4440,24 +4439,19 @@ MemoryObject *Executor::onAllocate(ExecutionState &state, uint64_t size, bool is
         );
     } else {
         mo = memory->allocate(size, isLocal, false, allocInst);
-        /* TODO: update recursively... */
-        /* bind the address to the depended state */
-        ObjectState *os = bindObjectInState(*dependedState, mo, isLocal);
-        /* initialize allocated object (in depended state...) */
-        if (zeroMemory) {
-            os->initializeToZero();
-        } else {
-            os->initializeToRandom();
-        }
-
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
             klee_message("%p: allocating new address: %lx, size: %lu", &state, mo->address, size)
         );
+
+        /* TODO: do we need to add the MemoryObject here? */
         allocationRecord.addAddr(context, mo);
         if (state.isNormalState()) {
           state.getAllocationRecord().addAddr(context, mo);
         }
+
+        /* bind the address to the depended states */
+        bindAll(dependedState, mo, isLocal, zeroMemory);
     }
 
     return mo;
@@ -4487,9 +4481,7 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
 
 void Executor::onExecuteFree(ExecutionState *state, const MemoryObject *mo) {
     ExecutionState *dependedState = state->getDependedState();
-    /* TODO: update recursively... */
-    dependedState->addressSpace.unbindObject(mo);
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: freeing address %lx", dependedState, mo->address));
+    unbindAll(dependedState, mo);
 }
 
 void Executor::terminateDependedState(ExecutionState *dependedState) {
@@ -4547,4 +4539,42 @@ bool Executor::canSkipCallSite(ExecutionState &state, Function *f) {
     }
 
     return false;
+}
+
+void Executor::bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory) {
+    ExecutionState *next;
+    do {
+        /* this state is a normal state (and might be a recovery state as well) */
+        next = NULL;
+        if (state->isRecoveryState()) {
+            next = state->getDependedState();
+        }
+
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: binding address: %lx", state, mo->address));
+        ObjectState *os = bindObjectInState(*state, mo, isLocal);
+        /* initialize allocated object */
+        if (zeroMemory) {
+            os->initializeToZero();
+        } else {
+            os->initializeToRandom();
+        }
+
+        state = next;
+    } while (next);
+}
+
+void Executor::unbindAll(ExecutionState *state, const MemoryObject *mo) {
+    ExecutionState *next;
+    do {
+        /* this state is a normal state (and might be a recovery state as well) */
+        next = NULL;
+        if (state->isRecoveryState()) {
+            next = state->getDependedState();
+        }
+
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: unbinding address %lx", state, mo->address));
+        state->addressSpace.unbindObject(mo);
+
+        state = next;
+    } while (next);
 }
