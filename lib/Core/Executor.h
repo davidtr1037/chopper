@@ -512,6 +512,8 @@ private:
   void bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory);
   void unbindAll(ExecutionState *state, const MemoryObject *mo);
   ExecutionState *forkDependedStates(ExecutionState *trueState, ExecutionState *falseState);
+  bool checkConsistencyForAll(ExecutionState &dependedState, ExecutionState &recoveryState);
+  void mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition);
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
