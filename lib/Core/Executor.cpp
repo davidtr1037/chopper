@@ -1076,6 +1076,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
       if (!isTrueStateValid && isFalseStateValid) {
         /* the originating depended state must be terminated... */
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating originating depended state: %p", dependedState));
         terminateDependedState(dependedState);
         return StatePair(0, falseState);
       }
@@ -3197,9 +3198,10 @@ void Executor::terminateStateOnError(ExecutionState &state,
     dependedState = state.getDependedState();
     assert(dependedState);
   }
-  terminateState(state);
 
+  terminateState(state);
   if (dependedState) {
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating depended state on error: %p", dependedState));
     terminateDependedState(dependedState);
   }
 
@@ -4476,10 +4478,10 @@ MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, boo
         if (state.isNormalState()) {
           state.getAllocationRecord().addAddr(context, mo);
         }
-
-        /* bind the address to the depended states */
-        bindAll(dependedState, mo, isLocal, zeroMemory);
     }
+
+    /* bind the address to the depended states */
+    bindAll(dependedState, mo, isLocal, zeroMemory);
 
     return mo;
 }
@@ -4578,12 +4580,14 @@ void Executor::bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bo
         }
 
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: binding address: %lx", state, mo->address));
-        ObjectState *os = bindObjectInState(*state, mo, isLocal);
-        /* initialize allocated object */
-        if (zeroMemory) {
-            os->initializeToZero();
-        } else {
-            os->initializeToRandom();
+        if (!state->addressSpace.findObject(mo)) {
+            ObjectState *os = bindObjectInState(*state, mo, isLocal);
+            /* initialize allocated object */
+            if (zeroMemory) {
+                os->initializeToZero();
+            } else {
+                os->initializeToRandom();
+            }
         }
 
         state = next;
