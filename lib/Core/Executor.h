@@ -511,6 +511,7 @@ private:
   bool canSkipCallSite(ExecutionState &state, llvm::Function *f);
   void bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory);
   void unbindAll(ExecutionState *state, const MemoryObject *mo);
+  ExecutionState *forkDependedStates(ExecutionState *trueState, ExecutionState *falseState);
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,

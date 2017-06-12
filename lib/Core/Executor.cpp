@@ -1025,18 +1025,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       bool isFalseStateValid = false;
       if (checkConsistency(*dependedState, *falseState)) {
         /* forked state is consistent with it's originator */
-        forkedDependedState = new ExecutionState(*dependedState);
-        assert(forkedDependedState->isSuspended());
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("forked depended state: %p", forkedDependedState));
-
-        forkedDependedState->setRecoveryState(falseState);
-        falseState->setDependedState(forkedDependedState);
-
-        dependedState->ptreeNode->data = 0;
-        std::pair<PTree::Node*, PTree::Node*> res = processTree->split(dependedState->ptreeNode, forkedDependedState, dependedState);
-        forkedDependedState->ptreeNode = res.first;
-        dependedState->ptreeNode = res.second;
-
+        forkedDependedState = forkDependedStates(trueState, falseState);
         isFalseStateValid = true;
       } else {
         DEBUG_WITH_TYPE(
@@ -4581,4 +4570,61 @@ void Executor::unbindAll(ExecutionState *state, const MemoryObject *mo) {
 
         state = next;
     } while (next);
+}
+
+ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, ExecutionState *falseState) {
+    ExecutionState *current = trueState->getDependedState();
+    ExecutionState *forkedPrev = falseState;
+    ExecutionState *forked = NULL;
+    ExecutionState *firstForked = NULL;
+    bool isFirst = true;
+
+    /* fork the chain of depended states */
+    do {
+        forked = new ExecutionState(*current);
+        assert(forked->isSuspended());
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("forked depended state: %p (from %p)", forked, current));
+
+        forked->setRecoveryState(forkedPrev);
+        forkedPrev->setDependedState(forked);
+
+        DEBUG_WITH_TYPE(
+            DEBUG_BASIC,
+            klee_message(
+                "forked %p: dep = %p rec = %p",
+                forked,
+                forked->isRecoveryState() ? forked->getDependedState() : NULL,
+                forked->isNormalState() ? forked->getRecoveryState() : NULL
+            )
+        );
+        DEBUG_WITH_TYPE(
+            DEBUG_BASIC,
+            klee_message(
+                "forkedPrev %p: dep = %p rec = %p",
+                forkedPrev,
+                forkedPrev->isRecoveryState() ? forkedPrev->getDependedState() : NULL,
+                forkedPrev->isNormalState() ? forkedPrev->getRecoveryState() : NULL
+            )
+        );
+
+        current->ptreeNode->data = 0;
+        std::pair<PTree::Node*, PTree::Node*> res = processTree->split(current->ptreeNode, forked, current);
+        forked->ptreeNode = res.first;
+        current->ptreeNode = res.second;
+
+        /* first forked state */
+        if (isFirst) {
+            firstForked = forked;
+            isFirst = false;
+        }
+
+        if (current->isRecoveryState()) {
+            forkedPrev = forked;
+            current = current->getDependedState();
+        } else {
+            current = NULL;
+        }
+    } while (current);
+
+    return firstForked;
 }
