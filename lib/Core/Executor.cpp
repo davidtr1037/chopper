@@ -1024,7 +1024,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", trueState, dependedState)
       );
       bool isTrueStateValid = false;
-      if (checkConsistency(*dependedState, *trueState)) {
+      if (checkConsistencyForAll(*dependedState, *trueState)) {
         isTrueStateValid = true;  
       } else {
         DEBUG_WITH_TYPE(
@@ -1040,7 +1040,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState)
       );
       bool isFalseStateValid = false;
-      if (checkConsistency(*dependedState, *falseState)) {
+      if (checkConsistencyForAll(*dependedState, *falseState)) {
         /* forked state is consistent with it's originator */
         forkedDependedState = forkDependedStates(trueState, falseState);
         isFalseStateValid = true;
@@ -1054,10 +1054,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
       /* copy constraints if required */
       if (isTrueStateValid) {
-        mergeConstraints(*dependedState, condition);
+        mergeConstraintsForAll(*dependedState, condition);
       }
       if (isFalseStateValid) {
-        mergeConstraints(*forkedDependedState, Expr::createIsZero(condition));
+        mergeConstraintsForAll(*forkedDependedState, Expr::createIsZero(condition));
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
@@ -4654,4 +4654,34 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
     } while (current);
 
     return firstForked;
+}
+
+bool Executor::checkConsistencyForAll(ExecutionState &dependedState, ExecutionState &recoveryState) {
+    ExecutionState *next = &dependedState;
+    do {
+        if (!checkConsistency(*next, recoveryState)) {
+            return false;
+        }
+
+        if (next->isRecoveryState()) {
+            next = next->getDependedState();
+        } else {
+            next = NULL;
+        }
+    } while (next);
+
+    return true;
+}
+
+void Executor::mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition) {
+    ExecutionState *next = &dependedState;
+    do {
+        mergeConstraints(*next, condition);
+
+        if (next->isRecoveryState()) {
+            next = next->getDependedState();
+        } else {
+            next = NULL;
+        }
+    } while (next);
 }
