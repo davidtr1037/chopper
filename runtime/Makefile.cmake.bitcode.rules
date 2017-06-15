@@ -97,6 +97,7 @@ $(LOCAL_BUILD_DIR)/%.bc : $(SRC_DIR)/%.c
 	@echo "LLVMCC ($(RUNTIME_CONFIG_STRING)) $<"
 	$(Verb) $(MKDIR) -p $(LOCAL_BUILD_DIR)
 	$(Verb) $(LLVMCC) $(LLVMCC.Flags) $(LLVMCC.Warnings) $< -c -o $@ -MP -MMD -MF $(LOCAL_BUILD_DIR)/$*.dep
+	$(Verb) $(LLVM_OPT) -mem2reg $@ -o $@
 
 # $(LLVMCC_FLAGS_FILE) depends on `force` which will force the rule to
 # rerun every build. However the rule will only update the file when the
