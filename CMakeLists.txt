@@ -265,6 +265,12 @@ if (NOT EXISTS "${LLVM_AS}")
   message(FATAL_ERROR "Failed to find llvm-as at \"${LLVM_AS}\"")
 endif()
 
+# Find opt (LLVM)
+set(LLVM_OPT "${LLVM_TOOLS_BINARY_DIR}/opt")
+if (NOT EXISTS "${LLVM_OPT}")
+  message(FATAL_ERROR "Failed to find opt at \"${LLVM_OPT}\"")
+endif()
+
 ################################################################################
 # Find bitcode compiler
 ################################################################################
