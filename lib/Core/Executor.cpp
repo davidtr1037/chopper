@@ -432,7 +432,7 @@ const Module *Executor::setModule(llvm::Module *module,
   cloner = new Cloner(module, ra, mra);
   sliceGenerator = new SliceGenerator(module, aa, mra, annotator, cloner);
   kmodule->prepare(opts, interpreterHandler, ra, aa, mra, annotator, cloner, sliceGenerator);
-  
+
   specialFunctionHandler->bind();
 
   if (StatsTracker::useStatistics() || userSearcherRequiresMD2U()) {
