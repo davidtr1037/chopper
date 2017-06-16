@@ -442,11 +442,16 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   kleeMergeFn = module->getFunction("klee_merge");
 
+  klee_message("Runnining Pointer Analysis...");
   ra->run();
   PassManager passManager;
   passManager.add(aa);
   passManager.run(*module);
+
+  klee_message("Runnining Mod-Ref Analysis...");
   mra->run();
+
+  klee_message("Computing Slices...");
   annotator->annotate();
   cloner->run();
   sliceGenerator->generate();
