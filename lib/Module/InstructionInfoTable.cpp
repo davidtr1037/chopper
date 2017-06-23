@@ -146,7 +146,7 @@ InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner)
     Cloner::SliceMap *sliceMap = cloner->getSlices(fnIt);
     if (sliceMap != 0) {
       for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
-        Function *cloned = s->second.first;
+        Function *cloned = s->second.f;
         for (inst_iterator it = inst_begin(cloned); it != inst_end(cloned); it++) {
           /* translate cloned instruction */
           Instruction *inst = &*it;

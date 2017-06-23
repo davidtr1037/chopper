@@ -369,7 +369,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
         uint32_t id = s->first;
         Function *cloned = s->second.first;
 
-        KFunction *kcloned = new KFunction(cloned, this);
+        KFunction *kcloned = new KFunction(sliceInfo.f, this);
         kcloned->isCloned = true;
         if (hasRetSlice) {
           kcloned->isRetSlice = (id == retSliceId);

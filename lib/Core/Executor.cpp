@@ -1372,22 +1372,22 @@ void Executor::executeCall(ExecutionState &state,
         assert(false);
       }
       state.setDirectRetSliceId(retSliceId);
-      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, retSliceId);
-      Function *retSlice = sliceInfo->first;
+      Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, retSliceId);
+      Function *retSlice = sliceInfo->f;
       f = retSlice;
     }
 
     /* TODO: fix this mess... */
     if (state.isRecoveryState()) {
       RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
-      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, recoveryInfo->sliceId);
-      Function *cloned = sliceInfo->first;
+      Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, recoveryInfo->sliceId);
+      Function *cloned = sliceInfo->f;
       f = cloned;
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting slice..."));
     }
     if (state.isNormalState() && state.isExecutingRetSlice()) {
-      Cloner::SliceInfo *sliceInfo = cloner->getSlice(f, state.getDirectRetSliceId());
-      Function *cloned = sliceInfo->first;
+      Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, state.getDirectRetSliceId());
+      Function *cloned = sliceInfo->f;
       f = cloned;
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting ret-slice..."));
     }
