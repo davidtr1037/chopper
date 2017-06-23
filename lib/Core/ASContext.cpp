@@ -30,23 +30,13 @@ ASContext::ASContext(ASContext &other) :
 
 /* TODO: use the translatedValue API? */
 Instruction *ASContext::getTranslatedInst(Cloner *cloner, Instruction *inst) {
-    /* get function */
-    Function *f = inst->getParent()->getParent();
-    /* get translation map */
-    Cloner::ValueTranslationMap *map = cloner->getCloneInfo(f);
-    /* translate if required... */
-    if (map) {
-        Value *clonedValue = dyn_cast<Value>(inst);
-        Cloner::ValueTranslationMap::iterator entry = map->find(clonedValue);
-        if (entry == map->end()) {
-            assert(false);
-        }
-
-        Value *originalValue = entry->second;
-        inst = dyn_cast<Instruction>(originalValue);
+    Value *value = cloner->translateValue(inst);
+    if (!isa<Instruction>(value)) {
+        /* why... */
+        assert(false);
     }
 
-    return inst;
+    return dyn_cast<Instruction>(value);
 }
 
 void ASContext::dump() {
