@@ -4721,14 +4721,22 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
                 kcloned->isRetSlice = (sliceId == retSliceId);
             }
 
-            errs() << "adding function: " << cloned->getName() << "\n";
+            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding function: %s", cloned->getName().data()));
             /* update debug info */
             kmodule->infos->addClonedInfo(cloner, cloned);
             /* update function map */
             kmodule->addFunction(cloner, kcloned);
-
-            /* debug */
-            cloned->print(errs()); errs() << "\n";
+            /* update the instruction constants of the new KFunction */
+            for (unsigned i = 0; i < kcloned->numInstructions; ++i) {
+                bindInstructionConstants(kcloned->instructions[i]);
+            }
+            /* when we add a KFunction, additional constants might be added */
+            for (unsigned i = kmodule->constantTable.size(); i < kmodule->constants.size(); ++i) {
+                Cell c = {
+                    .value = evalConstant(kmodule->constants[i])
+                };
+                kmodule->constantTable.push_back(c);
+            }
         }
     }
 
