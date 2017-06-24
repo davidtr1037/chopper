@@ -100,7 +100,6 @@ KModule::KModule(Module *_module)
 }
 
 KModule::~KModule() {
-  delete[] constantTable;
   delete infos;
 
   for (std::vector<KFunction*>::iterator it = functions.begin(), 
@@ -441,6 +440,7 @@ unsigned KModule::getConstantID(Constant *c, KInstruction* ki) {
   kc = new KConstant(c, id, ki);
   constantMap.insert(std::make_pair(c, kc));
   constants.push_back(c);
+
   return id;
 }
 

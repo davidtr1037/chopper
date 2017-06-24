@@ -2721,10 +2721,11 @@ void Executor::bindModuleConstants() {
       bindInstructionConstants(kf->instructions[i]);
   }
 
-  kmodule->constantTable = new Cell[kmodule->constants.size()];
   for (unsigned i=0; i<kmodule->constants.size(); ++i) {
-    Cell &c = kmodule->constantTable[i];
-    c.value = evalConstant(kmodule->constants[i]);
+    Cell c = {
+        .value = evalConstant(kmodule->constants[i])
+    };
+    kmodule->constantTable.push_back(c);
   }
 }
 
@@ -4675,7 +4676,6 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
         uint32_t retSliceId = 0;
         bool hasRetSlice = mra->getRetSliceId(target, retSliceId);
 
-        /* TODO: update KModule, InstructionInfoTable */
         std::set<Function *> &reachable = cloner->getReachabilityMap()[target];
         for (std::set<Function *>::iterator i = reachable.begin(); i != reachable.end(); i++) {
             /* original function */

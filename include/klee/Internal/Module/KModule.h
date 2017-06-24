@@ -108,7 +108,7 @@ namespace klee {
     std::map<const llvm::Constant*, KConstant*> constantMap;
     KConstant* getKConstant(const llvm::Constant *c);
 
-    Cell *constantTable;
+    std::vector<Cell> constantTable;
 
     // Functions which are part of KLEE runtime
     std::set<const llvm::Function*> internalFunctions;
