@@ -478,7 +478,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
       for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
         uint32_t id = s->first;
-        Function *cloned = s->second.first;
+        Cloner::SliceInfo &sliceInfo = s->second;
+        if (!sliceInfo.isSliced) {
+            /* don't add a cloned function which was not sliced */
+            continue;
+        }
 
         KFunction *kcloned = new KFunction(sliceInfo.f, this);
         kcloned->isCloned = true;
@@ -490,23 +494,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     }
 
     for (std::set<KFunction *>::iterator kfi = pool.begin(); kfi != pool.end(); kfi++) {
-      KFunction *kf = *kfi;
-      for (unsigned i=0; i<kf->numInstructions; ++i) {
-        KInstruction *ki = kf->instructions[i];
-        ki->info = &infos->getInfo(ki->inst);
-        ki->isCloned = kf->isCloned;
-        ki->origInst = NULL;
-        if (kf->isCloned) {
-          Value *origValue = cloner->translateValue(ki->inst);
-          if (origValue) {
-            /* TODO: some instructions can't be translated (RET, ...) */
-            ki->origInst = dyn_cast<llvm::Instruction>(origValue);
-          }
-        }
-      }
-
-      functions.push_back(kf);
-      functionMap.insert(std::make_pair(kf->function, kf));
+      addFunction(cloner, *kfi);
     }
   }
 
@@ -527,6 +515,25 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     }
     llvm::errs() << "]\n";
   }
+}
+
+void KModule::addFunction(Cloner *cloner, KFunction *kf) {
+    for (unsigned i=0; i<kf->numInstructions; ++i) {
+        KInstruction *ki = kf->instructions[i];
+        ki->info = &infos->getInfo(ki->inst);
+        ki->isCloned = kf->isCloned;
+        ki->origInst = NULL;
+        if (kf->isCloned) {
+            Value *origValue = cloner->translateValue(ki->inst);
+            if (origValue) {
+                /* TODO: some instructions can't be translated (RET, ...) */
+                ki->origInst = dyn_cast<llvm::Instruction>(origValue);
+            }
+        }
+    }
+
+    functions.push_back(kf);
+    functionMap.insert(std::make_pair(kf->function, kf));
 }
 
 KConstant* KModule::getKConstant(Constant *c) {
