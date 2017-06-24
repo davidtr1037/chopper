@@ -1447,23 +1447,24 @@ void Executor::executeCall(ExecutionState &state,
         assert(false);
       }
       state.setDirectRetSliceId(retSliceId);
-      Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, retSliceId);
-      Function *retSlice = sliceInfo->f;
-      f = retSlice;
+      //Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, retSliceId);
+      //Function *retSlice = sliceInfo->f;
+      f = getSlice(f, retSliceId, ModRefAnalysis::ReturnValue);
     }
 
     /* TODO: fix this mess... */
     if (state.isRecoveryState()) {
       RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
-      Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, recoveryInfo->sliceId);
-      Function *cloned = sliceInfo->f;
-      f = cloned;
-      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting slice..."));
+      //Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, recoveryInfo->sliceId);
+      //Function *cloned = sliceInfo->f;
+      f = getSlice(f, recoveryInfo->sliceId, ModRefAnalysis::Modifier);
+      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting slice: %s", f->getName().data()));
     }
     if (state.isNormalState() && state.isExecutingRetSlice()) {
-      Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, state.getDirectRetSliceId());
-      Function *cloned = sliceInfo->f;
-      f = cloned;
+      //Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, state.getDirectRetSliceId());
+      //Function *cloned = sliceInfo->f;
+      //f = cloned;
+      f = getSlice(f, state.getDirectRetSliceId(), ModRefAnalysis::ReturnValue);
       DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting ret-slice..."));
     }
 
@@ -4327,10 +4328,11 @@ void Executor::onRecoveryStateWrite(
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message(
-      "write in state %p: mo = %p, address = %lx offset = %lx",
+      "write in state %p: mo = %p, address = %lx, size = %x, offset = %lx",
       &state,
       mo,
       mo->address,
+      mo->size,
       dyn_cast<ConstantExpr>(offset)->getZExtValue()
     )
   );
@@ -4684,4 +4686,51 @@ void Executor::mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> c
             next = NULL;
         }
     } while (next);
+}
+
+/* on demand slicing... */
+Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis::SideEffectType type) {
+    Cloner::SliceInfo *sliceInfo = NULL;
+
+    sliceInfo = cloner->getSliceInfo(target, sliceId);
+    if (!sliceInfo->isSliced) {
+        DEBUG_WITH_TYPE(DEBUG_BASIC,
+            klee_message("generating slice for: %s (id = %u)", target->getName().data(), sliceId)
+        );
+        sliceGenerator->generateSlice(target, sliceId, type);
+
+        uint32_t retSliceId = 0;
+        bool hasRetSlice = mra->getRetSliceId(target, retSliceId);
+
+        /* TODO: update KModule, InstructionInfoTable */
+        std::set<Function *> &reachable = cloner->getReachabilityMap()[target];
+        for (std::set<Function *>::iterator i = reachable.begin(); i != reachable.end(); i++) {
+            /* original function */
+            Function *f = *i;
+            if (f->isDeclaration()) {
+                continue;
+            }
+
+            /* get the cloned function (using the slice id) */
+            Function *cloned = cloner->getSliceInfo(f, sliceId)->f;
+
+            /* initialize KFunction */
+            KFunction *kcloned = new KFunction(cloned, kmodule);
+            kcloned->isCloned = true;
+            if (hasRetSlice) {
+                kcloned->isRetSlice = (sliceId == retSliceId);
+            }
+
+            errs() << "adding function: " << cloned->getName() << "\n";
+            /* update debug info */
+            kmodule->infos->addClonedInfo(cloner, cloned);
+            /* update function map */
+            kmodule->addFunction(cloner, kcloned);
+
+            /* debug */
+            cloned->print(errs()); errs() << "\n";
+        }
+    }
+
+    return sliceInfo->f;
 }

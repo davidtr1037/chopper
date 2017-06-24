@@ -506,6 +506,7 @@ private:
   ExecutionState *forkDependedStates(ExecutionState *trueState, ExecutionState *falseState);
   bool checkConsistencyForAll(ExecutionState &dependedState, ExecutionState &recoveryState);
   void mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition);
+  llvm::Function *getSlice(llvm::Function *target, uint32_t sliceId, ModRefAnalysis::SideEffectType type);
 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
