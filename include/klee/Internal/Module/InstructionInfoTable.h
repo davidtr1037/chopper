@@ -67,6 +67,7 @@ namespace klee {
     unsigned getMaxID() const;
     const InstructionInfo &getInfo(const llvm::Instruction*) const;
     const InstructionInfo &getFunctionInfo(const llvm::Function*) const;
+    void addClonedInfo(Cloner *cloner, llvm::Function *f);
   };
 
 }

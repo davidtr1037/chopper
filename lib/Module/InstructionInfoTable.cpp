@@ -155,12 +155,24 @@ InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner)
     Cloner::SliceMap *sliceMap = cloner->getSlices(fnIt);
     if (sliceMap != 0) {
       for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
-        Function *cloned = s->second.f;
-        for (inst_iterator it = inst_begin(cloned); it != inst_end(cloned); it++) {
-          /* translate cloned instruction */
-          Instruction *inst = &*it;
-          Value *value = cloner->translateValue(inst);
-          if (value) {
+        Cloner::SliceInfo &sliceInfo = s->second;
+        if (!sliceInfo.isSliced) {
+            continue;
+        }
+
+        Function *cloned = sliceInfo.f;
+        addClonedInfo(cloner, cloned);
+      }
+    }
+  }
+}
+
+void InstructionInfoTable::addClonedInfo(Cloner *cloner, Function *f) {
+    for (inst_iterator it = inst_begin(f); it != inst_end(f); it++) {
+        /* translate cloned instruction */
+        Instruction *inst = &*it;
+        Value *value = cloner->translateValue(inst);
+        if (value) {
             /* add original instruction information */
             Instruction *origInst = dyn_cast<Instruction>(value);
             if (!origInst) {
@@ -170,14 +182,11 @@ InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner)
 
             const InstructionInfo &info = getInfo(origInst);
             infos.insert(std::make_pair(inst, info));
-          } else {
+        } else {
             /* instruction information not available (probably due to slicer insertions) */
             infos.insert(std::make_pair(inst, dummyInfo));
-          }
         }
-      }
     }
-  }
 }
 
 InstructionInfoTable::~InstructionInfoTable() {
