@@ -493,7 +493,8 @@ private:
     Expr::Width width
   );
   void dumpConstrains(ExecutionState &state);
-  bool checkConsistency(ExecutionState &state, ExecutionState &recoveryState);
+  bool checkConsistency(ExecutionState &dependedState, ExecutionState &recoveryState);
+  bool checkConsistency(ExecutionState &recoveryState, ref<Expr> condition);
   MemoryObject *onExecuteAlloc(ExecutionState &state, uint64_t size, bool isLocal, llvm::Instruction *allocInst, bool zeroMemory);
   bool isDynamicAlloc(llvm::Instruction *allocInst);
   void onExecuteFree(ExecutionState *state, const MemoryObject *mo);
