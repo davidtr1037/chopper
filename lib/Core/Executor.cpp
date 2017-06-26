@@ -697,7 +697,25 @@ void Executor::branch(ExecutionState &state,
                       const std::vector< ref<Expr> > &conditions,
                       std::vector<ExecutionState*> &result) {
   TimerStatIncrementer timer(stats::forkTime);
-  unsigned N = conditions.size();
+
+  std::vector< ref<Expr> > filtered;
+  for (std::vector< ref<Expr> >::const_iterator i = conditions.begin(); i != conditions.end(); i++) {
+    ref<Expr> condition = *i;
+    if (state.isRecoveryState()) {
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("%p: checking switch condition consistency", &state)
+      );
+      if (!checkConsistency(state, condition)) {
+        /* we don't want conditions which are not consistent with the depended state */
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("inconsistent switch condition"));
+        continue;
+      }
+    }
+    filtered.push_back(condition);
+  }
+
+  unsigned N = filtered.size();
   assert(N);
 
   if (MaxForks!=~0u && stats::forks >= MaxForks) {
@@ -774,9 +792,45 @@ void Executor::branch(ExecutionState &state,
     }
   }
 
-  for (unsigned i=0; i<N; ++i)
-    if (result[i])
-      addConstraint(*result[i], conditions[i]);
+  /* handle the forks */
+  std::vector<ExecutionState *> dependedStates;
+  for (unsigned i=0; i<N; ++i) {
+    ExecutionState *current = result[i];
+    if (current) {
+      if (current->isRecoveryState()) {
+        if (i == 0) {
+          /* the first state must have a depended state */
+          assert(current->getDependedState());
+          dependedStates.push_back(current->getDependedState());
+        } else {
+          /* here we must fork the depended state */
+          ExecutionState *prev = result[i - 1];
+          ExecutionState *forkedDependedState = forkDependedStates(prev, current);
+          dependedStates.push_back(forkedDependedState);
+
+          /* update statistics */
+          interpreterHandler->incRecoveryStatesCount();
+        }
+      } else {
+        dependedStates.push_back(NULL);
+      }
+    }
+  }
+
+  /* handle the constraints */
+  for (unsigned i=0; i<N; ++i) {
+    ExecutionState *current = result[i];
+    if (current) {
+      ref<Expr> condition = filtered[i];
+      addConstraint(*current, condition);
+      if (current->isRecoveryState()) {
+        ExecutionState *dependedState = dependedStates[i];
+        if (dependedState) {
+          mergeConstraintsForAll(*dependedState, condition);
+        }
+      }
+    }
+  }
 }
 
 Executor::StatePair 
@@ -1041,6 +1095,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
       if (isFalseStateValid) {
         mergeConstraintsForAll(*forkedDependedState, Expr::createIsZero(condition));
+
+        /* TODO: is it the right place? */
+        interpreterHandler->incRecoveryStatesCount();
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
@@ -4399,7 +4456,7 @@ void Executor::dumpConstrains(ExecutionState &state) {
   }
 }
 
-bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryState) {
+bool Executor::checkConsistency(ExecutionState &dependedState, ExecutionState &recoveryState) {
     Solver::Validity result;
     ref<Expr> condition = ConstantExpr::alloc(1, Expr::Bool);
 
@@ -4407,7 +4464,24 @@ bool Executor::checkConsistency(ExecutionState &state, ExecutionState &recoveryS
         ref<Expr> e = *i;
         condition = AndExpr::create(condition, e);
     }
-    solver->evaluate(state, condition, result);
+
+    solver->evaluate(dependedState, condition, result);
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
+
+    return result != Solver::False;
+}
+
+/* checks consistency without creating a new state */
+bool Executor::checkConsistency(ExecutionState &recoveryState, ref<Expr> condition) {
+    Solver::Validity result;
+    ref<Expr> all = condition;
+
+    for (ConstraintManager::constraint_iterator i = recoveryState.constraints.begin(); i != recoveryState.constraints.end(); i++) {
+        ref<Expr> e = *i;
+        all = AndExpr::create(all, e);
+    }
+
+    solver->evaluate(*recoveryState.getDependedState(), all, result);
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
 
     return result != Solver::False;
