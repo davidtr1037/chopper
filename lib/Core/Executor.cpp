@@ -4421,7 +4421,11 @@ void Executor::onNormalStateWrite(
     return;
   }
 
-  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
+  if (state.prevPC->inst->getOpcode() != Instruction::Store) {
+    /* TODO: this must be a vastart call, check! */
+    return;
+  }
+
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
   /* TODO: check the writing of symbolic values */
