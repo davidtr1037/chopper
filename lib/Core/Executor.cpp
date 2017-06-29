@@ -1484,7 +1484,7 @@ void Executor::executeCall(ExecutionState &state,
     /* TODO: make it more readable... */
     if (state.isNormalState() && !state.isRecoveryState() && filterCallSite(state, f)) {
       /* create snapshot, recovery state will be created on demand... */
-      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding snapshot (index = %lu)", state.getSnapshots().size()));
+      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: adding snapshot (index = %lu)", &state, state.getSnapshots().size()));
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
 
       if (canSkipCallSite(state, f)) {
@@ -4773,6 +4773,7 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
             klee_message("generating slice for: %s (id = %u)", target->getName().data(), sliceId)
         );
         sliceGenerator->generateSlice(target, sliceId, type);
+        sliceGenerator->dumpSlice(target, sliceId, true);
 
         uint32_t retSliceId = 0;
         bool hasRetSlice = mra->getRetSliceId(target, retSliceId);
