@@ -14,6 +14,7 @@
 #include "klee/Interpreter.h"
 
 #include <ReachabilityAnalysis.h>
+#include <Inliner.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
 #include <Annotator.h>
@@ -126,7 +127,7 @@ namespace klee {
     // FIXME: ihandler should not be here
     void prepare(const Interpreter::ModuleOptions &opts, 
                  InterpreterHandler *ihandler, 
-                 ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra,
+                 ReachabilityAnalysis *ra, Inliner *inliner, AAPass *aa, ModRefAnalysis *mra,
                  Annotator *annotator, Cloner *cloner, SliceGenerator *sliceGenerator);
 
     /// Return an id for the given constant, creating a new one if necessary.

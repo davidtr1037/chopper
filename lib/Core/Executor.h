@@ -26,6 +26,7 @@
 #include "llvm/ADT/Twine.h"
 
 #include <ReachabilityAnalysis.h>
+#include <Inliner.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
 #include <Annotator.h>
@@ -217,6 +218,7 @@ private:
   std::vector<ExecutionState *> suspendedStates;
   std::vector<ExecutionState *> resumedStates;
   ReachabilityAnalysis *ra;
+  Inliner *inliner;
   AAPass *aa;
   ModRefAnalysis *mra;
   Annotator *annotator;
