@@ -57,6 +57,7 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 
 #include <ReachabilityAnalysis.h>
+#include <Inliner.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
 #include <Annotator.h>
@@ -246,7 +247,7 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih,
-                      ReachabilityAnalysis *ra, AAPass *aa, ModRefAnalysis *mra,
+                      ReachabilityAnalysis *ra, Inliner *inliner, AAPass *aa, ModRefAnalysis *mra,
                       Annotator *annotator, Cloner *cloner, SliceGenerator *sliceGenerator) {
   if (!MergeAtExit.empty()) {
     Function *mergeFn = module->getFunction("klee_merge");
@@ -442,6 +443,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   klee_message("Runnining Pointer Analysis...");
   ra->run();
+  inliner->run();
   PassManager passManager;
   passManager.add(aa);
   passManager.run(*module);

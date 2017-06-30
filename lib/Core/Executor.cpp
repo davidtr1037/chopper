@@ -95,6 +95,7 @@
 #include "llvm/PassManager.h"
 
 #include <ReachabilityAnalysis.h>
+#include <Inliner.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
 #include <Annotator.h>
@@ -432,11 +433,6 @@ const Module *Executor::setModule(llvm::Module *module,
 
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
-  specialFunctionHandler->prepare();
-  ra = new ReachabilityAnalysis(module);
-  aa = new AAPass();
-  aa->setPAType(PointerAnalysis::Andersen_WPA);
-
   /* build target functions */
   std::vector<std::string> targets;
   const std::vector<SlicedFunctionOption> &slicingOptions = interpreterOpts.slicingOptions;
@@ -444,12 +440,21 @@ const Module *Executor::setModule(llvm::Module *module,
     targets.push_back(i->name);
   }
 
+  std::vector<std::string> inlineFunctions;
+  //inlineFunctions.push_back("memcpy");
+
+  specialFunctionHandler->prepare();
+  ra = new ReachabilityAnalysis(module);
+  inliner = new Inliner(module, targets, inlineFunctions);
+  aa = new AAPass();
+  aa->setPAType(PointerAnalysis::Andersen_WPA);
+
   /* TODO: fix hard coded entry point... */
   mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", targets);
   annotator = new Annotator(kmodule->module, mra);
   cloner = new Cloner(module, ra, mra);
   sliceGenerator = new SliceGenerator(module, aa, mra, annotator, cloner, true);
-  kmodule->prepare(opts, interpreterHandler, ra, aa, mra, annotator, cloner, sliceGenerator);
+  kmodule->prepare(opts, interpreterHandler, ra, inliner, aa, mra, annotator, cloner, sliceGenerator);
 
   specialFunctionHandler->bind();
 
