@@ -44,8 +44,12 @@ namespace klee {
 
     /* TODO: add doc... */
     bool isCloned;
-    /* TODO: add doc... */
+    /* points to the original instruction if the instruction is cloned */
     llvm::Instruction *origInst;
+    /* relevant only for load instructions */
+    bool mayBlock;
+    /* relevant only for store instructions */
+    bool mayOverride;
 
   public:
     virtual ~KInstruction();

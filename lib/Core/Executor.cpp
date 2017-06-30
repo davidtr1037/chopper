@@ -4015,7 +4015,7 @@ Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opt
 
 bool Executor::isPotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: checking load...", &state));
-  if (!mra->mayBlock(ki->getOrigInst())) {
+  if (!ki->mayBlock) {
     return false;
   }
 
@@ -4423,7 +4423,7 @@ void Executor::onNormalStateWrite(
 /* checking if a store may override a sliced function stores ... */
 bool Executor::isOverridingStore(KInstruction *ki) {
   assert(ki->inst->getOpcode() == Instruction::Store);
-  return true;
+  return ki->mayOverride;
 }
 
 void Executor::onNormalStateRead(
@@ -4777,7 +4777,7 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
             /* update debug info */
             kmodule->infos->addClonedInfo(cloner, cloned);
             /* update function map */
-            kmodule->addFunction(cloner, kcloned);
+            kmodule->addFunction(cloner, mra, kcloned);
             /* update the instruction constants of the new KFunction */
             for (unsigned i = 0; i < kcloned->numInstructions; ++i) {
                 bindInstructionConstants(kcloned->instructions[i]);

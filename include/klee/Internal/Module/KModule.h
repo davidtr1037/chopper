@@ -132,7 +132,7 @@ namespace klee {
     /// Return an id for the given constant, creating a new one if necessary.
     unsigned getConstantID(llvm::Constant *c, KInstruction* ki);
 
-    void addFunction(Cloner *cloner, KFunction *kf);
+    void addFunction(Cloner *cloner, ModRefAnalysis *mra, KFunction *kf);
 
   };
 } // End klee namespace
