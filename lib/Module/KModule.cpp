@@ -492,7 +492,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     }
 
     for (std::set<KFunction *>::iterator kfi = pool.begin(); kfi != pool.end(); kfi++) {
-      addFunction(cloner, *kfi);
+      addFunction(cloner, mra, *kfi);
     }
   }
 
@@ -515,18 +515,27 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   }
 }
 
-void KModule::addFunction(Cloner *cloner, KFunction *kf) {
+void KModule::addFunction(Cloner *cloner, ModRefAnalysis *mra, KFunction *kf) {
     for (unsigned i=0; i<kf->numInstructions; ++i) {
         KInstruction *ki = kf->instructions[i];
         ki->info = &infos->getInfo(ki->inst);
         ki->isCloned = kf->isCloned;
         ki->origInst = NULL;
+        ki->mayBlock = false;
+        ki->mayOverride = false;
         if (kf->isCloned) {
             Value *origValue = cloner->translateValue(ki->inst);
             if (origValue) {
                 /* TODO: some instructions can't be translated (RET, ...) */
                 ki->origInst = dyn_cast<llvm::Instruction>(origValue);
             }
+        }
+
+        if (ki->inst->getOpcode() == Instruction::Load) {
+            ki->mayBlock = mra->mayBlock(ki->getOrigInst());
+        }
+        if (ki->inst->getOpcode() == Instruction::Store) {
+            ki->mayOverride = mra->mayOverride(ki->getOrigInst());
         }
     }
 
