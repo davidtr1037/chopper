@@ -4346,6 +4346,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   interpreterHandler->incRecoveryStatesCount();
 }
 
+/* TODO: handle vastart calls */
 void Executor::onRecoveryStateWrite(
   ExecutionState &state,
   ref<Expr> address,
@@ -4353,10 +4354,8 @@ void Executor::onRecoveryStateWrite(
   ref<Expr> offset,
   ref<Expr> value
 ) {
-  assert(state.prevPC->inst->getOpcode() == Instruction::Store);
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
-  //assert(isa<ConstantExpr>(value));
 
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
@@ -4370,9 +4369,8 @@ void Executor::onRecoveryStateWrite(
     )
   );
 
+  uint64_t storeAddr = dyn_cast<ConstantExpr>(address)->getZExtValue();
   RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
-  ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
-  uint64_t storeAddr = ce->getZExtValue();
   if (storeAddr != recoveryInfo->loadAddr) {
     return;
   }
@@ -4401,14 +4399,12 @@ void Executor::onNormalStateWrite(
     return;
   }
 
-  assert(isa<ConstantExpr>(address));
-  assert(isa<ConstantExpr>(offset));
-  /* TODO: check the writing of symbolic values */
-  //assert(isa<ConstantExpr>(value));
-
   if (!isOverridingStore(state.prevPC)) {
     return;
   }
+
+  assert(isa<ConstantExpr>(address));
+  assert(isa<ConstantExpr>(offset));
 
   uint64_t concreteAddress = dyn_cast<ConstantExpr>(address)->getZExtValue();
   size_t sizeInBytes = value->getWidth() / 8;
