@@ -1062,33 +1062,17 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         DEBUG_BASIC,
         klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", trueState, dependedState)
       );
-      bool isTrueStateValid = false;
-      if (checkConsistencyForAll(*dependedState, *trueState)) {
-        isTrueStateValid = true;  
-      } else {
-        DEBUG_WITH_TYPE(
-          DEBUG_BASIC,
-          klee_message("terminating inconsistent forked recovery state (true state): %p", trueState)
-        );
-        terminateState(*trueState);
-      }
+      bool isTrueStateValid = checkConsistencyForAll(*dependedState, *trueState);
 
       /* check consistency of false state with the depended state */
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
         klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState)
       );
-      bool isFalseStateValid = false;
-      if (checkConsistencyForAll(*dependedState, *falseState)) {
-        /* forked state is consistent with it's originator */
+      bool isFalseStateValid = checkConsistencyForAll(*dependedState, *falseState);
+      if (isFalseStateValid) {
+        /* the forked state is consistent with it's originator */
         forkedDependedState = forkDependedStates(trueState, falseState);
-        isFalseStateValid = true;
-      } else {
-        DEBUG_WITH_TYPE(
-          DEBUG_BASIC,
-          klee_message("terminating inconsistent forked recovery state (false state): %p", falseState)
-        );
-        terminateState(*falseState);
       }
 
       /* copy constraints if required */
@@ -1103,12 +1087,20 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("terminating inconsistent forked recovery state (false state): %p", falseState)
+        );
+        /* here there are no depended states... */
+        terminateState(*falseState);
         return StatePair(trueState, 0);
       }
       if (!isTrueStateValid && isFalseStateValid) {
-        /* the originating depended state must be terminated... */
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating originating depended state: %p", dependedState));
-        terminateDependedState(dependedState);
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("terminating inconsistent forked recovery state (true state): %p", trueState)
+        );
+        terminateStateRecursively(*trueState);
         return StatePair(0, falseState);
       }
       if (!isTrueStateValid && !isFalseStateValid) {
@@ -1638,6 +1630,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
+  /* TODO: replace with a better predicate (call stack counter?) */
   if (state.isRecoveryState() && state.getExitInst() == i) {
     onRecoveryStateExit(state);
     return;
@@ -3023,6 +3016,7 @@ void Executor::terminateStateEarly(ExecutionState &state,
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
+  /* TODO: handle recovery states */
   terminateState(state);
 }
 
@@ -3030,7 +3024,11 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
-  terminateState(state);
+  if (state.isRecoveryState()) {
+    terminateStateRecursively(state);
+  } else {
+    terminateState(state);
+  }
 }
 
 const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const ExecutionState &state,
@@ -3135,16 +3133,10 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
 
-  ExecutionState *dependedState = NULL;
   if (state.isRecoveryState()) {
-    dependedState = state.getDependedState();
-    assert(dependedState);
-  }
-
-  terminateState(state);
-  if (dependedState) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating depended state on error: %p", dependedState));
-    terminateDependedState(dependedState);
+    terminateStateRecursively(state);
+  } else {
+    terminateState(state);
   }
 
   if (shouldExitOn(termReason)) {
@@ -4554,23 +4546,24 @@ void Executor::onExecuteFree(ExecutionState *state, const MemoryObject *mo) {
     unbindAll(dependedState, mo);
 }
 
-void Executor::terminateDependedState(ExecutionState *dependedState) {
+void Executor::terminateStateRecursively(ExecutionState &state) {
+    ExecutionState *current = &state;
     ExecutionState *next = NULL;
 
-    /* recursive termination... */
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("recursively terminating..."));
     do {
-        if (dependedState->isRecoveryState()) {
-            next = dependedState->getDependedState();
+        if (current->isRecoveryState()) {
+            next = current->getDependedState();
             assert(next);
         } else {
             next = NULL;
         }
 
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating depended state %p", dependedState));
-        terminateState(*dependedState);
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating state %p", current));
+        terminateState(*current);
 
-        dependedState = next;
-    } while (dependedState);
+        current = next;
+    } while (current);
 }
 
 void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> condition) {

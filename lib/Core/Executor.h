@@ -508,7 +508,7 @@ private:
   MemoryObject *onExecuteAlloc(ExecutionState &state, uint64_t size, bool isLocal, llvm::Instruction *allocInst, bool zeroMemory);
   bool isDynamicAlloc(llvm::Instruction *allocInst);
   void onExecuteFree(ExecutionState *state, const MemoryObject *mo);
-  void terminateDependedState(ExecutionState *dependedState);
+  void terminateStateRecursively(ExecutionState &state);
   void mergeConstraints(ExecutionState &dependedState, ref<Expr> condition);
   bool filterCallSite(ExecutionState &state, llvm::Function *f);
   bool canSkipCallSite(ExecutionState &state, llvm::Function *f);
