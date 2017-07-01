@@ -94,6 +94,7 @@ public:
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
     std::vector<SlicedFunctionOption> slicingOptions;
+    std::vector<std::string> inlinedFunctions;
     unsigned int maxErrorCount;
 
     InterpreterOptions() : 

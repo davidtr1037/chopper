@@ -74,10 +74,10 @@ namespace {
                    cl::desc("The name of the sliced function"),
                    cl::init(""));
 
-  cl::opt<unsigned int>
-  CallSiteLine("line",
-               cl::desc("The line of the call site"),
-               cl::init(0));
+  cl::opt<std::string>
+  InlinedFunctions("inline",
+                   cl::desc("The list of functions to be inlined"),
+                   cl::init(""));
 
   cl::opt<unsigned int>
   MaxErrorCount("max-error-count",
@@ -1185,13 +1185,30 @@ void parseSlicingParameter(
 
     while (std::getline(stream, token, ',')) {
         if (!parseSlicedFunctionOption(token, fname, line)) {
-            klee_error("invalid slicing parameter: %s", token.c_str());
+            klee_error("slice option: invalid parameter: %s", token.c_str());
         }
         if (!module->getFunction(fname)) {
-          klee_error("sliced function '%s' not found in module.", fname.c_str());
+          klee_error("slice option: function '%s' not found in module.", fname.c_str());
         }
 
         result.push_back(Interpreter::SlicedFunctionOption(fname, line));
+    }
+}
+
+void parseInlinedFunctions(
+    Module *module,
+    std::string parameter,
+    std::vector<std::string> &result
+) {
+    std::istringstream stream(parameter);
+    std::string fname;
+
+    while (std::getline(stream, fname, ',')) {
+        if (!module->getFunction(fname)) {
+          klee_error("inline option: function '%s' not found in module.", fname.c_str());
+        }
+
+        result.push_back(fname);
     }
 }
 
@@ -1336,6 +1353,9 @@ int main(int argc, char **argv, char **envp) {
   std::vector<Interpreter::SlicedFunctionOption> slicingOptions;
   parseSlicingParameter(mainModule, SlicingParameter, slicingOptions);
 
+  std::vector<std::string> inlinedFunctions;
+  parseInlinedFunctions(mainModule, InlinedFunctions, inlinedFunctions);
+
   // FIXME: Change me to std types.
   int pArgc;
   char **pArgv;
@@ -1384,6 +1404,7 @@ int main(int argc, char **argv, char **envp) {
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   IOpts.slicingOptions = slicingOptions;
+  IOpts.inlinedFunctions = inlinedFunctions;
   IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
