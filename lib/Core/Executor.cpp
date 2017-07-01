@@ -440,12 +440,9 @@ const Module *Executor::setModule(llvm::Module *module,
     targets.push_back(i->name);
   }
 
-  std::vector<std::string> inlineFunctions;
-  //inlineFunctions.push_back("memcpy");
-
   specialFunctionHandler->prepare();
   ra = new ReachabilityAnalysis(module);
-  inliner = new Inliner(module, targets, inlineFunctions);
+  inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions);
   aa = new AAPass();
   aa->setPAType(PointerAnalysis::Andersen_WPA);
 
