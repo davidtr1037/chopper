@@ -4180,7 +4180,7 @@ void Executor::getLoadInfo(
   /* execute solver query */
   solver->setTimeout(coreSolverTimeout);
   if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
-    address = toConstant(state, address, "resolveOne failure");
+    address = toConstant(state, address, "resolveOne failure (getLoadInfo)");
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
   solver->setTimeout(0);
