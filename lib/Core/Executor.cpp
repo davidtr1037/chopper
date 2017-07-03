@@ -4112,11 +4112,11 @@ void Executor::getAllRecoveryInfo(
   ModRefAnalysis::AllocSite preciseAllocSite;
 
   /* TODO: decide which value to pass (original, cloned) */
-  loadInst = ki->inst;
-  getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite);
-
+  loadInst = ki->getOrigInst();
   DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "potentially blocking load: "; loadInst->print(errs()); errs() << "\n");
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
+
+  getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite);
 
   /* get the allocation site computed by static analysis */
   std::set<ModRefAnalysis::ModInfo> approximateModInfos;
