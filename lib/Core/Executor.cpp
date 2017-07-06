@@ -1409,6 +1409,8 @@ void Executor::executeCall(ExecutionState &state,
         klee_message("%p: adding snapshot (index = %u)", &state, index)
       );
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
+      /* TODO: fix later... */
+      state.clearResolvedAddresses();
 
       if (canSkipCallSite(state, f)) {
         DEBUG_WITH_TYPE(
