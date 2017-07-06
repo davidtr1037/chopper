@@ -452,6 +452,16 @@ public:
     return true;
   }
 
+  unsigned int getStartingIndex(uint64_t address, size_t size) {
+    WrittenAddressInfo info;
+    if (!getWrittenAddressInfo(address, size, info)) {
+      /* there was no overwrite... */
+      return 0;
+    }
+
+    return info.snapshotIndex + 1;
+  }
+
   //bool isAddressWritten(uint64_t address, size_t size) {
   //  assert(isNormalState());
   //  WrittenAddresses::iterator i = writtenAddresses.find(address);
