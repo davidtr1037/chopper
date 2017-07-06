@@ -4106,10 +4106,13 @@ void Executor::getAllRecoveryInfo(
   std::set<ModRefAnalysis::ModInfo> approximateModInfos;
   mra->getApproximateModInfos(ki->getOrigInst(), preciseAllocSite, approximateModInfos);
 
-  unsigned int snapshotIndex = 0;
+  /* we start from the last snapshot which is not affected by an overwrite */
+  unsigned int startIndex = state.getStartingIndex(loadAddr, loadSize);
+
   std::vector<Snapshot> &snapshots = state.getSnapshots();
-  for (std::vector<Snapshot>::iterator i = snapshots.begin(); i != snapshots.end(); i++) {
-    Function *snapshotFunction = i->f;
+  for (unsigned int index = startIndex; index < snapshots.size(); index++) {
+    Snapshot &snapshot = snapshots[index];
+    Function *snapshotFunction = snapshot.f;
 
     std::set<ModRefAnalysis::ModInfo>::iterator j;
     for (j = approximateModInfos.begin(); j != approximateModInfos.end(); j++) {
@@ -4136,8 +4139,8 @@ void Executor::getAllRecoveryInfo(
       recoveryInfo->loadSize = loadSize;
       recoveryInfo->f = modInfo.first;
       recoveryInfo->sliceId = sliceId;
-      recoveryInfo->snapshot = i->state;
-      recoveryInfo->snapshotIndex = snapshotIndex;
+      recoveryInfo->snapshot = snapshot.state;
+      recoveryInfo->snapshotIndex = index;
 
       result.push(recoveryInfo);
 
@@ -4156,8 +4159,6 @@ void Executor::getAllRecoveryInfo(
       /* TODO: validate that each snapshot corresponds to at most one modifier */
       break;
     }
-
-    snapshotIndex++;
   }
 }
 
@@ -4417,7 +4418,11 @@ void Executor::onNormalStateWrite(
   state.addWrittenAddress(concreteAddress, sizeInBytes, state.getSnapshotIndex());
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    klee_message("adding written address: (%lx, %zu)", concreteAddress, sizeInBytes)
+    klee_message("%p: adding written address: (%lx, %zu)",
+      &state,
+      concreteAddress,
+      sizeInBytes
+    )
   );
 }
 
