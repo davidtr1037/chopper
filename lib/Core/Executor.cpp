@@ -4044,7 +4044,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
 
   /* check if someone has written to this location */
   WrittenAddressInfo info;
-  if (!state.getWrittenAddressInfo(address, info)) {
+  if (!state.getWrittenAddressInfo(address, size, info)) {
     /* this address was not overriden */
     return true;
   }
