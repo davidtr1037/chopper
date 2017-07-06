@@ -4055,7 +4055,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
   }
 
   /* TODO: handle resolved loads... */
-  if (state.getSnapshotIndex() == info.snapshotIndex) {
+  if (state.getCurrentSnapshotIndex() == info.snapshotIndex) {
     /* TODO: hack... */
     state.markLoadAsUnresolved();
     DEBUG_WITH_TYPE(
@@ -4423,7 +4423,7 @@ void Executor::onNormalStateWrite(
   assert(sizeInBytes * 8 == value->getWidth());
 
   /* TODO: don't add if already resolved */
-  state.addWrittenAddress(concreteAddress, sizeInBytes, state.getSnapshotIndex());
+  state.addWrittenAddress(concreteAddress, sizeInBytes, state.getCurrentSnapshotIndex());
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message("%p: adding written address: (%lx, %zu)",

@@ -313,7 +313,7 @@ public:
     snapshots.push_back(snapshot);
   }
 
-  unsigned int getSnapshotIndex() {
+  unsigned int getCurrentSnapshotIndex() {
     assert(isNormalState());
     assert(!snapshots.empty());
     return snapshots.size() - 1;
