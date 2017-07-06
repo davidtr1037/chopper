@@ -429,11 +429,23 @@ public:
   }
 
   /* TODO: check size */
-  bool getWrittenAddressInfo(uint64_t address, WrittenAddressInfo &info) {
+  bool getWrittenAddressInfo(uint64_t address, size_t size, WrittenAddressInfo &info) {
     assert(isNormalState());
     WrittenAddresses::iterator i = writtenAddresses.find(address);
     if (i == writtenAddresses.end()) {
       return false;
+    }
+
+    std::set<size_t> &writtenSizes = i->second.sizes;
+    if (writtenSizes.size() != 1) {
+      /* TODO: handle.... */
+      assert(false);
+    }
+
+    size_t writtenSize = *(writtenSizes.begin());
+    if (writtenSize != size) {
+      /* TODO: handle... */
+      assert(false);
     }
 
     info = i->second;
