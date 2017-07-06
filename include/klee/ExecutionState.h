@@ -360,6 +360,16 @@ public:
     resolvedLoads.insert(address);
   }
 
+  bool isAddressResolved(uint64_t address) {
+    assert(isNormalState());
+    return resolvedLoads.find(address) != resolvedLoads.end();
+  }
+
+  void clearResolvedAddresses() {
+    assert(isNormalState());
+    resolvedLoads.clear();
+  }
+
   llvm::Instruction *getExitInst() {
     assert(isRecoveryState());
     return exitInst;

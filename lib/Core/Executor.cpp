@@ -4034,7 +4034,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
   size_t size = Expr::getMinBytesForWidth(width);
 
   /* check if already resolved */
-  if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
+  if (state.isAddressResolved(address)) {
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
       klee_message("%p: load from %#lx is already resolved", &state, address)
@@ -4304,7 +4304,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     recoveryState->setResumed();
     recoveryState->setRecoveryState(0);
     recoveryState->markLoadAsResolved();
-    recoveryState->getResolvedLoads().clear();
+    recoveryState->clearResolvedAddresses();
     /* this state may create another recovery state, so it must hold the allocation record */
     recoveryState->setAllocationRecord(state.getAllocationRecord());
     recoveryState->getGuidingConstraints().clear();
