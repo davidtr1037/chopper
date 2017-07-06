@@ -4036,6 +4036,7 @@ Interpreter *Interpreter::create(const InterpreterOptions &opts,
 
 bool Executor::isPotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: checking load...", &state));
+  /* basic check based on static analysis */
   if (!ki->mayBlock) {
     return false;
   }
@@ -4061,12 +4062,22 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
 
   /* check if already resolved */
   if (state.getResolvedLoads().find(address) != state.getResolvedLoads().end()) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: load from %#lx is already resolved", &state, address));
+    DEBUG_WITH_TYPE(
+      DEBUG_BASIC,
+      klee_message("%p: load from %#lx is already resolved", &state, address)
+    );
     return false;
   }
 
   /* check if someone has written to this location */
-  if (state.isAddressWritten(address, size)) {
+  WrittenAddressInfo info;
+  if (!state.getWrittenAddressInfo(address, info)) {
+    /* this address was not overriden */
+    return true;
+  }
+
+  /* TODO: handle resolved loads... */
+  if (state.getSnapshotIndex() == info.snapshotIndex) {
     /* TODO: hack... */
     state.markLoadAsUnresolved();
     DEBUG_WITH_TYPE(
@@ -4430,7 +4441,7 @@ void Executor::onNormalStateWrite(
   assert(sizeInBytes * 8 == value->getWidth());
 
   /* TODO: don't add if already resolved */
-  state.addWrittenAddress(concreteAddress, sizeInBytes);
+  state.addWrittenAddress(concreteAddress, sizeInBytes, state.getSnapshotIndex());
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message("adding written address: (%lx, %zu)", concreteAddress, sizeInBytes)
