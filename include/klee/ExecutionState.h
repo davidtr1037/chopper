@@ -115,6 +115,11 @@ struct Snapshot {
     };
 };
 
+struct WrittenAddressInfo {
+    std::set<size_t> sizes;
+    unsigned int snapshotIndex;
+};
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
@@ -146,7 +151,7 @@ private:
   /* used for guiding multiple recovery states */
   std::vector<ref<Expr>> guidingConstraints;
   /* we need to know if an address was written  */
-  typedef std::map<uint64_t, std::set<size_t> > WrittenAddresses;
+  typedef std::map<uint64_t, WrittenAddressInfo> WrittenAddresses;
   WrittenAddresses writtenAddresses;
   /* TODO: will be removed later... */
   unsigned int skippedCount;
@@ -308,6 +313,12 @@ public:
     snapshots.push_back(snapshot);
   }
 
+  unsigned int getSnapshotIndex() {
+    assert(isNormalState());
+    assert(!snapshots.empty());
+    return snapshots.size() - 1;
+  }
+
   ExecutionState *getRecoveryState() {
     assert(isNormalState());
     return recoveryState;
@@ -410,35 +421,50 @@ public:
     guidingConstraints.push_back(condition);
   }
 
-  void addWrittenAddress(uint64_t address, size_t size) {
+  void addWrittenAddress(uint64_t address, size_t size, unsigned int snapshotIndex) {
     assert(isNormalState());
-    writtenAddresses[address].insert(size);
+    WrittenAddressInfo &info = writtenAddresses[address];
+    info.sizes.insert(size);
+    info.snapshotIndex = snapshotIndex;
   }
 
-  bool isAddressWritten(uint64_t address, size_t size) {
+  /* TODO: check size */
+  bool getWrittenAddressInfo(uint64_t address, WrittenAddressInfo &info) {
     assert(isNormalState());
     WrittenAddresses::iterator i = writtenAddresses.find(address);
     if (i == writtenAddresses.end()) {
       return false;
     }
 
-    std::set<size_t> &writtenSizes = i->second;
-    if (writtenSizes.size() != 1) {
-      /* TODO: something is wrong.... */
-      assert(false);
-    }
-
-    size_t writtenSize = *(writtenSizes.begin());
-    if (writtenSize != size) {
-      /* TODO: handle... */
-      assert(false);
-    }
-
-    /* cleanup... */
-    writtenAddresses.erase(i);
-
+    info = i->second;
     return true;
   }
+
+  //bool isAddressWritten(uint64_t address, size_t size) {
+  //  assert(isNormalState());
+  //  WrittenAddresses::iterator i = writtenAddresses.find(address);
+  //  if (i == writtenAddresses.end()) {
+  //    return false;
+  //  }
+
+  //  WrittenAddressInfo &info = *i;
+  //  std::set<size_t> &writtenSizes = i->second;
+  //  if (writtenSizes.size() != 1) {
+  //    /* TODO: something is wrong.... */
+  //    assert(false);
+  //  }
+
+  //  size_t writtenSize = *(writtenSizes.begin());
+  //  if (writtenSize != size) {
+  //    /* TODO: handle... */
+  //    assert(false);
+  //  }
+
+  //  /* cleanup... */
+  //  writtenAddresses.erase(i);
+
+  //  return true;
+  //}
 
   unsigned int getSkippedCount() {
     assert(isNormalState());
