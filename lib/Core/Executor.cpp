@@ -1403,7 +1403,11 @@ void Executor::executeCall(ExecutionState &state,
     /* TODO: make it more readable... */
     if (state.isNormalState() && !state.isRecoveryState() && filterCallSite(state, f)) {
       /* create snapshot, recovery state will be created on demand... */
-      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: adding snapshot (index = %lu)", &state, state.getSnapshots().size()));
+      unsigned int index = state.getSnapshots().size();
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("%p: adding snapshot (index = %u)", &state, index)
+      );
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
 
       if (canSkipCallSite(state, f)) {
@@ -1423,25 +1427,24 @@ void Executor::executeCall(ExecutionState &state,
         assert(false);
       }
       state.setDirectRetSliceId(retSliceId);
-      //Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, retSliceId);
-      //Function *retSlice = sliceInfo->f;
       f = getSlice(f, retSliceId, ModRefAnalysis::ReturnValue);
     }
 
     /* TODO: fix this mess... */
     if (state.isRecoveryState()) {
       RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
-      //Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, recoveryInfo->sliceId);
-      //Function *cloned = sliceInfo->f;
       f = getSlice(f, recoveryInfo->sliceId, ModRefAnalysis::Modifier);
-      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting slice: %s", f->getName().data()));
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("injecting slice: %s", f->getName().data())
+      );
     }
     if (state.isNormalState() && state.isExecutingRetSlice()) {
-      //Cloner::SliceInfo *sliceInfo = cloner->getSliceInfo(f, state.getDirectRetSliceId());
-      //Function *cloned = sliceInfo->f;
-      //f = cloned;
       f = getSlice(f, state.getDirectRetSliceId(), ModRefAnalysis::ReturnValue);
-      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("injecting ret-slice..."));
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("injecting ret-slice...")
+      );
     }
 
     KFunction *kf = kmodule->functionMap[f];
