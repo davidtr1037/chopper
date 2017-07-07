@@ -120,6 +120,12 @@ struct WrittenAddressInfo {
     unsigned int snapshotIndex;
 };
 
+/* recovery state result information */
+struct RecoveryResult {
+    /* did the recovery state wrote to the blocking load address */
+    bool modified;
+};
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
@@ -146,6 +152,12 @@ private:
   bool blockingLoadStatus;
   /* resloved load addresses */
   std::set<uint64_t> resolvedLoads;
+  /* maps a slice id to a resolved expression */
+  typedef std::map<uint32_t, RecoveryResult> SnapshotCache;
+  /* maps a snapshot index to a slice cache */
+  typedef std::map<uint32_t, SnapshotCache> RecoveryCache;
+  /* TODO: add doc... */
+  RecoveryCache recoveryCache;
   /* we have to remember which allocations were executed */
   AllocationRecord allocationRecord;
   /* used for guiding multiple recovery states */
@@ -368,6 +380,33 @@ public:
   void clearResolvedAddresses() {
     assert(isNormalState());
     resolvedLoads.clear();
+  }
+
+  void updateRecoveryCache(unsigned int snapshotIndex, unsigned int sliceId) {
+    assert(isNormalState());
+    SnapshotCache &snapshotCache = recoveryCache[snapshotIndex];
+    RecoveryResult &result = snapshotCache[sliceId];
+    result.modified = true;
+  }
+
+  bool getRecoveryResult(
+    unsigned int snapshotIndex,
+    unsigned int sliceId,
+    RecoveryResult &result
+  ) {
+    RecoveryCache::iterator i = recoveryCache.find(snapshotIndex);
+    if (i == recoveryCache.end()) {
+      return false;
+    }
+
+    SnapshotCache &snapshotCache = i->second;
+    SnapshotCache::iterator j = snapshotCache.find(sliceId);
+    if (j == snapshotCache.end()) {
+      return false;
+    }
+
+    result = j->second;
+    return true;
   }
 
   llvm::Instruction *getExitInst() {
