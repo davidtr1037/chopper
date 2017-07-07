@@ -466,7 +466,7 @@ private:
   void getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *kinst,
-    std::queue<RecoveryInfo *> &result
+    std::list<RecoveryInfo *> &result
   );
   void getLoadInfo(
     ExecutionState &state,
