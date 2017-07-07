@@ -4140,11 +4140,21 @@ void Executor::getAllRecoveryInfo(
   std::set<ModRefAnalysis::ModInfo> approximateModInfos;
   mra->getApproximateModInfos(ki->getOrigInst(), preciseAllocSite, approximateModInfos);
 
+  /* all the recovery information which may be required  */
+  std::list<RecoveryInfo *> required;
+  /* the snapshots of the state */
+  std::vector<Snapshot> &snapshots = state.getSnapshots();
   /* we start from the last snapshot which is not affected by an overwrite */
   unsigned int startIndex = state.getStartingIndex(loadAddr, loadSize);
 
-  std::vector<Snapshot> &snapshots = state.getSnapshots();
+  /* collect recovery information */
   for (unsigned int index = startIndex; index < snapshots.size(); index++) {
+    if (state.isRecoveryState()) {
+      if (state.getRecoveryInfo()->snapshotIndex == index) {
+        break;
+      }
+    }
+
     Snapshot &snapshot = snapshots[index];
     Function *snapshotFunction = snapshot.f;
 
@@ -4166,8 +4176,6 @@ void Executor::getAllRecoveryInfo(
 
       uint32_t sliceId = entry->second;
 
-      /* TODO: check recovery cache */
-
       /* initialize... */
       RecoveryInfo *recoveryInfo = new RecoveryInfo();
       recoveryInfo->loadInst = loadInst;
@@ -4178,22 +4186,65 @@ void Executor::getAllRecoveryInfo(
       recoveryInfo->snapshot = snapshot.state;
       recoveryInfo->snapshotIndex = index;
 
-      result.push(recoveryInfo);
-
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message(
-          "recovery info: addr = %#lx, size = %lx, function: %s, slice id = %u, snapshot index = %u",
-          recoveryInfo->loadAddr,
-          recoveryInfo->loadSize,
-          recoveryInfo->f->getName().data(),
-          recoveryInfo->sliceId,
-          recoveryInfo->snapshotIndex
-        )
-      );
+      required.push_back(recoveryInfo);
 
       /* TODO: validate that each snapshot corresponds to at most one modifier */
       break;
+    }
+  }
+
+  /* do some filtering... */
+  for (std::list<RecoveryInfo *>::reverse_iterator i = required.rbegin(); i != required.rend(); i++) {
+    RecoveryInfo *recoveryInfo = *i;
+    unsigned int index = recoveryInfo->snapshotIndex;
+    unsigned int sliceId = recoveryInfo->sliceId;
+
+    DEBUG_WITH_TYPE(
+      DEBUG_BASIC,
+      klee_message(
+        "recovery info: addr = %#lx, size = %lx, function: %s, slice id = %u, snapshot index = %u",
+        recoveryInfo->loadAddr,
+        recoveryInfo->loadSize,
+        recoveryInfo->f->getName().data(),
+        recoveryInfo->sliceId,
+        recoveryInfo->snapshotIndex
+      )
+    );
+
+    RecoveryResult recoveryResult;
+    if (state.getRecoveryResult(index, sliceId, recoveryResult)) {
+      /* the slice was executed... */
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message(
+          "%p: recovery result (index = %u, slice id = %u, %s)",
+          &state,
+          index,
+          sliceId,
+          recoveryResult.modified ? "modified" : "unmodified"
+        )
+      );
+
+      if (recoveryResult.modified) {
+        /*
+          this is the latest slice which has real side effects,
+          so there is no need to recover the previous skipped functions
+        */
+        result.push_front(recoveryInfo);
+        break;
+      }
+    } else {
+      /* the slice was never executed, so we must add it */
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message(
+          "%p: adding recovery info for a non-executed slice (index = %u, slice id = %u)",
+          &state,
+          index,
+          sliceId
+        )
+      );
+      result.push_front(recoveryInfo);
     }
   }
 }
@@ -4339,6 +4390,8 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     recoveryState->setRecoveryState(0);
     recoveryState->markLoadAsResolved();
     recoveryState->clearResolvedAddresses();
+    /* TODO: we need only a prefix of the cache... */
+    recoveryState->setRecoveryCache(state.getRecoveryCache());
     /* this state may create another recovery state, so it must hold the allocation record */
     recoveryState->setAllocationRecord(state.getAllocationRecord());
     recoveryState->getGuidingConstraints().clear();
@@ -4426,6 +4479,17 @@ void Executor::onRecoveryStateWrite(
   );
 
   /* TODO: update recovery cache */
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message(
+      "%p: updating cache for %p (index = %u, slice id = %u)",
+      &state,
+      dependedState,
+      recoveryInfo->snapshotIndex,
+      recoveryInfo->sliceId
+    )
+  );
+  dependedState->updateRecoveryCache(recoveryInfo->snapshotIndex, recoveryInfo->sliceId);
 }
 
 void Executor::onNormalStateWrite(
