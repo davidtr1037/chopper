@@ -4096,7 +4096,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
 
 bool Executor::handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki) {
   /* find which slices should be executed... */
-  std::queue<RecoveryInfo *> &recoveryInfos = state.getPendingRecoveryInfos();
+  std::list<RecoveryInfo *> &recoveryInfos = state.getPendingRecoveryInfos();
   getAllRecoveryInfo(state, ki, recoveryInfos);
   if (recoveryInfos.empty()) {
     /* we are not dependent on previously skipped functions */
@@ -4119,7 +4119,7 @@ bool Executor::handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction
 void Executor::getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *ki,
-    std::queue<RecoveryInfo *> &result
+    std::list<RecoveryInfo *> &result
 ) {
   Instruction *loadInst;
   uint64_t loadAddr;
