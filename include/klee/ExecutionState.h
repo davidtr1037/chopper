@@ -165,10 +165,6 @@ private:
   /* we need to know if an address was written  */
   typedef std::map<uint64_t, WrittenAddressInfo> WrittenAddresses;
   WrittenAddresses writtenAddresses;
-  /* TODO: will be removed later... */
-  unsigned int skippedCount;
-  /* TODO: will be removed later... */
-  unsigned int recoveryCount;
   /* TODO: add doc... */
   uint32_t directRetSliceId;
   /* we use this to determine which recovery states must be run */
@@ -536,26 +532,6 @@ public:
 
   //  return true;
   //}
-
-  unsigned int getSkippedCount() {
-    assert(isNormalState());
-    return skippedCount;
-  }
-
-  void incSkippedCount() {
-    assert(isNormalState());
-    skippedCount++;
-  }
-
-  unsigned int getRecoveryCount() {
-    assert(isNormalState());
-    return recoveryCount;
-  }
-
-  void incRecoveryCount() {
-    assert(isNormalState());
-    recoveryCount++;
-  }
 
   bool isExecutingRetSlice() {
     assert(isNormalState());

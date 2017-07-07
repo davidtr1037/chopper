@@ -1492,7 +1492,6 @@ void Executor::executeCall(ExecutionState &state,
           DEBUG_BASIC,
           klee_message("%p: skipping function call to %s", &state, f->getName().data())
         );
-        state.incSkippedCount();
         return;
       }
 
@@ -4384,7 +4383,6 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   addedStates.push_back(recoveryState);
 
   /* statistics */
-  state.incRecoveryCount();
   interpreterHandler->incRecoveryStatesCount();
 }
 
