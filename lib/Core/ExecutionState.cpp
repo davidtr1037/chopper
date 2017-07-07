@@ -70,8 +70,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
     suspendStatus(false),
     recoveryState(0),
     blockingLoadStatus(true),
-    skippedCount(0),
-    recoveryCount(0),
     directRetSliceId(0),
 
     /* recovery state properties */
@@ -123,8 +121,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     allocationRecord(state.allocationRecord),
     guidingConstraints(state.guidingConstraints),
     writtenAddresses(state.writtenAddresses),
-    skippedCount(state.skippedCount),
-    recoveryCount(state.recoveryCount),
     directRetSliceId(state.directRetSliceId),
     pendingRecoveryInfos(state.pendingRecoveryInfos),
 
