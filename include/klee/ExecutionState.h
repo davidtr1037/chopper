@@ -376,6 +376,16 @@ public:
     resolvedLoads.clear();
   }
 
+  RecoveryCache &getRecoveryCache() {
+    assert(isNormalState());
+    return recoveryCache;
+  }
+
+  void setRecoveryCache(RecoveryCache &cache) {
+    assert(isNormalState());
+    recoveryCache = cache;
+  }
+
   void updateRecoveryCache(unsigned int snapshotIndex, unsigned int sliceId) {
     assert(isNormalState());
     SnapshotCache &snapshotCache = recoveryCache[snapshotIndex];
