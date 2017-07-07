@@ -141,21 +141,20 @@ private:
 
   /* normal state properties */
 
+  typedef std::map<uint32_t, RecoveryResult> SnapshotCache;
+  typedef std::map<uint32_t, SnapshotCache> RecoveryCache;
+  typedef std::map<uint64_t, WrittenAddressInfo> WrittenAddresses;
+
   /* a normal state has a suspend status */
   bool suspendStatus;
   /* history of taken snapshots, which are uses to create recovery states */
   std::vector<Snapshot> snapshots;
   /* a normal state has a unique recovery state */
   ExecutionState *recoveryState;
-  /* we should know of the current load inst */
   /* TODO: rename/re-implement */
   bool blockingLoadStatus;
   /* resloved load addresses */
   std::set<uint64_t> resolvedLoads;
-  /* maps a slice id to a resolved expression */
-  typedef std::map<uint32_t, RecoveryResult> SnapshotCache;
-  /* maps a snapshot index to a slice cache */
-  typedef std::map<uint32_t, SnapshotCache> RecoveryCache;
   /* TODO: add doc... */
   RecoveryCache recoveryCache;
   /* we have to remember which allocations were executed */
@@ -163,7 +162,6 @@ private:
   /* used for guiding multiple recovery states */
   std::vector<ref<Expr>> guidingConstraints;
   /* we need to know if an address was written  */
-  typedef std::map<uint64_t, WrittenAddressInfo> WrittenAddresses;
   WrittenAddresses writtenAddresses;
   /* TODO: add doc... */
   uint32_t directRetSliceId;
