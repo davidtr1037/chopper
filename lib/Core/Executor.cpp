@@ -1484,7 +1484,7 @@ void Executor::executeCall(ExecutionState &state,
         klee_message("%p: adding snapshot (index = %u)", &state, index)
       );
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
-      /* TODO: fix later... */
+      /* TODO: will be replaced later... */
       state.clearResolvedAddresses();
 
       if (canSkipCallSite(state, f)) {
@@ -4167,6 +4167,8 @@ void Executor::getAllRecoveryInfo(
 
       uint32_t sliceId = entry->second;
 
+      /* TODO: check recovery cache */
+
       /* initialize... */
       RecoveryInfo *recoveryInfo = new RecoveryInfo();
       recoveryInfo->loadInst = loadInst;
@@ -4324,6 +4326,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   assert(snapshotState);
 
   /* initialize recovery state */
+  /* TODO: non-first snapshots hold normal state properties! */
   ExecutionState *recoveryState = new ExecutionState(*snapshotState);
   if (recoveryInfo->snapshotIndex == 0) {
     /* a recovery state which is created from the first snapshot has no dependencies */
@@ -4419,7 +4422,12 @@ void Executor::onRecoveryStateWrite(
   const ObjectState *os = dependedState->addressSpace.findObject(mo);
   ObjectState *wos = dependedState->addressSpace.getWriteable(mo, os);
   wos->write(offset, value);
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("copying from %p to %p", &state, dependedState));
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message("copying from %p to %p", &state, dependedState)
+  );
+
+  /* TODO: update recovery cache */
 }
 
 void Executor::onNormalStateWrite(
