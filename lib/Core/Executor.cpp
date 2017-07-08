@@ -984,12 +984,35 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     return StatePair(0, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
-    ExecutionState *falseState, *trueState = &current;
+    ExecutionState *falseState = NULL, *trueState = &current;
 
-    ++stats::forks;
+    bool forkRequired = true;
+    if (trueState->isRecoveryState()) {
+      /* check if the negated condition is consistent with the depended states */
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message(
+          "checking consisteny in fork for recovery state (false branch): %p (dep = %p)",
+          trueState,
+          trueState->getDependedState()
+        )
+      );
+      if (!checkConsistency(*trueState, Expr::createIsZero(condition))) {
+        forkRequired = false;
+      }
+    }
 
-    falseState = trueState->branch();
-    addedStates.push_back(falseState);
+    if (forkRequired) {
+      ++stats::forks;
+      falseState = trueState->branch();
+      addedStates.push_back(falseState);
+      if (trueState->isRecoveryState()) {
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("forked recovery state: %p", falseState)
+        );
+      }
+    }
 
     if (it != seedMap.end()) {
       std::vector<SeedInfo> seeds = it->second;
@@ -1025,11 +1048,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    current.ptreeNode->data = 0;
-    std::pair<PTree::Node*, PTree::Node*> res =
-      processTree->split(current.ptreeNode, falseState, trueState);
-    falseState->ptreeNode = res.first;
-    trueState->ptreeNode = res.second;
+    if (forkRequired) {
+      current.ptreeNode->data = 0;
+      std::pair<PTree::Node*, PTree::Node*> res =
+        processTree->split(current.ptreeNode, falseState, trueState);
+      falseState->ptreeNode = res.first;
+      trueState->ptreeNode = res.second;
+    }
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -1044,33 +1069,49 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       falseState->symPathOS = symPathWriter->open(current.symPathOS);
       if (!isInternal) {
         trueState->symPathOS << "1";
-        falseState->symPathOS << "0";
+        if (forkRequired) {
+          falseState->symPathOS = symPathWriter->open(current.symPathOS);
+          falseState->symPathOS << "0";
+        }
       }
     }
 
     addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createIsZero(condition));
+    if (forkRequired) {
+      addConstraint(*falseState, Expr::createIsZero(condition));
+    }
+
+    /* TODO: handle termination of recovery states... */
+    // Kinda gross, do we even really still want this option?
+    if (MaxDepth && MaxDepth<=trueState->depth) {
+      terminateStateEarly(*trueState, "max-depth exceeded.");
+      if (forkRequired) {
+        terminateStateEarly(*falseState, "max-depth exceeded.");
+      }
+      return StatePair(0, 0);
+    }
 
     if (trueState->isRecoveryState()) {
       ExecutionState *dependedState = trueState->getDependedState();
       ExecutionState *forkedDependedState = NULL;
+      bool isTrueStateValid = false;
+      bool isFalseStateValid = false;
 
       /* check consistency of true state with the depended state */
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
-        klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", trueState, dependedState)
+        klee_message(
+          "checking consisteny in fork for recovery state (true branch): %p (dep = %p)",
+          trueState,
+          dependedState
+        )
       );
-      bool isTrueStateValid = checkConsistencyForAll(*dependedState, *trueState);
+      isTrueStateValid = checkConsistency(*trueState, condition);
 
-      /* check consistency of false state with the depended state */
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("checking consisteny after fork in recovery state: %p (dep = %p)", falseState, dependedState)
-      );
-      bool isFalseStateValid = checkConsistencyForAll(*dependedState, *falseState);
-      if (isFalseStateValid) {
-        /* the forked state is consistent with it's originator */
+      if (forkRequired) {
+        /* if we are here, then the false state is consistent with it's depended states */
         forkedDependedState = forkDependedStates(trueState, falseState);
+        isFalseStateValid = true;
       }
 
       /* copy constraints if required */
@@ -1079,18 +1120,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
       if (isFalseStateValid) {
         mergeConstraintsForAll(*forkedDependedState, Expr::createIsZero(condition));
-
-        /* TODO: is it the right place? */
         interpreterHandler->incRecoveryStatesCount();
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
-        DEBUG_WITH_TYPE(
-          DEBUG_BASIC,
-          klee_message("terminating inconsistent forked recovery state (false state): %p", falseState)
-        );
-        /* here there are no depended states... */
-        terminateState(*falseState);
         return StatePair(trueState, 0);
       }
       if (!isTrueStateValid && isFalseStateValid) {
@@ -1105,14 +1138,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         /* TODO: is it possible? */
         assert(false);
       }
-    }
-
-    /* TODO: handle termination of recovery states... */
-    // Kinda gross, do we even really still want this option?
-    if (MaxDepth && MaxDepth<=trueState->depth) {
-      terminateStateEarly(*trueState, "max-depth exceeded.");
-      terminateStateEarly(*falseState, "max-depth exceeded.");
-      return StatePair(0, 0);
     }
 
     return StatePair(trueState, falseState);
@@ -4543,35 +4568,27 @@ void Executor::dumpConstrains(ExecutionState &state) {
   }
 }
 
-bool Executor::checkConsistency(ExecutionState &dependedState, ExecutionState &recoveryState) {
-    Solver::Validity result;
-    ref<Expr> condition = ConstantExpr::alloc(1, Expr::Bool);
-
-    for (ConstraintManager::constraint_iterator i = recoveryState.constraints.begin(); i != recoveryState.constraints.end(); i++) {
-        ref<Expr> e = *i;
-        condition = AndExpr::create(condition, e);
-    }
-
-    solver->evaluate(dependedState, condition, result);
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
-
-    return result != Solver::False;
-}
-
 /* checks consistency without creating a new state */
 bool Executor::checkConsistency(ExecutionState &recoveryState, ref<Expr> condition) {
     Solver::Validity result;
-    ref<Expr> all = condition;
+    ExecutionState *next = NULL;
 
-    for (ConstraintManager::constraint_iterator i = recoveryState.constraints.begin(); i != recoveryState.constraints.end(); i++) {
-        ref<Expr> e = *i;
-        all = AndExpr::create(all, e);
-    }
+    next = recoveryState.getDependedState();
+    do {
+        solver->evaluate(*next, condition, result);
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
+        if (result == Solver::False) {
+            return false;
+        }
 
-    solver->evaluate(*recoveryState.getDependedState(), all, result);
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
+        if (next->isRecoveryState()) {
+            next = next->getDependedState();
+        } else {
+            next = NULL;
+        }
+    } while (next);
 
-    return result != Solver::False;
+    return true;
 }
 
 MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst, bool zeroMemory) {
@@ -4753,25 +4770,6 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
         forked->setRecoveryState(forkedPrev);
         forkedPrev->setDependedState(forked);
 
-        DEBUG_WITH_TYPE(
-            DEBUG_BASIC,
-            klee_message(
-                "forked %p: dep = %p rec = %p",
-                forked,
-                forked->isRecoveryState() ? forked->getDependedState() : NULL,
-                forked->isNormalState() ? forked->getRecoveryState() : NULL
-            )
-        );
-        DEBUG_WITH_TYPE(
-            DEBUG_BASIC,
-            klee_message(
-                "forkedPrev %p: dep = %p rec = %p",
-                forkedPrev,
-                forkedPrev->isRecoveryState() ? forkedPrev->getDependedState() : NULL,
-                forkedPrev->isNormalState() ? forkedPrev->getRecoveryState() : NULL
-            )
-        );
-
         current->ptreeNode->data = 0;
         std::pair<PTree::Node*, PTree::Node*> res = processTree->split(current->ptreeNode, forked, current);
         forked->ptreeNode = res.first;
@@ -4792,23 +4790,6 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
     } while (current);
 
     return firstForked;
-}
-
-bool Executor::checkConsistencyForAll(ExecutionState &dependedState, ExecutionState &recoveryState) {
-    ExecutionState *next = &dependedState;
-    do {
-        if (!checkConsistency(*next, recoveryState)) {
-            return false;
-        }
-
-        if (next->isRecoveryState()) {
-            next = next->getDependedState();
-        } else {
-            next = NULL;
-        }
-    } while (next);
-
-    return true;
 }
 
 void Executor::mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition) {
