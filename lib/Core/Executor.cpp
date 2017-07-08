@@ -2186,8 +2186,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     if (state.isNormalState() && state.isInDependentMode()) {
-      if (state.isBlockingLoadResolved() && isPotentiallyBlockingLoad(state, ki)) {
-        bool isBlocking = handlePotentiallyBlockingLoad(state, ki);
+      if (state.isBlockingLoadResolved() && isMayBlockingLoad(state, ki)) {
+        bool isBlocking = handleMayBlockingLoad(state, ki);
         if (isBlocking) {
           /* TODO: break? */
           return;
@@ -4009,7 +4009,7 @@ Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opt
   return new Executor(ctx, opts, ih);
 }
 
-bool Executor::isPotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki) {
+bool Executor::isMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: checking load...", &state));
   /* basic check based on static analysis */
   if (!ki->mayBlock) {
@@ -4065,7 +4065,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
   return true;
 }
 
-bool Executor::handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki) {
+bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
   /* find which slices should be executed... */
   std::list<RecoveryInfo *> &recoveryInfos = state.getPendingRecoveryInfos();
   getAllRecoveryInfo(state, ki, recoveryInfos);
@@ -4101,7 +4101,7 @@ void Executor::getAllRecoveryInfo(
   loadInst = ki->getOrigInst();
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    errs() << "potentially blocking load: "; loadInst->print(errs()); errs() << "\n"
+    errs() << "may-blocking load: "; loadInst->print(errs()); errs() << "\n"
   );
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
