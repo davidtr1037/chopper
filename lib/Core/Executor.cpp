@@ -4756,7 +4756,7 @@ void Executor::unbindAll(ExecutionState *state, const MemoryObject *mo) {
 
 ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, ExecutionState *falseState) {
     ExecutionState *current = trueState->getDependedState();
-    ExecutionState *forkedPrev = falseState;
+    ExecutionState *prevForked = falseState;
     ExecutionState *forked = NULL;
     ExecutionState *firstForked = NULL;
     bool isFirst = true;
@@ -4767,8 +4767,8 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
         assert(forked->isSuspended());
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("forked depended state: %p (from %p)", forked, current));
 
-        forked->setRecoveryState(forkedPrev);
-        forkedPrev->setDependedState(forked);
+        forked->setRecoveryState(prevForked);
+        prevForked->setDependedState(forked);
 
         current->ptreeNode->data = 0;
         std::pair<PTree::Node*, PTree::Node*> res = processTree->split(current->ptreeNode, forked, current);
@@ -4782,7 +4782,7 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
         }
 
         if (current->isRecoveryState()) {
-            forkedPrev = forked;
+            prevForked = forked;
             current = current->getDependedState();
         } else {
             current = NULL;
