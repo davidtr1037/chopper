@@ -258,6 +258,7 @@ private:
   unsigned m_testIndex;  // number of tests written so far
   unsigned m_pathsExplored; // number of paths explored so far
   unsigned m_recoveryStatesCount; // number of recovery states
+  unsigned m_generatedSlicesCount; // number of generated slices
 
   // used for writing .ktest files
   int m_argc;
@@ -275,8 +276,17 @@ public:
   unsigned getRecoveryStatesCount() {
     return m_recoveryStatesCount;
   }
+
   void incRecoveryStatesCount() {
     m_recoveryStatesCount++;
+  }
+
+  unsigned getGeneratedSlicesCount() {
+    return m_generatedSlicesCount;
+  }
+
+  void incGeneratedSlicesCount() {
+    m_generatedSlicesCount++;
   }
 
   void setInterpreter(Interpreter *i);
@@ -1660,6 +1670,8 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumTestCases() << "\n";
   stats << "KLEE: done: recovery states = "
         << handler->getRecoveryStatesCount() << "\n";
+  stats << "KLEE: done: generated slices = "
+        << handler->getGeneratedSlicesCount() << "\n";
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
