@@ -98,7 +98,6 @@
 #include <Inliner.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
-#include <Annotator.h>
 #include <Cloner.h>
 #include <SliceGenerator.h>
 
@@ -448,10 +447,9 @@ const Module *Executor::setModule(llvm::Module *module,
 
   /* TODO: fix hard coded entry point... */
   mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", targets);
-  annotator = new Annotator(kmodule->module, mra);
-  cloner = new Cloner(module, ra, mra);
-  sliceGenerator = new SliceGenerator(module, aa, mra, annotator, cloner, true);
-  kmodule->prepare(opts, interpreterHandler, ra, inliner, aa, mra, annotator, cloner, sliceGenerator);
+  cloner = new Cloner(module, ra);
+  sliceGenerator = new SliceGenerator(module, aa, mra, cloner, true);
+  kmodule->prepare(opts, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
 
   specialFunctionHandler->bind();
 

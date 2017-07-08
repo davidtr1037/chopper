@@ -29,7 +29,6 @@
 #include <Inliner.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
-#include <Annotator.h>
 #include <Cloner.h>
 #include <SliceGenerator.h>
 
@@ -223,7 +222,6 @@ private:
   Inliner *inliner;
   AAPass *aa;
   ModRefAnalysis *mra;
-  Annotator *annotator;
   Cloner *cloner;
   SliceGenerator *sliceGenerator;
 
