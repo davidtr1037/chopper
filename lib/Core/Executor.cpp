@@ -4828,17 +4828,23 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
     Cloner::SliceInfo *sliceInfo = NULL;
 
     sliceInfo = cloner->getSliceInfo(target, sliceId);
-    if (!sliceInfo->isSliced) {
+    if (!sliceInfo || !sliceInfo->isSliced) {
         DEBUG_WITH_TYPE(DEBUG_BASIC,
             klee_message("generating slice for: %s (id = %u)", target->getName().data(), sliceId)
         );
         sliceGenerator->generateSlice(target, sliceId, type);
         sliceGenerator->dumpSlice(target, sliceId, true);
 
+        if (!sliceInfo) {
+            sliceInfo = cloner->getSliceInfo(target, sliceId);
+            assert(sliceInfo);
+        }
+
         uint32_t retSliceId = 0;
         bool hasRetSlice = mra->getRetSliceId(target, retSliceId);
 
-        std::set<Function *> &reachable = cloner->getReachabilityMap()[target];
+        std::set<Function *> reachable;
+        cloner->getReachableFunctions(target, reachable);
         for (std::set<Function *>::iterator i = reachable.begin(); i != reachable.end(); i++) {
             /* original function */
             Function *f = *i;
