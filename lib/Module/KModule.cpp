@@ -47,7 +47,6 @@
 #include <Inliner.h>
 #include <AAPass.h>
 #include <ModRefAnalysis.h>
-#include <Annotator.h>
 #include <Cloner.h>
 #include <SliceGenerator.h>
 
@@ -207,8 +206,12 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih,
-                      ReachabilityAnalysis *ra, Inliner *inliner, AAPass *aa, ModRefAnalysis *mra,
-                      Annotator *annotator, Cloner *cloner, SliceGenerator *sliceGenerator) {
+                      ReachabilityAnalysis *ra,
+                      Inliner *inliner,
+                      AAPass *aa,
+                      ModRefAnalysis *mra,
+                      Cloner *cloner,
+                      SliceGenerator *sliceGenerator) {
   LLVMContext &ctx = module->getContext();
 
   // Inject checks prior to optimization... we also perform the
@@ -342,7 +345,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   mra->run();
 
   klee_message("Computing Slices...");
-  annotator->annotate();
   sliceGenerator->generate();
 
   /* Build shadow structures */
