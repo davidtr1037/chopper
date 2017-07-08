@@ -4834,6 +4834,7 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
         );
         sliceGenerator->generateSlice(target, sliceId, type);
         sliceGenerator->dumpSlice(target, sliceId, true);
+        interpreterHandler->incGeneratedSlicesCount();
 
         if (!sliceInfo) {
             sliceInfo = cloner->getSliceInfo(target, sliceId);
