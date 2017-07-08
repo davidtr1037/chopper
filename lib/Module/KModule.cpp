@@ -453,9 +453,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   klee_message("Computing Slices...");
   annotator->annotate();
-  cloner->run();
   sliceGenerator->generate();
-  sliceGenerator->dumpSlices();
 
   /* Build shadow structures */
 
