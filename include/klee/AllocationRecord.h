@@ -3,8 +3,7 @@
 
 #include "klee/ASContext.h"
 
-#include <map>
-#include <queue>
+#include <list>
 
 namespace klee {
 
