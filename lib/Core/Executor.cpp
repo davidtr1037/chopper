@@ -808,7 +808,7 @@ void Executor::branch(ExecutionState &state,
           ExecutionState *forkedDependedState = forkDependedStates(prev, current);
           dependedStates.push_back(forkedDependedState);
 
-          /* update statistics */
+          /* TODO: not sure if this is the right place... */
           interpreterHandler->incRecoveryStatesCount();
         }
       } else {
@@ -4359,6 +4359,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     /* initialize... */
     recoveryState->setResumed();
     recoveryState->setRecoveryState(0);
+    /* TODO: we need only a prefix of the snapshots... */
     recoveryState->markLoadAsResolved();
     recoveryState->clearResolvedAddresses();
     /* TODO: we need only a prefix of the cache... */
@@ -4367,7 +4368,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     recoveryState->setAllocationRecord(state.getAllocationRecord());
     recoveryState->getGuidingConstraints().clear();
     /* TODO: handle writtenAddresses */
-    /* this should be empty */
+
     assert(recoveryState->getPendingRecoveryInfos().empty());
   }
 
@@ -4834,6 +4835,8 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
         );
         sliceGenerator->generateSlice(target, sliceId, type);
         sliceGenerator->dumpSlice(target, sliceId, true);
+
+        /* update statistics */
         interpreterHandler->incGeneratedSlicesCount();
 
         if (!sliceInfo) {
