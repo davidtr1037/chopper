@@ -450,9 +450,9 @@ private:
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();
 
-  bool isPotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki);
+  bool isMayBlockingLoad(ExecutionState &state, KInstruction *ki);
   bool isResolvingRequired(ExecutionState &state, KInstruction *ki);
-  bool handlePotentiallyBlockingLoad(ExecutionState &state, KInstruction *ki);
+  bool handleMayBlockingLoad(ExecutionState &state, KInstruction *ki);
   void getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *kinst,
