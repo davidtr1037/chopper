@@ -493,7 +493,6 @@ private:
     Expr::Width width
   );
   void dumpConstrains(ExecutionState &state);
-  bool checkConsistency(ExecutionState &dependedState, ExecutionState &recoveryState);
   bool checkConsistency(ExecutionState &recoveryState, ref<Expr> condition);
   MemoryObject *onExecuteAlloc(ExecutionState &state, uint64_t size, bool isLocal, llvm::Instruction *allocInst, bool zeroMemory);
   bool isDynamicAlloc(llvm::Instruction *allocInst);
@@ -505,7 +504,6 @@ private:
   void bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory);
   void unbindAll(ExecutionState *state, const MemoryObject *mo);
   ExecutionState *forkDependedStates(ExecutionState *trueState, ExecutionState *falseState);
-  bool checkConsistencyForAll(ExecutionState &dependedState, ExecutionState &recoveryState);
   void mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition);
   llvm::Function *getSlice(llvm::Function *target, uint32_t sliceId, ModRefAnalysis::SideEffectType type);
 
