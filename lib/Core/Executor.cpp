@@ -2944,7 +2944,6 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     assert(!searcher->empty());
     ExecutionState &state = searcher->selectState();
-    //klee_message("selected state: %p", state);
     KInstruction *ki = state.pc;
     stepInstruction(state);
 
@@ -4690,10 +4689,18 @@ bool Executor::filterCallSite(ExecutionState &state, Function *f) {
         if (option.name == f->getName().str()) {
             Instruction *callInst = state.prevPC->inst;
             const InstructionInfo &info = kmodule->infos->getInfo(callInst);
-
-            if (option.line == 0 || option.line == info.line) {
+            /* skip any call site */
+            if (option.line == 0) {
                 return true;
             }
+
+            /* check if we have debug information */
+            if (info.line == 0) {
+                klee_warning_once(0, "call filter for %s: debug info not found...", option.name.data());
+                return true;
+            }
+
+            return (option.line == info.line);
         }
     }
 
