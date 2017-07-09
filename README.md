@@ -77,8 +77,24 @@ export LD_LIBRARY_PATH=<SVF_BUILD_DIR>/lib:<SVF_BUILD_DIR>/lib/CUDD:<DG_BUILD_DI
 klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ```
 
-Notes:
-* For choosing a specific call site of the sliced function, add ```-slice=<function>:<line>```.
-* For debugging the mechanism, add ```-debug-only=basic```.
-* Currently, the supported search heuristics are: dfs, bfs.
-* Currently, only klee-libc is supported. Some files (memcpy.c, memset.c) should be recompiled with `-O1` to avoid vector instructions.
+## Options
+### Slicing
+The skipped functions are set using the following option:
+```
+-slice=<function1>[:line],<function2>[:line],...
+```
+### Inlining
+In some cases, inlining can improve the precision of static analysis.
+Functions can be inlined using the following option:
+```
+-inline=<function1>,<function2>,...
+```
+### Debugging
+More verbose debug messages can be produced using the following option:
+```
+-debug-only=basic```
+```
+
+## Notes:
+* Currently, the supported search heuristics are: dfs, bfs, random-state.
+* When using klee-libc, some files (memcpy.c, memset.c) should be recompiled with `-O1` to avoid vector instructions.
