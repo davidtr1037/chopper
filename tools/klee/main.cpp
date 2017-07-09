@@ -315,6 +315,8 @@ KleeHandler::KleeHandler(int argc, char **argv)
     m_testIndex(0),
     m_pathsExplored(0),
     m_recoveryStatesCount(0),
+    m_generatedSlicesCount(0),
+    m_snapshotsCount(0),
     m_argc(argc),
     m_argv(argv) {
 
