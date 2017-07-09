@@ -1432,6 +1432,7 @@ void Executor::executeCall(ExecutionState &state,
         klee_message("%p: adding snapshot (index = %u)", &state, index)
       );
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
+      interpreterHandler->incSnapshotsCount();
       /* TODO: will be replaced later... */
       state.clearResolvedAddresses();
 

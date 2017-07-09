@@ -245,6 +245,7 @@ private:
   unsigned m_pathsExplored; // number of paths explored so far
   unsigned m_recoveryStatesCount; // number of recovery states
   unsigned m_generatedSlicesCount; // number of generated slices
+  unsigned m_snapshotsCount; // number of created snapshots
 
   // used for writing .ktest files
   int m_argc;
@@ -274,6 +275,14 @@ public:
 
   void incGeneratedSlicesCount() {
     m_generatedSlicesCount++;
+  }
+
+  unsigned getSnapshotsCount() {
+    return m_snapshotsCount;
+  }
+
+  void incSnapshotsCount() {
+    m_snapshotsCount++;
   }
 
   void setInterpreter(Interpreter *i);
@@ -1594,6 +1603,8 @@ int main(int argc, char **argv, char **envp) {
         << handler->getRecoveryStatesCount() << "\n";
   stats << "KLEE: done: generated slices = "
         << handler->getGeneratedSlicesCount() << "\n";
+  stats << "KLEE: done: created snapshots = "
+        << handler->getSnapshotsCount() << "\n";
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)

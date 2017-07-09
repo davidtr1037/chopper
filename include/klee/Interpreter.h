@@ -45,6 +45,8 @@ public:
 
   virtual void incGeneratedSlicesCount() = 0;
 
+  virtual void incSnapshotsCount() = 0;
+
   virtual void processTestCase(const ExecutionState &state,
                                const char *err, 
                                const char *suffix) = 0;
