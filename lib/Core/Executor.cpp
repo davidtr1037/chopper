@@ -439,16 +439,17 @@ const Module *Executor::setModule(llvm::Module *module,
     targets.push_back(i->name);
   }
 
+  std::string entry = "main";
   specialFunctionHandler->prepare();
-  ra = new ReachabilityAnalysis(module);
+  ra = new ReachabilityAnalysis(module, entry, targets);
   inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions);
   aa = new AAPass();
   aa->setPAType(PointerAnalysis::Andersen_WPA);
 
   /* TODO: fix hard coded entry point... */
-  mra = new ModRefAnalysis(kmodule->module, ra, aa, "main", targets);
+  mra = new ModRefAnalysis(kmodule->module, ra, aa, entry, targets);
   cloner = new Cloner(module, ra);
-  sliceGenerator = new SliceGenerator(module, aa, mra, cloner, true);
+  sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, true);
   kmodule->prepare(opts, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
 
   specialFunctionHandler->bind();
@@ -4864,8 +4865,7 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
         uint32_t retSliceId = 0;
         bool hasRetSlice = mra->getRetSliceId(target, retSliceId);
 
-        std::set<Function *> reachable;
-        cloner->getReachableFunctions(target, reachable);
+        std::set<Function *> &reachable = ra->getReachableFunctions(target);
         for (std::set<Function *>::iterator i = reachable.begin(); i != reachable.end(); i++) {
             /* original function */
             Function *f = *i;

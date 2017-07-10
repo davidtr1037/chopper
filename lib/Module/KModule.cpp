@@ -444,17 +444,19 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   kleeMergeFn = module->getFunction("klee_merge");
 
-  klee_message("Runnining Pointer Analysis...");
+  klee_message("Runnining reachability analysis...");
   ra->run();
   inliner->run();
+
+  klee_message("Runnining pointer analysis...");
   PassManager passManager;
   passManager.add(aa);
   passManager.run(*module);
 
-  klee_message("Runnining Mod-Ref Analysis...");
+  klee_message("Runnining mod-ref analysis...");
   mra->run();
 
-  klee_message("Computing Slices...");
+  klee_message("Computing slices...");
   sliceGenerator->generate();
 
   /* Build shadow structures */
