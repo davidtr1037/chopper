@@ -4036,7 +4036,6 @@ Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opt
 }
 
 bool Executor::isMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: checking load...", &state));
   /* basic check based on static analysis */
   if (!ki->mayBlock) {
     return false;
