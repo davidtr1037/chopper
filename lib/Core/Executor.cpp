@@ -4064,7 +4064,6 @@ Interpreter *Interpreter::create(const InterpreterOptions &opts,
 }
 
 bool Executor::isMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: checking load...", &state));
   /* basic check based on static analysis */
   if (!ki->mayBlock) {
     return false;
