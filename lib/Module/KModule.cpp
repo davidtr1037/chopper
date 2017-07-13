@@ -444,9 +444,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   kleeMergeFn = module->getFunction("klee_merge");
 
+  /* first, we need to do the inlining... */
+  inliner->run();
+
   klee_message("Runnining reachability analysis...");
   ra->run();
-  inliner->run();
 
   klee_message("Runnining pointer analysis...");
   PassManager passManager;
