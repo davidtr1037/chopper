@@ -334,9 +334,11 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     delete f;
   }
 
+  /* first, we need to do the inlining... */
+  inliner->run();
+
   klee_message("Runnining reachability analysis...");
   ra->run();
-  inliner->run();
 
   klee_message("Runnining pointer analysis...");
   PassManager passManager;
