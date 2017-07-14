@@ -137,6 +137,7 @@ namespace klee {
     // FIXME: ihandler should not be here
     void prepare(const Interpreter::ModuleOptions &opts,
                  InterpreterHandler *ihandler,
+                 bool hasSlicingParameter,
                  ReachabilityAnalysis *ra,
                  Inliner *inliner,
                  AAPass *aa,
@@ -147,7 +148,7 @@ namespace klee {
     /// Return an id for the given constant, creating a new one if necessary.
     unsigned getConstantID(llvm::Constant *c, KInstruction* ki);
 
-    void addFunction(Cloner *cloner, ModRefAnalysis *mra, KFunction *kf);
+    void addFunction(KFunction *kf, bool hasSlicingParameter, Cloner *cloner, ModRefAnalysis *mra);
 
   };
 } // End klee namespace

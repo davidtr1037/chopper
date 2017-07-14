@@ -151,6 +151,10 @@ InstructionInfoTable::InstructionInfoTable(Module *m, Cloner *cloner)
                                                   assemblyLine)));
     }
 
+    if (!cloner) {
+        continue;
+    }
+
     /* handle cloned functions */
     Cloner::SliceMap *sliceMap = cloner->getSlices(fnIt);
     if (sliceMap != 0) {
