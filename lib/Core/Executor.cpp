@@ -398,6 +398,13 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                  ErrorInfo.c_str());
     }
   }
+
+  ra = NULL;
+  inliner = NULL;
+  aa = NULL;
+  mra = NULL;
+  cloner = NULL;
+  sliceGenerator = NULL;
 }
 
 
@@ -414,25 +421,29 @@ const Module *Executor::setModule(llvm::Module *module,
 
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
-  /* build target functions */
-  std::vector<std::string> targets;
-  const std::vector<SlicedFunctionOption> &slicingOptions = interpreterOpts.slicingOptions;
-  for (auto i = slicingOptions.begin(); i != slicingOptions.end(); i++) {
-    targets.push_back(i->name);
+  bool hasSlicingParameter = !interpreterOpts.slicingOptions.empty();
+  if (hasSlicingParameter) {
+    /* build target functions */
+    std::vector<std::string> targets;
+    const std::vector<SlicedFunctionOption> &slicingOptions = interpreterOpts.slicingOptions;
+    for (auto i = slicingOptions.begin(); i != slicingOptions.end(); i++) {
+      targets.push_back(i->name);
+    }
+
+    std::string entry = "main";
+    specialFunctionHandler->prepare();
+    ra = new ReachabilityAnalysis(module, entry, targets);
+    inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions);
+    aa = new AAPass();
+    aa->setPAType(PointerAnalysis::Andersen_WPA);
+
+    /* TODO: fix hard coded entry point... */
+    mra = new ModRefAnalysis(kmodule->module, ra, aa, entry, targets);
+    cloner = new Cloner(module, ra);
+    sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, true);
   }
 
-  std::string entry = "main";
-  specialFunctionHandler->prepare();
-  ra = new ReachabilityAnalysis(module, entry, targets);
-  inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions);
-  aa = new AAPass();
-  aa->setPAType(PointerAnalysis::Andersen_WPA);
-
-  /* TODO: fix hard coded entry point... */
-  mra = new ModRefAnalysis(kmodule->module, ra, aa, entry, targets);
-  cloner = new Cloner(module, ra);
-  sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, true);
-  kmodule->prepare(opts, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
+  kmodule->prepare(opts, interpreterHandler, hasSlicingParameter, ra, inliner, aa, mra, cloner, sliceGenerator);
 
   specialFunctionHandler->bind();
 
@@ -4858,7 +4869,7 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
             /* update debug info */
             kmodule->infos->addClonedInfo(cloner, cloned);
             /* update function map */
-            kmodule->addFunction(cloner, mra, kcloned);
+            kmodule->addFunction(kcloned, true, cloner, mra);
             /* update the instruction constants of the new KFunction */
             for (unsigned i = 0; i < kcloned->numInstructions; ++i) {
                 bindInstructionConstants(kcloned->instructions[i]);

@@ -1601,12 +1601,16 @@ int main(int argc, char **argv, char **envp) {
         << (handler->getNumPathsExplored() - handler->getRecoveryStatesCount()) << "\n";
   stats << "KLEE: done: generated tests = "
         << handler->getNumTestCases() << "\n";
-  stats << "KLEE: done: recovery states = "
-        << handler->getRecoveryStatesCount() << "\n";
-  stats << "KLEE: done: generated slices = "
-        << handler->getGeneratedSlicesCount() << "\n";
-  stats << "KLEE: done: created snapshots = "
-        << handler->getSnapshotsCount() << "\n";
+
+  /* these are relevant only when we have a slicing option */
+  if (!IOpts.slicingOptions.empty()) {
+    stats << "KLEE: done: recovery states = "
+          << handler->getRecoveryStatesCount() << "\n";
+    stats << "KLEE: done: generated slices = "
+          << handler->getGeneratedSlicesCount() << "\n";
+    stats << "KLEE: done: created snapshots = "
+          << handler->getSnapshotsCount() << "\n";
+  }
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)

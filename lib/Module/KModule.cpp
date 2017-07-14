@@ -206,6 +206,7 @@ void KModule::addInternalFunction(const char* functionName){
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih,
+                      bool hasSlicingParameter,
                       ReachabilityAnalysis *ra,
                       Inliner *inliner,
                       AAPass *aa,
@@ -334,22 +335,24 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     delete f;
   }
 
-  /* first, we need to do the inlining... */
-  inliner->run();
+  if (hasSlicingParameter) {
+    /* first, we need to do the inlining... */
+    inliner->run();
 
-  klee_message("Runnining reachability analysis...");
-  ra->run();
+    klee_message("Runnining reachability analysis...");
+    ra->run();
 
-  klee_message("Runnining pointer analysis...");
-  PassManager passManager;
-  passManager.add(aa);
-  passManager.run(*module);
+    klee_message("Runnining pointer analysis...");
+    PassManager passManager;
+    passManager.add(aa);
+    passManager.run(*module);
 
-  klee_message("Runnining mod-ref analysis...");
-  mra->run();
+    klee_message("Runnining mod-ref analysis...");
+    mra->run();
 
-  klee_message("Computing slices...");
-  sliceGenerator->generate();
+    klee_message("Computing slices...");
+    sliceGenerator->generate();
+  }
 
   /* Build shadow structures */
 
@@ -365,30 +368,32 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     std::set<KFunction *> pool;
     pool.insert(new KFunction(f, this));
 
-    Cloner::SliceMap *sliceMap = cloner->getSlices(f);
-    if (sliceMap != 0) {
-      uint32_t retSliceId = 0;
-      bool hasRetSlice = mra->getRetSliceId(f, retSliceId);
+    if (hasSlicingParameter) {
+      Cloner::SliceMap *sliceMap = cloner->getSlices(f);
+      if (sliceMap != 0) {
+        uint32_t retSliceId = 0;
+        bool hasRetSlice = mra->getRetSliceId(f, retSliceId);
 
-      for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
-        uint32_t id = s->first;
-        Cloner::SliceInfo &sliceInfo = s->second;
-        if (!sliceInfo.isSliced) {
-            /* don't add a cloned function which was not sliced */
-            continue;
-        }
+        for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
+          uint32_t id = s->first;
+          Cloner::SliceInfo &sliceInfo = s->second;
+          if (!sliceInfo.isSliced) {
+              /* don't add a cloned function which was not sliced */
+              continue;
+          }
 
-        KFunction *kcloned = new KFunction(sliceInfo.f, this);
-        kcloned->isCloned = true;
-        if (hasRetSlice) {
-          kcloned->isRetSlice = (id == retSliceId);
+          KFunction *kcloned = new KFunction(sliceInfo.f, this);
+          kcloned->isCloned = true;
+          if (hasRetSlice) {
+            kcloned->isRetSlice = (id == retSliceId);
+          }
+          pool.insert(kcloned);
         }
-        pool.insert(kcloned);
       }
     }
 
     for (std::set<KFunction *>::iterator kfi = pool.begin(); kfi != pool.end(); kfi++) {
-      addFunction(cloner, mra, *kfi);
+      addFunction(*kfi, hasSlicingParameter, cloner, mra);
     }
   }
 
@@ -411,7 +416,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   }
 }
 
-void KModule::addFunction(Cloner *cloner, ModRefAnalysis *mra, KFunction *kf) {
+void KModule::addFunction(KFunction *kf, bool hasSlicingParameter, Cloner *cloner, ModRefAnalysis *mra) {
     for (unsigned i=0; i<kf->numInstructions; ++i) {
         KInstruction *ki = kf->instructions[i];
         ki->info = &infos->getInfo(ki->inst);
@@ -419,6 +424,11 @@ void KModule::addFunction(Cloner *cloner, ModRefAnalysis *mra, KFunction *kf) {
         ki->origInst = NULL;
         ki->mayBlock = false;
         ki->mayOverride = false;
+
+        if (!hasSlicingParameter) {
+            continue;
+        }
+
         if (kf->isCloned) {
             Value *origValue = cloner->translateValue(ki->inst);
             if (origValue) {
