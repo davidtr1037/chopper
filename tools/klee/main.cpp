@@ -1676,7 +1676,7 @@ int main(int argc, char **argv, char **envp) {
   stats << "KLEE: done: total instructions = "
         << instructions << "\n";
   stats << "KLEE: done: completed paths = "
-        << handler->getNumPathsExplored() << "\n";
+        << (handler->getNumPathsExplored() - handler->getRecoveryStatesCount()) << "\n";
   stats << "KLEE: done: generated tests = "
         << handler->getNumTestCases() << "\n";
   stats << "KLEE: done: recovery states = "
