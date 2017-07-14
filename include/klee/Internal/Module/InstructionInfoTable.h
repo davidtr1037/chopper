@@ -61,7 +61,7 @@ namespace klee {
                                  const std::string *&File, unsigned &Line);
 
   public:
-    InstructionInfoTable(llvm::Module *m, Cloner *cloner);
+    InstructionInfoTable(llvm::Module *m, bool hasSlicingParameter, Cloner *cloner);
     ~InstructionInfoTable();
 
     unsigned getMaxID() const;

@@ -356,7 +356,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   /* Build shadow structures */
 
-  infos = new InstructionInfoTable(module, cloner);  
+  infos = new InstructionInfoTable(module, hasSlicingParameter, cloner);
   
   for (Module::iterator it = module->begin(), ie = module->end();
        it != ie; ++it) {
