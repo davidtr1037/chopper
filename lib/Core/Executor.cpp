@@ -710,6 +710,7 @@ void Executor::branch(ExecutionState &state,
                       std::vector<ExecutionState*> &result) {
   TimerStatIncrementer timer(stats::forkTime);
 
+  /* filter out the consistent conditions */
   std::vector< ref<Expr> > filtered;
   for (std::vector< ref<Expr> >::const_iterator i = conditions.begin(); i != conditions.end(); i++) {
     ref<Expr> condition = *i;
@@ -747,6 +748,9 @@ void Executor::branch(ExecutionState &state,
     for (unsigned i=1; i<N; ++i) {
       ExecutionState *es = result[theRNG.getInt32() % i];
       ExecutionState *ns = es->branch();
+      if (ns->isRecoveryState()) {
+        interpreterHandler->incRecoveryStatesCount();
+      }
       addedStates.push_back(ns);
       result.push_back(ns);
       es->ptreeNode->data = 0;
@@ -819,9 +823,6 @@ void Executor::branch(ExecutionState &state,
           ExecutionState *prev = result[i - 1];
           ExecutionState *forkedDependedState = forkDependedStates(prev, current);
           dependedStates.push_back(forkedDependedState);
-
-          /* TODO: not sure if this is the right place... */
-          interpreterHandler->incRecoveryStatesCount();
         }
       } else {
         dependedStates.push_back(NULL);
@@ -1023,6 +1024,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           DEBUG_BASIC,
           klee_message("forked recovery state: %p", falseState)
         );
+        interpreterHandler->incRecoveryStatesCount();
       }
     }
 
@@ -1132,7 +1134,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
       if (isFalseStateValid) {
         mergeConstraintsForAll(*forkedDependedState, Expr::createIsZero(condition));
-        interpreterHandler->incRecoveryStatesCount();
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
@@ -4785,6 +4786,10 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
         forked = new ExecutionState(*current);
         assert(forked->isSuspended());
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("forked depended state: %p (from %p)", forked, current));
+
+        if (forked->isRecoveryState()) {
+            interpreterHandler->incRecoveryStatesCount();
+        }
 
         forked->setRecoveryState(prevForked);
         prevForked->setDependedState(forked);
