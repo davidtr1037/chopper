@@ -84,14 +84,16 @@ namespace {
   cl::opt<std::string>
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
-  cl::opt<std::string>
-  SlicingParameter("slice",
-                   cl::desc("The name of the sliced function"),
-                   cl::init(""));
+  cl::opt<std::string> SkippedFunctions(
+      "skip-functions",
+      cl::desc("Comma-separated list of functions to skip. Optionally, it can "
+               "be specified the line number of the function definition (e.g. "
+               "<function1>[:line],<function2>[:line],..)"));
 
   cl::opt<std::string>
   InlinedFunctions("inline",
-                   cl::desc("The list of functions to be inlined"),
+                   cl::desc("Comma-separated list of functions to be inlined "
+                            "(e.g. <function1>,<function2>,..)"),
                    cl::init(""));
 
   cl::opt<unsigned int>
@@ -1450,7 +1452,7 @@ int main(int argc, char **argv, char **envp) {
   }
 
   std::vector<Interpreter::SlicedFunctionOption> slicingOptions;
-  parseSlicingParameter(mainModule, SlicingParameter, slicingOptions);
+  parseSlicingParameter(mainModule, SkippedFunctions, slicingOptions);
 
   std::vector<std::string> inlinedFunctions;
   parseInlinedFunctions(mainModule, InlinedFunctions, inlinedFunctions);
