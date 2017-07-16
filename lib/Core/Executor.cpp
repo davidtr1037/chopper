@@ -366,7 +366,8 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString),
-      errorCount(0) {
+      errorCount(0),
+      logFile(0) {
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
@@ -448,17 +449,19 @@ const Module *Executor::setModule(llvm::Module *module,
       targets.push_back(i->name);
     }
 
+    logFile = interpreterHandler->openOutputFile("sa.log");
+
     std::string entry = "main";
     specialFunctionHandler->prepare();
-    ra = new ReachabilityAnalysis(module, entry, targets);
-    inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions);
+    ra = new ReachabilityAnalysis(module, entry, targets, *logFile);
+    inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions, *logFile);
     aa = new AAPass();
     aa->setPAType(PointerAnalysis::Andersen_WPA);
 
     /* TODO: fix hard coded entry point... */
-    mra = new ModRefAnalysis(kmodule->module, ra, aa, entry, targets);
-    cloner = new Cloner(module, ra);
-    sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, true);
+    mra = new ModRefAnalysis(kmodule->module, ra, aa, entry, targets, *logFile);
+    cloner = new Cloner(module, ra, *logFile);
+    sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, true);
   }
 
   kmodule->prepare(opts, interpreterHandler, hasSlicingParameter, ra, inliner, aa, mra, cloner, sliceGenerator);
@@ -494,6 +497,9 @@ Executor::~Executor() {
   }
   if (debugInstFile) {
     delete debugInstFile;
+  }
+  if (logFile) {
+    delete logFile;
   }
 }
 
