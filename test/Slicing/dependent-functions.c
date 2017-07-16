@@ -1,7 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -libc=uclibc --posix-runtime -search=dfs -skip-functions=f %t.bc > %t.out 2>&1
-// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-A -check-prefix=CHECK-B -check-prefix=CHECK-Z -check-prefix=CHECK-ANOT -check-prefix=CHECK-BNOT
+// RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f %t.bc > %t.out 2>&1
+// RUN: FileCheck %s -input-file=%t.out  -check-prefix=CHECK-PATHS -check-prefix=CHECK-STATES -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS -check-prefix=CHECK-A -check-prefix=CHECK-B -check-prefix=CHECK-Z -check-prefix=CHECK-ANOT -check-prefix=CHECK-BNOT
 
 // CHECK-PATHS: KLEE: done: completed paths = 3
 // CHECK-STATES: KLEE: done: recovery states = 4
@@ -15,7 +15,6 @@
 // CHECK-BNOT:b is not 2
 
 #include <stdio.h>
-#include <assert.h>
 #include <klee/klee.h>
 
 typedef struct {
@@ -43,7 +42,6 @@ int main(int argc, char *argv[], char *envp[]) {
 
     klee_make_symbolic(&a, sizeof(a), "a");
     klee_make_symbolic(&b, sizeof(b), "b");
-    klee_make_symbolic(&c, sizeof(c), "c");
 
     f(&o);
     if (a == 3) {
