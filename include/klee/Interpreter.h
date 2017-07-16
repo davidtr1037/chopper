@@ -76,12 +76,12 @@ public:
 	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
   };
 
-  struct SlicedFunctionOption {
+  struct SkippedFunctionOption {
     std::string name;
     /* TODO: change to lines? */
     unsigned int line;
 
-    SlicedFunctionOption(std::string name, unsigned int line) :
+    SkippedFunctionOption(std::string name, unsigned int line) :
       name(name), line(line)
     {
 
@@ -96,7 +96,7 @@ public:
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
-    std::vector<SlicedFunctionOption> slicingOptions;
+    std::vector<SkippedFunctionOption> slicingOptions;
     std::vector<std::string> inlinedFunctions;
     unsigned int maxErrorCount;
 

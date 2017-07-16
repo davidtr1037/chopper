@@ -1235,7 +1235,7 @@ bool parseSlicedFunctionOption(std::string option, std::string &fname, unsigned 
 void parseSlicingParameter(
     Module *module,
     std::string parameter,
-    std::vector<Interpreter::SlicedFunctionOption> &result
+    std::vector<Interpreter::SkippedFunctionOption> &result
 ) {
     std::istringstream stream(parameter);
     std::string token;
@@ -1250,7 +1250,7 @@ void parseSlicingParameter(
           klee_error("slice option: function '%s' not found in module.", fname.c_str());
         }
 
-        result.push_back(Interpreter::SlicedFunctionOption(fname, line));
+        result.push_back(Interpreter::SkippedFunctionOption(fname, line));
     }
 }
 
@@ -1451,7 +1451,7 @@ int main(int argc, char **argv, char **envp) {
     klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
-  std::vector<Interpreter::SlicedFunctionOption> slicingOptions;
+  std::vector<Interpreter::SkippedFunctionOption> slicingOptions;
   parseSlicingParameter(mainModule, SkippedFunctions, slicingOptions);
 
   std::vector<std::string> inlinedFunctions;

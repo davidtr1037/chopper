@@ -443,7 +443,7 @@ const Module *Executor::setModule(llvm::Module *module,
   if (hasSlicingParameter) {
     /* build target functions */
     std::vector<std::string> targets;
-    const std::vector<SlicedFunctionOption> &slicingOptions = interpreterOpts.slicingOptions;
+    const std::vector<SkippedFunctionOption> &slicingOptions = interpreterOpts.slicingOptions;
     for (auto i = slicingOptions.begin(); i != slicingOptions.end(); i++) {
       targets.push_back(i->name);
     }
@@ -1512,6 +1512,7 @@ void Executor::executeCall(ExecutionState &state,
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
+
     /* TODO: make it more readable... */
     if (state.isNormalState() && !state.isRecoveryState() && filterCallSite(state, f)) {
       /* create snapshot, recovery state will be created on demand... */
@@ -4723,9 +4724,9 @@ void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> conditi
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
-    const std::vector<SlicedFunctionOption> &options = interpreterOpts.slicingOptions;
+    const std::vector<SkippedFunctionOption> &options = interpreterOpts.slicingOptions;
     for (auto i = options.begin(); i != options.end(); i++) {
-        const SlicedFunctionOption &option = *i;
+        const SkippedFunctionOption &option = *i;
         if (option.name == f->getName().str()) {
             Instruction *callInst = state.prevPC->inst;
             const InstructionInfo &info = kmodule->infos->getInfo(callInst);
