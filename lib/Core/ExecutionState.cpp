@@ -78,7 +78,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
 
     /* recovery state properties */
     exitInst(0),
-    dependedState(0),
+    dependentState(0),
     recoveryInfo(0),
 
     pc(kf->instructions),
@@ -131,7 +131,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 
     /* recovery state properties */
     exitInst(state.exitInst),
-    dependedState(state.dependedState),
+    dependentState(state.dependentState),
     recoveryInfo(state.recoveryInfo),
     guidingAllocationRecord(state.guidingAllocationRecord),
 

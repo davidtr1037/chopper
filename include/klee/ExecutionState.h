@@ -173,8 +173,8 @@ private:
 
   /* a recovery state must stop when reaching this instruction */
   llvm::Instruction *exitInst;
-  /* a recovery state has its own depended state */
-  ExecutionState *dependedState;
+  /* a recovery state has its own dependent state */
+  ExecutionState *dependentState;
   /* TODO: should be ref<RecoveryInfo> */
   RecoveryInfo *recoveryInfo;
   /* we use this record while executing a recovery state  */
@@ -423,15 +423,15 @@ public:
     this->exitInst = exitInst;
   }
 
-  ExecutionState *getDependedState() {
+  ExecutionState *getDependentState() {
     assert(isRecoveryState());
-    return dependedState;
+    return dependentState;
   }
 
-  void setDependedState(ExecutionState *state) {
+  void setDependentState(ExecutionState *state) {
     assert(isRecoveryState());
     assert(state->isNormalState());
-    dependedState = state;
+    dependentState = state;
   }
 
   RecoveryInfo *getRecoveryInfo() {

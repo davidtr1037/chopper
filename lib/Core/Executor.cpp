@@ -741,7 +741,7 @@ void Executor::branch(ExecutionState &state,
         klee_message("%p: checking switch condition consistency", &state)
       );
       if (!checkConsistency(state, condition)) {
-        /* we don't want conditions which are not consistent with the depended state */
+        /* we don't want conditions which are not consistent with the dependent state */
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("inconsistent switch condition"));
         continue;
       }
@@ -830,23 +830,23 @@ void Executor::branch(ExecutionState &state,
   }
 
   /* handle the forks */
-  std::vector<ExecutionState *> dependedStates;
+  std::vector<ExecutionState *> dependentStates;
   for (unsigned i=0; i<N; ++i) {
     ExecutionState *current = result[i];
     if (current) {
       if (current->isRecoveryState()) {
         if (i == 0) {
-          /* the first state must have a depended state */
-          assert(current->getDependedState());
-          dependedStates.push_back(current->getDependedState());
+          /* the first state must have a dependent state */
+          assert(current->getDependentState());
+          dependentStates.push_back(current->getDependentState());
         } else {
-          /* here we must fork the depended state */
+          /* here we must fork the dependent state */
           ExecutionState *prev = result[i - 1];
-          ExecutionState *forkedDependedState = forkDependedStates(prev, current);
-          dependedStates.push_back(forkedDependedState);
+          ExecutionState *forkeddependentState = forkDependentStates(prev, current);
+          dependentStates.push_back(forkeddependentState);
         }
       } else {
-        dependedStates.push_back(NULL);
+        dependentStates.push_back(NULL);
       }
     }
   }
@@ -858,9 +858,9 @@ void Executor::branch(ExecutionState &state,
       ref<Expr> condition = filtered[i];
       addConstraint(*current, condition);
       if (current->isRecoveryState()) {
-        ExecutionState *dependedState = dependedStates[i];
-        if (dependedState) {
-          mergeConstraintsForAll(*dependedState, condition);
+        ExecutionState *dependentState = dependentStates[i];
+        if (dependentState) {
+          mergeConstraintsForAll(*dependentState, condition);
         }
       }
     }
@@ -1022,13 +1022,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     bool forkRequired = true;
     if (trueState->isRecoveryState()) {
-      /* check if the negated condition is consistent with the depended states */
+      /* check if the negated condition is consistent with the dependent states */
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
         klee_message(
           "checking consisteny in fork for recovery state (false branch): %p (dep = %p)",
           trueState,
-          trueState->getDependedState()
+          trueState->getDependentState()
         )
       );
       if (!checkConsistency(*trueState, Expr::createIsZero(condition))) {
@@ -1124,34 +1124,34 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     if (trueState->isRecoveryState()) {
-      ExecutionState *dependedState = trueState->getDependedState();
-      ExecutionState *forkedDependedState = NULL;
+      ExecutionState *dependentState = trueState->getDependentState();
+      ExecutionState *forkeddependentState = NULL;
       bool isTrueStateValid = false;
       bool isFalseStateValid = false;
 
-      /* check consistency of true state with the depended state */
+      /* check consistency of true state with the dependent state */
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
         klee_message(
           "checking consisteny in fork for recovery state (true branch): %p (dep = %p)",
           trueState,
-          dependedState
+          dependentState
         )
       );
       isTrueStateValid = checkConsistency(*trueState, condition);
 
       if (forkRequired) {
-        /* if we are here, then the false state is consistent with it's depended states */
-        forkedDependedState = forkDependedStates(trueState, falseState);
+        /* if we are here, then the false state is consistent with it's dependent states */
+        forkeddependentState = forkDependentStates(trueState, falseState);
         isFalseStateValid = true;
       }
 
       /* copy constraints if required */
       if (isTrueStateValid) {
-        mergeConstraintsForAll(*dependedState, condition);
+        mergeConstraintsForAll(*dependentState, condition);
       }
       if (isFalseStateValid) {
-        mergeConstraintsForAll(*forkedDependedState, Expr::createIsZero(condition));
+        mergeConstraintsForAll(*forkeddependentState, Expr::createIsZero(condition));
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
@@ -4367,32 +4367,32 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
 void Executor::onRecoveryStateExit(ExecutionState &state) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: recovery state reached exit instruction", &state));
 
-  ExecutionState *dependedState = state.getDependedState();
-  //dumpConstrains(*dependedState);
+  ExecutionState *dependentState = state.getDependentState();
+  //dumpConstrains(*dependentState);
 
   /* check if we need to run another recovery state */
-  if (dependedState->hasPendingRecoveryInfo()) {
-    RecoveryInfo *ri = dependedState->getPendingRecoveryInfo();
-    startRecoveryState(*dependedState, ri);
+  if (dependentState->hasPendingRecoveryInfo()) {
+    RecoveryInfo *ri = dependentState->getPendingRecoveryInfo();
+    startRecoveryState(*dependentState, ri);
   } else {
-    notifyDependedState(state);
+    notifyDependentState(state);
   }
   terminateState(state);
 }
 
-void Executor::notifyDependedState(ExecutionState &recoveryState) {
-  ExecutionState *dependedState = recoveryState.getDependedState();
-  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: notifying depended state %p", &recoveryState, dependedState));
+void Executor::notifyDependentState(ExecutionState &recoveryState) {
+  ExecutionState *dependentState = recoveryState.getDependentState();
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: notifying dependent state %p", &recoveryState, dependentState));
 
   if (recoveryState.isNormalState()) {
-    /* the allocation record of the recovery states contains the allocation record of the depended state */
-    dependedState->setAllocationRecord(recoveryState.getAllocationRecord());
+    /* the allocation record of the recovery states contains the allocation record of the dependent state */
+    dependentState->setAllocationRecord(recoveryState.getAllocationRecord());
   }
 
-  if (states.find(dependedState) == states.end()) {
-    resumeState(*dependedState, true);
+  if (states.find(dependentState) == states.end()) {
+    resumeState(*dependentState, true);
   } else {
-    resumeState(*dependedState, false);
+    resumeState(*dependentState, false);
   }
 }
 
@@ -4438,7 +4438,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     assert(recoveryState->getPendingRecoveryInfos().empty());
   }
 
-  recoveryState->setDependedState(&state);
+  recoveryState->setDependentState(&state);
   recoveryState->setExitInst(snapshotState->pc->inst);
 
   /* pass allocation record to recovery state */
@@ -4506,14 +4506,14 @@ void Executor::onRecoveryStateWrite(
     return;
   }
 
-  /* copy data to depended state... */
-  ExecutionState *dependedState = state.getDependedState();
-  const ObjectState *os = dependedState->addressSpace.findObject(mo);
-  ObjectState *wos = dependedState->addressSpace.getWriteable(mo, os);
+  /* copy data to dependent state... */
+  ExecutionState *dependentState = state.getDependentState();
+  const ObjectState *os = dependentState->addressSpace.findObject(mo);
+  ObjectState *wos = dependentState->addressSpace.getWriteable(mo, os);
   wos->write(offset, value);
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    klee_message("copying from %p to %p", &state, dependedState)
+    klee_message("copying from %p to %p", &state, dependentState)
   );
 
   /* TODO: update recovery cache */
@@ -4522,12 +4522,12 @@ void Executor::onRecoveryStateWrite(
     klee_message(
       "%p: updating cache for %p (index = %u, slice id = %u)",
       &state,
-      dependedState,
+      dependentState,
       recoveryInfo->snapshotIndex,
       recoveryInfo->sliceId
     )
   );
-  dependedState->updateRecoveryCache(recoveryInfo->snapshotIndex, recoveryInfo->sliceId);
+  dependentState->updateRecoveryCache(recoveryInfo->snapshotIndex, recoveryInfo->sliceId);
 }
 
 void Executor::onNormalStateWrite(
@@ -4614,7 +4614,7 @@ bool Executor::checkConsistency(ExecutionState &recoveryState, ref<Expr> conditi
     Solver::Validity result;
     ExecutionState *next = NULL;
 
-    next = recoveryState.getDependedState();
+    next = recoveryState.getDependentState();
     do {
         solver->evaluate(*next, condition, result);
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
@@ -4623,7 +4623,7 @@ bool Executor::checkConsistency(ExecutionState &recoveryState, ref<Expr> conditi
         }
 
         if (next->isRecoveryState()) {
-            next = next->getDependedState();
+            next = next->getDependentState();
         } else {
             next = NULL;
         }
@@ -4640,8 +4640,8 @@ MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, boo
     state.getCallTrace(callTrace);
     ASContext context(cloner, callTrace, allocInst);
 
-    ExecutionState *dependedState = state.getDependedState();
-    AllocationRecord &allocationRecord = dependedState->getAllocationRecord();
+    ExecutionState *dependentState = state.getDependentState();
+    AllocationRecord &allocationRecord = dependentState->getAllocationRecord();
     /* TODO: the same context may appear in a loop... */
     if (allocationRecord.exists(context)) {
         /* the address should be already bound */
@@ -4664,8 +4664,8 @@ MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, boo
         }
     }
 
-    /* bind the address to the depended states */
-    bindAll(dependedState, mo, isLocal, zeroMemory);
+    /* bind the address to the dependent states */
+    bindAll(dependentState, mo, isLocal, zeroMemory);
 
     return mo;
 }
@@ -4693,8 +4693,8 @@ bool Executor::isDynamicAlloc(Instruction *allocInst) {
 }
 
 void Executor::onExecuteFree(ExecutionState *state, const MemoryObject *mo) {
-    ExecutionState *dependedState = state->getDependedState();
-    unbindAll(dependedState, mo);
+    ExecutionState *dependentState = state->getDependentState();
+    unbindAll(dependentState, mo);
 }
 
 void Executor::terminateStateRecursively(ExecutionState &state) {
@@ -4704,7 +4704,7 @@ void Executor::terminateStateRecursively(ExecutionState &state) {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("recursively terminating..."));
     do {
         if (current->isRecoveryState()) {
-            next = current->getDependedState();
+            next = current->getDependentState();
             assert(next);
         } else {
             next = NULL;
@@ -4717,10 +4717,10 @@ void Executor::terminateStateRecursively(ExecutionState &state) {
     } while (current);
 }
 
-void Executor::mergeConstraints(ExecutionState &dependedState, ref<Expr> condition) {
-    assert(dependedState.isNormalState());
-    addConstraint(dependedState, condition);
-    dependedState.addGuidingConstraint(condition);
+void Executor::mergeConstraints(ExecutionState &dependentState, ref<Expr> condition) {
+    assert(dependentState.isNormalState());
+    addConstraint(dependentState, condition);
+    dependentState.addGuidingConstraint(condition);
 }
 
 bool Executor::filterCallSite(ExecutionState &state, Function *f) {
@@ -4769,7 +4769,7 @@ void Executor::bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bo
         /* this state is a normal state (and might be a recovery state as well) */
         next = NULL;
         if (state->isRecoveryState()) {
-            next = state->getDependedState();
+            next = state->getDependentState();
         }
 
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: binding address: %lx", state, mo->address));
@@ -4793,7 +4793,7 @@ void Executor::unbindAll(ExecutionState *state, const MemoryObject *mo) {
         /* this state is a normal state (and might be a recovery state as well) */
         next = NULL;
         if (state->isRecoveryState()) {
-            next = state->getDependedState();
+            next = state->getDependentState();
         }
 
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: unbinding address %lx", state, mo->address));
@@ -4803,25 +4803,25 @@ void Executor::unbindAll(ExecutionState *state, const MemoryObject *mo) {
     } while (next);
 }
 
-ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, ExecutionState *falseState) {
-    ExecutionState *current = trueState->getDependedState();
+ExecutionState *Executor::forkDependentStates(ExecutionState *trueState, ExecutionState *falseState) {
+    ExecutionState *current = trueState->getDependentState();
     ExecutionState *prevForked = falseState;
     ExecutionState *forked = NULL;
     ExecutionState *firstForked = NULL;
     bool isFirst = true;
 
-    /* fork the chain of depended states */
+    /* fork the chain of dependent states */
     do {
         forked = new ExecutionState(*current);
         assert(forked->isSuspended());
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("forked depended state: %p (from %p)", forked, current));
+        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("forked dependent state: %p (from %p)", forked, current));
 
         if (forked->isRecoveryState()) {
             interpreterHandler->incRecoveryStatesCount();
         }
 
         forked->setRecoveryState(prevForked);
-        prevForked->setDependedState(forked);
+        prevForked->setDependentState(forked);
 
         current->ptreeNode->data = 0;
         std::pair<PTree::Node*, PTree::Node*> res = processTree->split(current->ptreeNode, forked, current);
@@ -4836,7 +4836,7 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
 
         if (current->isRecoveryState()) {
             prevForked = forked;
-            current = current->getDependedState();
+            current = current->getDependentState();
         } else {
             current = NULL;
         }
@@ -4845,13 +4845,13 @@ ExecutionState *Executor::forkDependedStates(ExecutionState *trueState, Executio
     return firstForked;
 }
 
-void Executor::mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition) {
-    ExecutionState *next = &dependedState;
+void Executor::mergeConstraintsForAll(ExecutionState &dependentState, ref<Expr> condition) {
+    ExecutionState *next = &dependentState;
     do {
         mergeConstraints(*next, condition);
 
         if (next->isRecoveryState()) {
-            next = next->getDependedState();
+            next = next->getDependentState();
         } else {
             next = NULL;
         }
