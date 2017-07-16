@@ -475,7 +475,7 @@ private:
   );
   void suspendState(ExecutionState &state);
   void resumeState(ExecutionState &state, bool implicitlyCreated);
-  void notifyDependedState(ExecutionState &recoveryState);
+  void notifyDependentState(ExecutionState &recoveryState);
   void onRecoveryStateExit(ExecutionState &state);
   void startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo);
   void onRecoveryStateWrite(
@@ -511,7 +511,7 @@ private:
   bool canSkipCallSite(ExecutionState &state, llvm::Function *f);
   void bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory);
   void unbindAll(ExecutionState *state, const MemoryObject *mo);
-  ExecutionState *forkDependedStates(ExecutionState *trueState, ExecutionState *falseState);
+  ExecutionState *forkDependentStates(ExecutionState *trueState, ExecutionState *falseState);
   void mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition);
   llvm::Function *getSlice(llvm::Function *target, uint32_t sliceId, ModRefAnalysis::SideEffectType type);
 
