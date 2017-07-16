@@ -1,3 +1,15 @@
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out -libc=uclibc --posix-runtime -search=dfs -skip-functions=f %t.bc > %t.out 2>&1
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-T -check-prefix=CHECK-F -check-prefix=CHECK-PATHS -check-prefix=CHECK-STATES -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS
+
+// CHECK-T: True branch
+// CHECK-F: False branch
+// CHECK-PATHS: KLEE: done: completed paths = 2
+// CHECK-STATES: KLEE: done: recovery states = 2
+// CHECK-SLICES: KLEE: done: generated slices = 2
+// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 1
+
 #include <stdio.h>
 
 #include <klee/klee.h>
@@ -20,9 +32,9 @@ int main(int argc, char *argv[], char *envp[]) {
 
     f(&o);
     if (k > 0) {
-        printf("%d\n", o.x); 
+        printf("True branch %d\n", o.x);
     } else {
-        printf("%d\n", o.y); 
+        printf("False branch %d\n", o.y);
     }
 
     return 0;
