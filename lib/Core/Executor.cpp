@@ -1448,7 +1448,7 @@ void Executor::executeCall(ExecutionState &state,
       state.addSnapshot(Snapshot(new ExecutionState(state), f));
       interpreterHandler->incSnapshotsCount();
       /* TODO: will be replaced later... */
-      state.clearResolvedAddresses();
+      state.clearRecoveredAddresses();
 
       if (canSkipCallSite(state, f)) {
         DEBUG_WITH_TYPE(
@@ -2226,7 +2226,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     if (state.isNormalState() && state.isInDependentMode()) {
-      if (state.isBlockingLoadResolved() && isMayBlockingLoad(state, ki)) {
+      if (state.isBlockingLoadRecovered() && isMayBlockingLoad(state, ki)) {
         bool isBlocking = handleMayBlockingLoad(state, ki);
         if (isBlocking) {
           /* TODO: break? */
@@ -4074,7 +4074,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
   size_t size = Expr::getMinBytesForWidth(width);
 
   /* check if already resolved */
-  if (state.isAddressResolved(address)) {
+  if (state.isAddressRecovered(address)) {
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
       klee_message("%p: load from %#lx is already resolved", &state, address)
@@ -4092,7 +4092,7 @@ bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
   /* TODO: handle resolved loads... */
   if (state.getCurrentSnapshotIndex() == info.snapshotIndex) {
     /* TODO: hack... */
-    state.markLoadAsUnresolved();
+    state.markLoadAsNotRecovered();
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
       klee_message("location (%lx, %zu) was written, recovery is not required", address, size);
@@ -4324,7 +4324,7 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("resuming: %p", &state));
   state.setResumed();
   state.setRecoveryState(0);
-  state.markLoadAsUnresolved();
+  state.markLoadAsNotRecovered();
   if (implicitlyCreated) {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding an implicitly created state: %p", &state));
     addedStates.push_back(&state);
@@ -4398,8 +4398,8 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     recoveryState->setResumed();
     recoveryState->setRecoveryState(0);
     /* TODO: we need only a prefix of the snapshots... */
-    recoveryState->markLoadAsResolved();
-    recoveryState->clearResolvedAddresses();
+    recoveryState->markLoadAsRecovered();
+    recoveryState->clearRecoveredAddresses();
     /* TODO: we need only a prefix of the cache... */
     recoveryState->setRecoveryCache(state.getRecoveryCache());
     /* this state may create another recovery state, so it must hold the allocation record */
@@ -4558,7 +4558,7 @@ void Executor::onNormalStateRead(
     return;
   }
 
-  if (state.isBlockingLoadResolved()) {
+  if (state.isBlockingLoadRecovered()) {
     return;
   }
 
@@ -4569,8 +4569,8 @@ void Executor::onNormalStateRead(
   uint64_t addr = ce->getZExtValue();
 
   /* update resolved loads */
-  state.addResolvedAddress(addr);
-  state.markLoadAsResolved();
+  state.addRecoveredAddress(addr);
+  state.markLoadAsRecovered();
 }
 
 void Executor::dumpConstrains(ExecutionState &state) {

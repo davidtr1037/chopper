@@ -117,7 +117,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     snapshots(state.snapshots),
     recoveryState(state.recoveryState),
     blockingLoadStatus(state.blockingLoadStatus),
-    resolvedLoads(state.resolvedLoads),
+    recoveredLoads(state.recoveredLoads),
     recoveryCache(state.recoveryCache),
     allocationRecord(state.allocationRecord),
     guidingConstraints(state.guidingConstraints),

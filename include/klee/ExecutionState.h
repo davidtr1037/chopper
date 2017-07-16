@@ -154,7 +154,7 @@ private:
   /* TODO: rename/re-implement */
   bool blockingLoadStatus;
   /* resloved load addresses */
-  std::set<uint64_t> resolvedLoads;
+  std::set<uint64_t> recoveredLoads;
   /* TODO: add doc... */
   RecoveryCache recoveryCache;
   /* we have to remember which allocations were executed */
@@ -339,41 +339,41 @@ public:
   }
 
   /* TODO: rename/re-implement */
-  bool isBlockingLoadResolved() {
+  bool isBlockingLoadRecovered() {
     assert(isNormalState());
     return blockingLoadStatus;
   }
 
   /* TODO: rename/re-implement */
-  void markLoadAsUnresolved() {
+  void markLoadAsNotRecovered() {
     assert(isNormalState());
     blockingLoadStatus = false;
   }
 
   /* TODO: rename/re-implement */
-  void markLoadAsResolved() {
+  void markLoadAsRecovered() {
     assert(isNormalState());
     blockingLoadStatus = true;
   }
 
-  std::set<uint64_t> &getResolvedLoads() {
+  std::set<uint64_t> &getRecoveredLoads() {
     assert(isNormalState());
-    return resolvedLoads;
+    return recoveredLoads;
   }
 
-  void addResolvedAddress(uint64_t address) {
+  void addRecoveredAddress(uint64_t address) {
     assert(isNormalState());
-    resolvedLoads.insert(address);
+    recoveredLoads.insert(address);
   }
 
-  bool isAddressResolved(uint64_t address) {
+  bool isAddressRecovered(uint64_t address) {
     assert(isNormalState());
-    return resolvedLoads.find(address) != resolvedLoads.end();
+    return recoveredLoads.find(address) != recoveredLoads.end();
   }
 
-  void clearResolvedAddresses() {
+  void clearRecoveredAddresses() {
     assert(isNormalState());
-    resolvedLoads.clear();
+    recoveredLoads.clear();
   }
 
   RecoveryCache &getRecoveryCache() {
