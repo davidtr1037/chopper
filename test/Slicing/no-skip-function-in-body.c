@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out -libc=uclibc --posix-runtime -search=dfs -skip-functions=foo2 %t.bc > %t.out 2>&1
+// RUN: not %klee --output-dir=%t.klee-out -search=dfs -skip-functions=foo2 %t.bc > %t.out 2>&1
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-ERROR
 
 // CHECK-ERROR: KLEE: ERROR: slice option: function 'foo2' not found in module.
