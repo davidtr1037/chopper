@@ -1,12 +1,18 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -libc=uclibc --posix-runtime -search=dfs -skip-functions=f %t.bc > %t.out 2>&1
-// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-T -check-prefix=CHECK-F -check-prefix=CHECK-PATHS -check-prefix=CHECK-STATES -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-A -check-prefix=CHECK-B -check-prefix=CHECK-Z -check-prefix=CHECK-ANOT -check-prefix=CHECK-BNOT
 
-// CHECK-PATHS: KLEE: done: completed paths = 2
+// CHECK-PATHS: KLEE: done: completed paths = 3
 // CHECK-STATES: KLEE: done: recovery states = 4
 // CHECK-SLICES: KLEE: done: generated slices = 2
 // CHECK-SNAPSHOTS: KLEE: done: created snapshots = 1
+
+// CHECK-A:a is 3
+// CHECK-B:b is 2
+// CHECK-Z:z is gt 3
+// CHECK-ANOT:a is not 3
+// CHECK-BNOT:b is not 2
 
 #include <stdio.h>
 #include <assert.h>
