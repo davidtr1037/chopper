@@ -86,9 +86,9 @@ namespace {
 
   cl::opt<std::string> SkippedFunctions(
       "skip-functions",
-      cl::desc("Comma-separated list of functions to skip. Optionally, it can "
-               "be specified the line number of the function definition (e.g. "
-               "<function1>[:line],<function2>[:line],..)"));
+      cl::desc("Comma-separated list of functions to skip. "
+               "Optionally, a line number can be specified to choose a specific call site "
+               "(e.g. <function1>[:line],<function2>[:line],..)"));
 
   cl::opt<std::string>
   InlinedFunctions("inline",
