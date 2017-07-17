@@ -1520,7 +1520,7 @@ void Executor::executeCall(ExecutionState &state,
     // from just an instruction (unlike LLVM).
 
     /* TODO: make it more readable... */
-    if (state.isNormalState() && !state.isRecoveryState() && filterCallSite(state, f)) {
+    if (state.isNormalState() && !state.isRecoveryState() && isFunctionToSkip(state, f)) {
       /* create snapshot, recovery state will be created on demand... */
       unsigned int index = state.getSnapshots().size();
       DEBUG_WITH_TYPE(
@@ -4729,7 +4729,7 @@ void Executor::mergeConstraints(ExecutionState &dependentState, ref<Expr> condit
     dependentState.addGuidingConstraint(condition);
 }
 
-bool Executor::filterCallSite(ExecutionState &state, Function *f) {
+bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
     const std::vector<SkippedFunctionOption> &options = interpreterOpts.slicingOptions;
     for (auto i = options.begin(); i != options.end(); i++) {
         const SkippedFunctionOption &option = *i;
