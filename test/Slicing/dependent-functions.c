@@ -1,12 +1,17 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f %t.bc > %t.out 2>&1
-// RUN: FileCheck %s -input-file=%t.out  -check-prefix=CHECK-PATHS -check-prefix=CHECK-STATES -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS -check-prefix=CHECK-A -check-prefix=CHECK-B -check-prefix=CHECK-Z -check-prefix=CHECK-ANOT -check-prefix=CHECK-BNOT
+// RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f,g,h %t.bc > %t.out 2>&1
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-PATHS -check-prefix=CHECK-STATES -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-A
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-B
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-Z
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-ANOT
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-BNOT
 
 // CHECK-PATHS: KLEE: done: completed paths = 3
-// CHECK-STATES: KLEE: done: recovery states = 4
-// CHECK-SLICES: KLEE: done: generated slices = 2
-// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 1
+// CHECK-STATES: KLEE: done: recovery states = 3
+// CHECK-SLICES: KLEE: done: generated slices = 3
+// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 3
 
 // CHECK-A:a is 3
 // CHECK-B:b is 2
