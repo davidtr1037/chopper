@@ -4188,7 +4188,7 @@ void Executor::getAllRecoveryInfo(
   loadInst = ki->getOrigInst();
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    errs() << "may-blocking load: "; loadInst->print(errs()); errs() << "\n"
+    errs() << "KLEE: may-blocking load: "; loadInst->print(errs()); errs() << "\n"
   );
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
