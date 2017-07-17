@@ -1004,9 +1004,24 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   } else {
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState = NULL, *trueState = &current;
-
+    ref<Expr> negatedCondition = Expr::createIsZero(condition);
+    ref<Expr> consistentCondition;
     bool forkRequired = true;
+    bool isTrueStateValid = false;
+    bool isFalseStateValid = false;
+
     if (trueState->isRecoveryState()) {
+      /* check if the condition is consistent with the dependent states */
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message(
+          "checking consisteny in fork for recovery state (true branch): %p (dep = %p)",
+          trueState,
+          trueState->getDependentState()
+        )
+      );
+      isTrueStateValid = checkConsistency(*trueState, condition);
+
       /* check if the negated condition is consistent with the dependent states */
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
@@ -1016,7 +1031,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
           trueState->getDependentState()
         )
       );
-      if (!checkConsistency(*trueState, Expr::createIsZero(condition))) {
+      isFalseStateValid = checkConsistency(*trueState, negatedCondition);
+
+      /* don't fork if one of the branches is infeasible */
+      if (!(isTrueStateValid && isFalseStateValid)) {
         forkRequired = false;
       }
     }
@@ -1096,9 +1114,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    addConstraint(*trueState, condition);
     if (forkRequired) {
-      addConstraint(*falseState, Expr::createIsZero(condition));
+      addConstraint(*trueState, condition);
+      addConstraint(*falseState, negatedCondition);
+    } else {
+      /* it must be a recovery state, and one of the branches is inconsistent */
+      consistentCondition = isTrueStateValid ? condition : negatedCondition;
+      addConstraint(*trueState, consistentCondition);
     }
 
     /* TODO: handle termination of recovery states... */
@@ -1113,45 +1135,32 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     if (trueState->isRecoveryState()) {
       ExecutionState *dependentState = trueState->getDependentState();
-      ExecutionState *forkeddependentState = NULL;
-      bool isTrueStateValid = false;
-      bool isFalseStateValid = false;
-
-      /* check consistency of true state with the dependent state */
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message(
-          "checking consisteny in fork for recovery state (true branch): %p (dep = %p)",
-          trueState,
-          dependentState
-        )
-      );
-      isTrueStateValid = checkConsistency(*trueState, condition);
+      ExecutionState *forkedDependentState = NULL;
 
       if (forkRequired) {
         /* if we are here, then the false state is consistent with it's dependent states */
-        forkeddependentState = forkDependentStates(trueState, falseState);
-        isFalseStateValid = true;
+        forkedDependentState = forkDependentStates(trueState, falseState);
       }
 
       /* copy constraints if required */
-      if (isTrueStateValid) {
+      if (forkRequired) {
         mergeConstraintsForAll(*dependentState, condition);
-      }
-      if (isFalseStateValid) {
-        mergeConstraintsForAll(*forkeddependentState, Expr::createIsZero(condition));
+        mergeConstraintsForAll(*forkedDependentState, negatedCondition);
+      } else {
+        consistentCondition = isTrueStateValid ? condition : negatedCondition;
+        mergeConstraintsForAll(*dependentState, consistentCondition);
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
         return StatePair(trueState, 0);
       }
       if (!isTrueStateValid && isFalseStateValid) {
-        DEBUG_WITH_TYPE(
-          DEBUG_BASIC,
-          klee_message("terminating inconsistent forked recovery state (true state): %p", trueState)
-        );
-        terminateStateRecursively(*trueState);
-        return StatePair(0, falseState);
+        if (forkRequired) {
+          return StatePair(0, falseState);
+        } else {
+          /* reuse the current state... */
+          return StatePair(0, trueState);
+        }
       }
       if (!isTrueStateValid && !isFalseStateValid) {
         /* TODO: is it possible? */
