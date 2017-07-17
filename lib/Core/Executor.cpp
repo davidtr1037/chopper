@@ -827,8 +827,8 @@ void Executor::branch(ExecutionState &state,
         } else {
           /* here we must fork the dependent state */
           ExecutionState *prev = result[i - 1];
-          ExecutionState *forkeddependentState = forkDependentStates(prev, current);
-          dependentStates.push_back(forkeddependentState);
+          ExecutionState *forkedDependentState = forkDependentStates(prev, current);
+          dependentStates.push_back(forkedDependentState);
         }
       } else {
         dependentStates.push_back(NULL);
