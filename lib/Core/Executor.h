@@ -509,7 +509,7 @@ private:
   void onExecuteFree(ExecutionState *state, const MemoryObject *mo);
   void terminateStateRecursively(ExecutionState &state);
   void mergeConstraints(ExecutionState &dependedState, ref<Expr> condition);
-  bool filterCallSite(ExecutionState &state, llvm::Function *f);
+  bool isFunctionToSkip(ExecutionState &state, llvm::Function *f);
   bool canSkipCallSite(ExecutionState &state, llvm::Function *f);
   void bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory);
   void unbindAll(ExecutionState *state, const MemoryObject *mo);
