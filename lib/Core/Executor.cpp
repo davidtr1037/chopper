@@ -1428,6 +1428,10 @@ void Executor::executeCall(ExecutionState &state,
       }
       break;
     }
+    // FIXME: terrible hack to fix an issue with inlining of memcpy
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    // FIXME: terrible hack end
     case Intrinsic::vaend:
       // va_end is a noop for the interpreter.
       //
