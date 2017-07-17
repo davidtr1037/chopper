@@ -4075,14 +4075,14 @@ bool Executor::isMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
     return false;
   }
 
-  if (!isResolvingRequired(state, ki)) {
+  if (!isRecoveryRequired(state, ki)) {
     return false;
   }
 
   return true;
 }
 
-bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
+bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
   /* resolve address expression */
   ref<Expr> addressExpr = eval(ki, 0, state).value;
   if (!isa<ConstantExpr>(addressExpr)) {
