@@ -43,7 +43,7 @@ void h(point *o) {
 int main(int argc, char *argv[], char *envp[]) {
     point o;
     o.x = 1; o.y = 0; o.z = 0;
-    int a,b,c;
+    int a,b;
 
     klee_make_symbolic(&a, sizeof(a), "a");
     klee_make_symbolic(&b, sizeof(b), "b");
