@@ -160,7 +160,7 @@ private:
   /* we have to remember which allocations were executed */
   AllocationRecord allocationRecord;
   /* used for guiding multiple recovery states */
-  std::vector< ref<Expr> > guidingConstraints;
+  std::vector<ref<Expr>> guidingConstraints;
   /* we need to know if an address was written  */
   WrittenAddresses writtenAddresses;
   /* TODO: add doc... */
@@ -468,6 +468,10 @@ public:
 
   std::vector<ref<Expr>> &getGuidingConstraints() {
     return guidingConstraints;
+  }
+
+  void setGuidingConstraints(std::vector<ref<Expr>> &constraints) {
+    guidingConstraints = constraints;
   }
 
   void addGuidingConstraint(ref<Expr> condition) {
