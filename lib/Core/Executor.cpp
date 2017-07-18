@@ -1504,6 +1504,10 @@ void Executor::executeCall(ExecutionState &state,
       }
       break;
     }
+    // FIXME: terrible hack to fix an issue with inlining of memcpy
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    // FIXME: terrible hack end
     case Intrinsic::vaend:
       // va_end is a noop for the interpreter.
       //
@@ -4099,14 +4103,14 @@ bool Executor::isMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
     return false;
   }
 
-  if (!isResolvingRequired(state, ki)) {
+  if (!isRecoveryRequired(state, ki)) {
     return false;
   }
 
   return true;
 }
 
-bool Executor::isResolvingRequired(ExecutionState &state, KInstruction *ki) {
+bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
   /* resolve address expression */
   ref<Expr> addressExpr = eval(ki, 0, state).value;
   if (!isa<ConstantExpr>(addressExpr)) {
@@ -4184,7 +4188,7 @@ void Executor::getAllRecoveryInfo(
   loadInst = ki->getOrigInst();
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    errs() << "may-blocking load: "; loadInst->print(errs()); errs() << "\n"
+    errs() << "KLEE: may-blocking load: "; loadInst->print(errs()); errs() << "\n"
   );
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 

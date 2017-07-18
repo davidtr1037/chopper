@@ -453,7 +453,7 @@ private:
   void doDumpStates();
 
   bool isMayBlockingLoad(ExecutionState &state, KInstruction *ki);
-  bool isResolvingRequired(ExecutionState &state, KInstruction *ki);
+  bool isRecoveryRequired(ExecutionState &state, KInstruction *ki);
   bool handleMayBlockingLoad(ExecutionState &state, KInstruction *ki);
   void getAllRecoveryInfo(
     ExecutionState &state,
