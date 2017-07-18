@@ -77,7 +77,7 @@ struct RecoveryInfo {
     llvm::Function *f;
     uint32_t sliceId;
     /* TODO: a bit strange that it is here, will be fixed later */
-    ExecutionState *snapshot;
+    ExecutionState *snapshotState;
     unsigned int snapshotIndex;
 
     RecoveryInfo() :
@@ -86,7 +86,7 @@ struct RecoveryInfo {
         loadSize(0),
         f(0),
         sliceId(0),
-        snapshot(0),
+        snapshotState(0),
         snapshotIndex(0)
     {
 
@@ -160,7 +160,7 @@ private:
   /* we have to remember which allocations were executed */
   AllocationRecord allocationRecord;
   /* used for guiding multiple recovery states */
-  std::vector<ref<Expr>> guidingConstraints;
+  std::vector< ref<Expr> > guidingConstraints;
   /* we need to know if an address was written  */
   WrittenAddresses writtenAddresses;
   /* TODO: add doc... */

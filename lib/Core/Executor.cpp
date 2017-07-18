@@ -4241,7 +4241,7 @@ void Executor::getAllRecoveryInfo(
       recoveryInfo->loadSize = loadSize;
       recoveryInfo->f = modInfo.first;
       recoveryInfo->sliceId = sliceId;
-      recoveryInfo->snapshot = snapshot.state;
+      recoveryInfo->snapshotState = snapshot.state;
       recoveryInfo->snapshotIndex = index;
 
       required.push_back(recoveryInfo);
