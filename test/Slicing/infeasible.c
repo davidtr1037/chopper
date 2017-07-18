@@ -1,23 +1,21 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f,g,h %t.bc > %t.out 2>&1
+// RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f,g %t.bc > %t.out 2>&1
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-PATHS -check-prefix=CHECK-STATES -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-A
-// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-B
-// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-Z
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-ANOT
-// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-BNOT
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-Y
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-YNOT
 
-// CHECK-PATHS: KLEE: done: completed paths = 9
-// CHECK-STATES: KLEE: done: recovery states = 2
-// CHECK-SLICES: KLEE: done: generated slices = 1
-// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 1
+// CHECK-PATHS: KLEE: done: completed paths = 3
+// CHECK-STATES: KLEE: done: recovery states = 4
+// CHECK-SLICES: KLEE: done: generated slices = 2
+// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 2
 
 // CHECK-A:k is 3
-// CHECK-B:k is 2
-// CHECK-Z:z is gt 3
 // CHECK-ANOT:k is not 3
-// CHECK-BNOT:k is not 2
+// CHECK-Y:y is gt 2
+// CHECK-YNOT:y is not gt 2
 
 #include <stdio.h>
 #include <assert.h>
@@ -26,7 +24,6 @@
 typedef struct {
     int x;
     int y;
-    int z;
 } point;
 
 void f(point *o, int *a) {
@@ -36,26 +33,18 @@ void f(point *o, int *a) {
 		o->x--;
 }
 
-void g(point *o, int *b) {
-	if (*b > 0)
-		o->y = o->x * 2 + 1;
-	else
-		o->y = o->x + 1;
-}
-
-void h(point *o, int *c) {
-	if (*c > 0)
-		o->z = o->y + 1;
+void g(point *o) {
+    o->y = o->x * 2 + 1;
 }
 
 int main(int argc, char *argv[], char *envp[]) {
-    point o;
-    o.x = 1; o.y = 0; o.z = 0;
-    int a,b,c,k;
+    point o = {
+        .x = 1,
+        .y = 0
+    };
+    int a,k;
 
     klee_make_symbolic(&a, sizeof(a), "a");
-    klee_make_symbolic(&b, sizeof(b), "b");
-    klee_make_symbolic(&c, sizeof(b), "c");
     klee_make_symbolic(&k, sizeof(k), "k");
 
     f(&o, &a);
@@ -63,16 +52,12 @@ int main(int argc, char *argv[], char *envp[]) {
     	printf("k is 3\n");
     } else {
     	printf("k is not 3\n");
-    	g(&o, &b);
-    	if (k == 2) {
-    		printf("k is 2\n");
-    		h(&o, &c);
-    		if (o.z > 3) {
-    			printf("z is gt 3\n");
-    		}
-    	} else {
-    		printf("k is not 2\n");
-    	}
+    	g(&o);
+        if (o.y > 2) {
+            printf("y is gt 2\n");
+        } else {
+            printf("y is not gt 2\n");
+        }
     }
 
     return 0;
