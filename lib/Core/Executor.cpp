@@ -4418,20 +4418,7 @@ void Executor::notifyDependentState(ExecutionState &recoveryState) {
 }
 
 void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo) {
-  ExecutionState *snapshotState = NULL;
-
-  /* find the corresponding snapshot state */
-  std::vector<Snapshot> snapshots = state.getSnapshots();
-  for (std::vector<Snapshot>::iterator i = snapshots.begin(); i != snapshots.end(); i++) {
-    /* TODO: change to reference? */
-    Snapshot s = *i;
-    if (s.f == recoveryInfo->f) {
-      snapshotState = s.state;
-      /* TODO: break? */
-    }
-  }
-
-  assert(snapshotState);
+  ExecutionState *snapshotState = recoveryInfo->snapshotState;
 
   /* initialize recovery state */
   /* TODO: non-first snapshots hold normal state properties! */
