@@ -4471,7 +4471,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   /* set recovery information */
   recoveryState->setRecoveryInfo(recoveryInfo);
 
-  /* add accumulated constraints */
+  /* add the guiding constraints to the recovery state */
   std::vector<ref<Expr>> &constraints = state.getGuidingConstraints();
   for (std::vector<ref<Expr>>::iterator i = constraints.begin(); i != constraints.end(); i++) {
     addConstraint(*recoveryState, *i);
@@ -4494,7 +4494,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   state.ptreeNode = res.second;
   addedStates.push_back(recoveryState);
 
-  /* statistics */
+  /* update statistics */
   interpreterHandler->incRecoveryStatesCount();
 }
 
