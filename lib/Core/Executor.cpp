@@ -4474,13 +4474,13 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   recoveryState->setRecoveryInfo(recoveryInfo);
 
   /* add the guiding constraints to the recovery state */
-  std::vector< ref<Expr> > &constraints = state.getGuidingConstraints();
-  for (std::vector< ref<Expr> >::iterator i = constraints.begin(); i != constraints.end(); i++) {
+  std::set< ref<Expr> > &constraints = originatingState->getGuidingConstraints();
+  for (std::set< ref<Expr> >::iterator i = constraints.begin(); i != constraints.end(); i++) {
     addConstraint(*recoveryState, *i);
   }
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    klee_message("adding %lu constraints", constraints.size())
+    klee_message("adding %lu guiding constraints", constraints.size())
   );
 
   state.setRecoveryState(recoveryState);
