@@ -4216,8 +4216,7 @@ void Executor::getAllRecoveryInfo(
     Snapshot &snapshot = snapshots[index];
     Function *snapshotFunction = snapshot.f;
 
-    std::set<ModRefAnalysis::ModInfo>::iterator j;
-    for (j = approximateModInfos.begin(); j != approximateModInfos.end(); j++) {
+    for (std::set<ModRefAnalysis::ModInfo>::iterator j = approximateModInfos.begin(); j != approximateModInfos.end(); j++) {
       ModRefAnalysis::ModInfo modInfo = *j;
       if (modInfo.first != snapshotFunction) {
         /* the function of the snapshot must match the modifier */
@@ -4418,6 +4417,7 @@ void Executor::notifyDependentState(ExecutionState &recoveryState) {
 }
 
 void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo) {
+  klee_message("Recovery for function %s, load address 0x%lx", recoveryInfo->f->getName().str().c_str(), recoveryInfo->loadAddr);
   ExecutionState *snapshotState = recoveryInfo->snapshotState;
 
   /* initialize recovery state */
