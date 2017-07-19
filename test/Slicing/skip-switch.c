@@ -1,12 +1,14 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f %t.bc > %t.out 2>&1
+// RUN: %klee --output-dir=%t.klee-out -debug-only=basic -search=dfs -skip-functions=f %t.bc > %t.out 2>&1
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-PATHS -check-prefix=CHECK-STATES -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-A
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-B
+// RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-C
 
 // CHECK-A: x is 10
 // CHECK-B: x is 20
+// CHECK-C: adding 1 guiding constraints
 // CHECK-PATHS: KLEE: done: completed paths = 3
 // CHECK-STATES: KLEE: done: recovery states = 2
 // CHECK-SLICES: KLEE: done: generated slices = 1
