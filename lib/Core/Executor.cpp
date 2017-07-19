@@ -4420,7 +4420,20 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     assert(recoveryState->getPendingRecoveryInfos().empty());
   }
 
+  /* set dependent state */
   recoveryState->setDependentState(&state);
+
+  /* set originating state */
+  ExecutionState *originatingState;
+  if (state.isRecoveryState()) {
+    originatingState = state.getOriginatingState();
+  } else {
+    /* this must be the originating state */
+    originatingState = &state;
+  }
+  assert(originatingState);
+  recoveryState->setOriginatingState(originatingState);
+
   recoveryState->setExitInst(snapshotState->pc->inst);
 
   /* pass allocation record to recovery state */
@@ -4791,8 +4804,9 @@ void Executor::unbindAll(ExecutionState *state, const MemoryObject *mo) {
 
 ExecutionState *Executor::forkDependentStates(ExecutionState *trueState, ExecutionState *falseState) {
     ExecutionState *current = trueState->getDependentState();
-    ExecutionState *prevForked = falseState;
     ExecutionState *forked = NULL;
+    ExecutionState *prevForked = falseState;
+    ExecutionState *forkedOriginatingState = NULL;
     ExecutionState *firstForked = NULL;
     bool isFirst = true;
 
@@ -4824,6 +4838,23 @@ ExecutionState *Executor::forkDependentStates(ExecutionState *trueState, Executi
             prevForked = forked;
             current = current->getDependentState();
         } else {
+            forkedOriginatingState = forked;
+            current = NULL;
+        }
+    } while (current);
+
+    /* update originating state */
+    current = falseState;
+    do {
+        if (current->isRecoveryState()) {
+            DEBUG_WITH_TYPE(
+              DEBUG_BASIC,
+              klee_message("%p: updating originating state %p", current, forkedOriginatingState)
+            );
+            current->setOriginatingState(forkedOriginatingState);
+            current = current->getDependentState();
+        } else {
+            /* TODO: initialize originating state to NULL? */
             current = NULL;
         }
     } while (current);

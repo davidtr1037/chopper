@@ -175,6 +175,8 @@ private:
   llvm::Instruction *exitInst;
   /* a recovery state has its own dependent state */
   ExecutionState *dependentState;
+  /* a reference to the originating state */
+  ExecutionState *originatingState;
   /* TODO: should be ref<RecoveryInfo> */
   RecoveryInfo *recoveryInfo;
   /* we use this record while executing a recovery state  */
@@ -432,6 +434,17 @@ public:
     assert(isRecoveryState());
     assert(state->isNormalState());
     dependentState = state;
+  }
+
+  ExecutionState *getOriginatingState() {
+    assert(isRecoveryState());
+    return originatingState;
+  }
+
+  void setOriginatingState(ExecutionState *state) {
+    assert(isRecoveryState());
+    assert(state->isNormalState());
+    originatingState = state;
   }
 
   RecoveryInfo *getRecoveryInfo() {
