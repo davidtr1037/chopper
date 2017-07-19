@@ -160,6 +160,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
 
+  /* TODO: possibly not required if snapshots are cleared */
   if (isNormalState() && !isRecoveryState()) {
     guidingConstraints = state.guidingConstraints;
   }
