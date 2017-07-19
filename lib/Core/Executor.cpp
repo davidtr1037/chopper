@@ -4241,7 +4241,7 @@ void Executor::getAllRecoveryInfo(
       recoveryInfo->loadSize = loadSize;
       recoveryInfo->f = modInfo.first;
       recoveryInfo->sliceId = sliceId;
-      recoveryInfo->snapshot = snapshot.state;
+      recoveryInfo->snapshotState = snapshot.state;
       recoveryInfo->snapshotIndex = index;
 
       required.push_back(recoveryInfo);
@@ -4418,20 +4418,7 @@ void Executor::notifyDependentState(ExecutionState &recoveryState) {
 }
 
 void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo) {
-  ExecutionState *snapshotState = NULL;
-
-  /* find the corresponding snapshot state */
-  std::vector<Snapshot> snapshots = state.getSnapshots();
-  for (std::vector<Snapshot>::iterator i = snapshots.begin(); i != snapshots.end(); i++) {
-    /* TODO: change to reference? */
-    Snapshot s = *i;
-    if (s.f == recoveryInfo->f) {
-      snapshotState = s.state;
-      /* TODO: break? */
-    }
-  }
-
-  assert(snapshotState);
+  ExecutionState *snapshotState = recoveryInfo->snapshotState;
 
   /* initialize recovery state */
   /* TODO: non-first snapshots hold normal state properties! */
@@ -4453,7 +4440,9 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     recoveryState->setRecoveryCache(state.getRecoveryCache());
     /* this state may create another recovery state, so it must hold the allocation record */
     recoveryState->setAllocationRecord(state.getAllocationRecord());
-    recoveryState->getGuidingConstraints().clear();
+    /* TODO: reuse in a smarter way? */
+    /* this state may create another recovery state, so it must hold the guiding constraints */
+    recoveryState->setGuidingConstraints(state.getGuidingConstraints());
     /* TODO: handle writtenAddresses */
 
     assert(recoveryState->getPendingRecoveryInfos().empty());
@@ -4471,7 +4460,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   /* set recovery information */
   recoveryState->setRecoveryInfo(recoveryInfo);
 
-  /* add accumulated constraints */
+  /* add the guiding constraints to the recovery state */
   std::vector<ref<Expr>> &constraints = state.getGuidingConstraints();
   for (std::vector<ref<Expr>>::iterator i = constraints.begin(); i != constraints.end(); i++) {
     addConstraint(*recoveryState, *i);
@@ -4494,7 +4483,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   state.ptreeNode = res.second;
   addedStates.push_back(recoveryState);
 
-  /* statistics */
+  /* update statistics */
   interpreterHandler->incRecoveryStatesCount();
 }
 

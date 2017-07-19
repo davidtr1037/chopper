@@ -77,7 +77,7 @@ struct RecoveryInfo {
     llvm::Function *f;
     uint32_t sliceId;
     /* TODO: a bit strange that it is here, will be fixed later */
-    ExecutionState *snapshot;
+    ExecutionState *snapshotState;
     unsigned int snapshotIndex;
 
     RecoveryInfo() :
@@ -86,7 +86,7 @@ struct RecoveryInfo {
         loadSize(0),
         f(0),
         sliceId(0),
-        snapshot(0),
+        snapshotState(0),
         snapshotIndex(0)
     {
 
@@ -468,6 +468,10 @@ public:
 
   std::vector<ref<Expr>> &getGuidingConstraints() {
     return guidingConstraints;
+  }
+
+  void setGuidingConstraints(std::vector<ref<Expr>> &constraints) {
+    guidingConstraints = constraints;
   }
 
   void addGuidingConstraint(ref<Expr> condition) {
