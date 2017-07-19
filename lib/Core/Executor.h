@@ -514,7 +514,7 @@ private:
   void bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory);
   void unbindAll(ExecutionState *state, const MemoryObject *mo);
   ExecutionState *forkDependentStates(ExecutionState *trueState, ExecutionState *falseState);
-  void mergeConstraintsForAll(ExecutionState &dependedState, ref<Expr> condition);
+  void mergeConstraintsForAll(ExecutionState &recoveryState, ref<Expr> condition);
   llvm::Function *getSlice(llvm::Function *target, uint32_t sliceId, ModRefAnalysis::SideEffectType type);
 
 public:

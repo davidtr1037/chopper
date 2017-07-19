@@ -845,7 +845,8 @@ void Executor::branch(ExecutionState &state,
       if (current->isRecoveryState()) {
         ExecutionState *dependentState = dependentStates[i];
         if (dependentState) {
-          mergeConstraintsForAll(*dependentState, condition);
+          //mergeConstraintsForAll(*dependentState, condition);
+          mergeConstraintsForAll(*current, condition);
         }
       }
     }
@@ -1141,11 +1142,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
       /* copy constraints if required */
       if (forkRequired) {
-        mergeConstraintsForAll(*dependentState, condition);
-        mergeConstraintsForAll(*forkedDependentState, negatedCondition);
+        mergeConstraintsForAll(*trueState, condition);
+        mergeConstraintsForAll(*falseState, negatedCondition);
       } else {
         consistentCondition = isTrueStateValid ? condition : negatedCondition;
-        mergeConstraintsForAll(*dependentState, consistentCondition);
+        mergeConstraintsForAll(*trueState, consistentCondition);
       }
 
       if (isTrueStateValid && !isFalseStateValid) {
@@ -4410,8 +4411,7 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     /* this state may create another recovery state, so it must hold the allocation record */
     recoveryState->setAllocationRecord(state.getAllocationRecord());
     /* TODO: reuse in a smarter way? */
-    /* this state may create another recovery state, so it must hold the guiding constraints */
-    recoveryState->setGuidingConstraints(state.getGuidingConstraints());
+    //assert(recoveryState->getGuidingConstraints().empty());
     /* TODO: handle writtenAddresses */
 
     assert(recoveryState->getPendingRecoveryInfos().empty());
@@ -4716,7 +4716,7 @@ void Executor::terminateStateRecursively(ExecutionState &state) {
 void Executor::mergeConstraints(ExecutionState &dependentState, ref<Expr> condition) {
     assert(dependentState.isNormalState());
     addConstraint(dependentState, condition);
-    dependentState.addGuidingConstraint(condition);
+    //dependentState.addGuidingConstraint(condition);
 }
 
 bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
@@ -4859,8 +4859,8 @@ ExecutionState *Executor::forkDependentStates(ExecutionState *trueState, Executi
     return firstForked;
 }
 
-void Executor::mergeConstraintsForAll(ExecutionState &dependentState, ref<Expr> condition) {
-    ExecutionState *next = &dependentState;
+void Executor::mergeConstraintsForAll(ExecutionState &recoveryState, ref<Expr> condition) {
+    ExecutionState *next = recoveryState.getDependentState();
     do {
         mergeConstraints(*next, condition);
 
@@ -4870,6 +4870,10 @@ void Executor::mergeConstraintsForAll(ExecutionState &dependentState, ref<Expr> 
             next = NULL;
         }
     } while (next);
+
+    /* add the guiding constraints only to the originating state */
+    ExecutionState *originatingState = recoveryState.getOriginatingState();
+    originatingState->addGuidingConstraint(condition);
 }
 
 /* on demand slicing... */
