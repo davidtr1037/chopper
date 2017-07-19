@@ -4437,6 +4437,10 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   for (std::vector<ref<Expr>>::iterator i = constraints.begin(); i != constraints.end(); i++) {
     addConstraint(*recoveryState, *i);
   }
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message("adding %lu constraints", constraints.size())
+  );
 
   state.setRecoveryState(recoveryState);
 
