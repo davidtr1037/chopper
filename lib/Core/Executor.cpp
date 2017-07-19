@@ -1134,12 +1134,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     if (trueState->isRecoveryState()) {
-      ExecutionState *dependentState = trueState->getDependentState();
-      ExecutionState *forkedDependentState = NULL;
-
       if (forkRequired) {
         /* if we are here, then the false state is consistent with it's dependent states */
-        forkedDependentState = forkDependentStates(trueState, falseState);
+        forkDependentStates(trueState, falseState);
       }
 
       /* copy constraints if required */
