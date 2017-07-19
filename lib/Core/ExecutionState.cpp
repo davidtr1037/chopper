@@ -125,7 +125,8 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     recoveredLoads(state.recoveredLoads),
     recoveryCache(state.recoveryCache),
     allocationRecord(state.allocationRecord),
-    guidingConstraints(state.guidingConstraints),
+    /* TODO: copy only for originating states */
+    //guidingConstraints(state.guidingConstraints),
     writtenAddresses(state.writtenAddresses),
     directRetSliceId(state.directRetSliceId),
     pendingRecoveryInfos(state.pendingRecoveryInfos),
@@ -162,6 +163,10 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
+
+  if (isNormalState() && !isRecoveryState()) {
+    guidingConstraints = state.guidingConstraints;
+  }
 }
 
 ExecutionState *ExecutionState::branch() {
