@@ -4461,8 +4461,8 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
   recoveryState->setRecoveryInfo(recoveryInfo);
 
   /* add the guiding constraints to the recovery state */
-  std::vector<ref<Expr>> &constraints = state.getGuidingConstraints();
-  for (std::vector<ref<Expr>>::iterator i = constraints.begin(); i != constraints.end(); i++) {
+  std::vector< ref<Expr> > &constraints = state.getGuidingConstraints();
+  for (std::vector< ref<Expr> >::iterator i = constraints.begin(); i != constraints.end(); i++) {
     addConstraint(*recoveryState, *i);
   }
   DEBUG_WITH_TYPE(
