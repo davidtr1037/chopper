@@ -4284,7 +4284,10 @@ void Executor::notifyDependentState(ExecutionState &recoveryState) {
 }
 
 void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo) {
-  klee_message("Recovery for function %s, load address 0x%lx", recoveryInfo->f->getName().str().c_str(), recoveryInfo->loadAddr);
+  DEBUG_WITH_TYPE(
+    DEBUG_BASIC,
+    klee_message("starting recovery for function %s, load address %#lx", recoveryInfo->f->getName().str().c_str(), recoveryInfo->loadAddr)
+  );
   ExecutionState *snapshotState = recoveryInfo->snapshotState;
 
   /* initialize recovery state */
