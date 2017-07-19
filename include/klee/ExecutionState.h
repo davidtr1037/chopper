@@ -488,15 +488,23 @@ public:
   }
 
   std::set <ref<Expr> > &getGuidingConstraints() {
+    assert(isNormalState());
     return guidingConstraints;
   }
 
   void setGuidingConstraints(std::set< ref<Expr> > &constraints) {
+    assert(isNormalState());
     guidingConstraints = constraints;
   }
 
   void addGuidingConstraint(ref<Expr> condition) {
+    assert(isNormalState());
     guidingConstraints.insert(condition);
+  }
+
+  void clearGuidingConstraints() {
+    assert(isNormalState());
+    guidingConstraints.clear();
   }
 
   void addWrittenAddress(uint64_t address, size_t size, unsigned int snapshotIndex) {
