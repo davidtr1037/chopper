@@ -4335,8 +4335,8 @@ void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryI
     recoveryState->setRecoveryCache(state.getRecoveryCache());
     /* this state may create another recovery state, so it must hold the allocation record */
     recoveryState->setAllocationRecord(state.getAllocationRecord());
-    /* TODO: reuse in a smarter way? */
-    //assert(recoveryState->getGuidingConstraints().empty());
+    /* make sure it is empty... */
+    assert(recoveryState->getGuidingConstraints().empty());
     /* TODO: handle writtenAddresses */
 
     assert(recoveryState->getPendingRecoveryInfos().empty());
