@@ -716,25 +716,7 @@ void Executor::branch(ExecutionState &state,
                       std::vector<ExecutionState*> &result) {
   TimerStatIncrementer timer(stats::forkTime);
 
-  /* filter out the consistent conditions */
-  std::vector< ref<Expr> > filtered;
-  for (std::vector< ref<Expr> >::const_iterator i = conditions.begin(); i != conditions.end(); i++) {
-    ref<Expr> condition = *i;
-    if (state.isRecoveryState()) {
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("%p: checking switch condition consistency", &state)
-      );
-      if (!checkConsistency(state, condition)) {
-        /* we don't want conditions which are not consistent with the dependent state */
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("inconsistent switch condition"));
-        continue;
-      }
-    }
-    filtered.push_back(condition);
-  }
-
-  unsigned N = filtered.size();
+  unsigned N = conditions.size();
   assert(N);
 
   if (MaxForks!=~0u && stats::forks >= MaxForks) {
@@ -815,23 +797,15 @@ void Executor::branch(ExecutionState &state,
   }
 
   /* handle the forks */
-  std::vector<ExecutionState *> dependentStates;
   for (unsigned i=0; i<N; ++i) {
     ExecutionState *current = result[i];
     if (current) {
       if (current->isRecoveryState()) {
-        if (i == 0) {
-          /* the first state must have a dependent state */
-          assert(current->getDependentState());
-          dependentStates.push_back(current->getDependentState());
-        } else {
+        if (i != 0) {
           /* here we must fork the dependent state */
           ExecutionState *prev = result[i - 1];
-          ExecutionState *forkedDependentState = forkDependentStates(prev, current);
-          dependentStates.push_back(forkedDependentState);
+          forkDependentStates(prev, current);
         }
-      } else {
-        dependentStates.push_back(NULL);
       }
     }
   }
@@ -840,14 +814,10 @@ void Executor::branch(ExecutionState &state,
   for (unsigned i=0; i<N; ++i) {
     ExecutionState *current = result[i];
     if (current) {
-      ref<Expr> condition = filtered[i];
+      ref<Expr> condition = conditions[i];
       addConstraint(*current, condition);
       if (current->isRecoveryState()) {
-        ExecutionState *dependentState = dependentStates[i];
-        if (dependentState) {
-          //mergeConstraintsForAll(*dependentState, condition);
-          mergeConstraintsForAll(*current, condition);
-        }
+        mergeConstraintsForAll(*current, condition);
       }
     }
   }
@@ -1006,51 +976,16 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState = NULL, *trueState = &current;
     ref<Expr> negatedCondition = Expr::createIsZero(condition);
-    ref<Expr> consistentCondition;
-    bool forkRequired = true;
-    bool isTrueStateValid = false;
-    bool isFalseStateValid = false;
 
+    ++stats::forks;
+    falseState = trueState->branch();
+    addedStates.push_back(falseState);
     if (trueState->isRecoveryState()) {
-      /* check if the condition is consistent with the dependent states */
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
-        klee_message(
-          "checking consisteny in fork for recovery state (true branch): %p (dep = %p)",
-          trueState,
-          trueState->getDependentState()
-        )
+        klee_message("forked recovery state: %p", falseState)
       );
-      isTrueStateValid = checkConsistency(*trueState, condition);
-
-      /* check if the negated condition is consistent with the dependent states */
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message(
-          "checking consisteny in fork for recovery state (false branch): %p (dep = %p)",
-          trueState,
-          trueState->getDependentState()
-        )
-      );
-      isFalseStateValid = checkConsistency(*trueState, negatedCondition);
-
-      /* don't fork if one of the branches is infeasible */
-      if (!(isTrueStateValid && isFalseStateValid)) {
-        forkRequired = false;
-      }
-    }
-
-    if (forkRequired) {
-      ++stats::forks;
-      falseState = trueState->branch();
-      addedStates.push_back(falseState);
-      if (trueState->isRecoveryState()) {
-        DEBUG_WITH_TYPE(
-          DEBUG_BASIC,
-          klee_message("forked recovery state: %p", falseState)
-        );
-        interpreterHandler->incRecoveryStatesCount();
-      }
+      interpreterHandler->incRecoveryStatesCount();
     }
 
     if (it != seedMap.end()) {
@@ -1087,13 +1022,11 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    if (forkRequired) {
-      current.ptreeNode->data = 0;
-      std::pair<PTree::Node*, PTree::Node*> res =
-        processTree->split(current.ptreeNode, falseState, trueState);
-      falseState->ptreeNode = res.first;
-      trueState->ptreeNode = res.second;
-    }
+    current.ptreeNode->data = 0;
+    std::pair<PTree::Node*, PTree::Node*> res =
+      processTree->split(current.ptreeNode, falseState, trueState);
+    falseState->ptreeNode = res.first;
+    trueState->ptreeNode = res.second;
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -1101,69 +1034,33 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       falseState->pathOS = pathWriter->open(current.pathOS);
       if (!isInternal) {
         trueState->pathOS << "1";
+        falseState->pathOS = pathWriter->open(current.pathOS);
         falseState->pathOS << "0";
-      }
-    }
-    if (symPathWriter) {
-      falseState->symPathOS = symPathWriter->open(current.symPathOS);
-      if (!isInternal) {
+      }      
+      if (symPathWriter) {
         trueState->symPathOS << "1";
-        if (forkRequired) {
-          falseState->symPathOS = symPathWriter->open(current.symPathOS);
-          falseState->symPathOS << "0";
-        }
+        falseState->symPathOS = symPathWriter->open(current.symPathOS);
+        falseState->symPathOS << "0";
       }
     }
 
-    if (forkRequired) {
-      addConstraint(*trueState, condition);
-      addConstraint(*falseState, negatedCondition);
-    } else {
-      /* it must be a recovery state, and one of the branches is inconsistent */
-      consistentCondition = isTrueStateValid ? condition : negatedCondition;
-      addConstraint(*trueState, consistentCondition);
-    }
+    addConstraint(*trueState, condition);
+    addConstraint(*falseState, negatedCondition);
 
     /* TODO: handle termination of recovery states... */
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
       terminateStateEarly(*trueState, "max-depth exceeded.");
-      if (forkRequired) {
-        terminateStateEarly(*falseState, "max-depth exceeded.");
-      }
+      terminateStateEarly(*falseState, "max-depth exceeded.");
       return StatePair(0, 0);
     }
 
     if (trueState->isRecoveryState()) {
-      if (forkRequired) {
-        /* if we are here, then the false state is consistent with it's dependent states */
-        forkDependentStates(trueState, falseState);
-      }
+      forkDependentStates(trueState, falseState);
 
-      /* copy constraints if required */
-      if (forkRequired) {
-        mergeConstraintsForAll(*trueState, condition);
-        mergeConstraintsForAll(*falseState, negatedCondition);
-      } else {
-        consistentCondition = isTrueStateValid ? condition : negatedCondition;
-        mergeConstraintsForAll(*trueState, consistentCondition);
-      }
-
-      if (isTrueStateValid && !isFalseStateValid) {
-        return StatePair(trueState, 0);
-      }
-      if (!isTrueStateValid && isFalseStateValid) {
-        if (forkRequired) {
-          return StatePair(0, falseState);
-        } else {
-          /* reuse the current state... */
-          return StatePair(0, trueState);
-        }
-      }
-      if (!isTrueStateValid && !isFalseStateValid) {
-        /* TODO: is it possible? */
-        assert(false);
-      }
+      /* propagate constraints if required */
+      mergeConstraintsForAll(*trueState, condition);
+      mergeConstraintsForAll(*falseState, negatedCondition);
     }
 
     return StatePair(trueState, falseState);
@@ -4603,29 +4500,6 @@ void Executor::dumpConstrains(ExecutionState &state) {
       ref<Expr> e = *i;
       DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "  -- "; e->dump());
   }
-}
-
-/* checks consistency without creating a new state */
-bool Executor::checkConsistency(ExecutionState &recoveryState, ref<Expr> condition) {
-    Solver::Validity result;
-    ExecutionState *next = NULL;
-
-    next = recoveryState.getDependentState();
-    do {
-        solver->evaluate(*next, condition, result);
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("query result: %d", result));
-        if (result == Solver::False) {
-            return false;
-        }
-
-        if (next->isRecoveryState()) {
-            next = next->getDependentState();
-        } else {
-            next = NULL;
-        }
-    } while (next);
-
-    return true;
 }
 
 MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, bool isLocal, Instruction *allocInst, bool zeroMemory) {
