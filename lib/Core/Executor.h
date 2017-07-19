@@ -516,6 +516,7 @@ private:
   ExecutionState *forkDependentStates(ExecutionState *trueState, ExecutionState *falseState);
   void mergeConstraintsForAll(ExecutionState &recoveryState, ref<Expr> condition);
   llvm::Function *getSlice(llvm::Function *target, uint32_t sliceId, ModRefAnalysis::SideEffectType type);
+  ExecutionState *createSnapshotState(ExecutionState &state);
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,

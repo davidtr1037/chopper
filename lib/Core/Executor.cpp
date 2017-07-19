@@ -1462,7 +1462,7 @@ void Executor::executeCall(ExecutionState &state,
         DEBUG_BASIC,
         klee_message("%p: adding snapshot (index = %u)", &state, index)
       );
-      state.addSnapshot(Snapshot(new ExecutionState(state), f));
+      state.addSnapshot(Snapshot(createSnapshotState(state), f));
       interpreterHandler->incSnapshotsCount();
       /* TODO: will be replaced later... */
       state.clearRecoveredAddresses();
@@ -4716,7 +4716,6 @@ void Executor::terminateStateRecursively(ExecutionState &state) {
 void Executor::mergeConstraints(ExecutionState &dependentState, ref<Expr> condition) {
     assert(dependentState.isNormalState());
     addConstraint(dependentState, condition);
-    //dependentState.addGuidingConstraint(condition);
 }
 
 bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
@@ -4937,4 +4936,13 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
     }
 
     return sliceInfo->f;
+}
+
+ExecutionState *Executor::createSnapshotState(ExecutionState &state) {
+    ExecutionState *snapshotState = new ExecutionState(state);
+
+    /* remove guiding constraints */
+    snapshotState->clearGuidingConstraints();
+
+    return snapshotState;
 }
