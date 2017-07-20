@@ -114,7 +114,7 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
-	refCount(0),
+    refCount(0),
     fnAliases(state.fnAliases),
 
     type(state.type),
