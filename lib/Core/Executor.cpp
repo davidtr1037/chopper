@@ -440,12 +440,11 @@ const Module *Executor::setModule(llvm::Module *module,
 
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
-  bool hasSlicingParameter = !interpreterOpts.slicingOptions.empty();
+  bool hasSlicingParameter = !interpreterOpts.skippedFunctions.empty();
   if (hasSlicingParameter) {
     /* build target functions */
     std::vector<std::string> targets;
-    const std::vector<SkippedFunctionOption> &slicingOptions = interpreterOpts.slicingOptions;
-    for (auto i = slicingOptions.begin(); i != slicingOptions.end(); i++) {
+    for (auto i = interpreterOpts.skippedFunctions.begin(), e = interpreterOpts.skippedFunctions.end(); i != e; i++) {
       targets.push_back(i->name);
     }
 
@@ -4624,8 +4623,7 @@ void Executor::mergeConstraints(ExecutionState &dependentState, ref<Expr> condit
 }
 
 bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
-    const std::vector<SkippedFunctionOption> &options = interpreterOpts.slicingOptions;
-    for (auto i = options.begin(); i != options.end(); i++) {
+    for (auto i = interpreterOpts.skippedFunctions.begin(), e = interpreterOpts.skippedFunctions.end(); i != e; i++) {
         const SkippedFunctionOption &option = *i;
         if (option.name == f->getName().str()) {
             Instruction *callInst = state.prevPC->inst;

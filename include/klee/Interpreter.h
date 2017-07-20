@@ -96,7 +96,7 @@ public:
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
-    std::vector<SkippedFunctionOption> slicingOptions;
+    std::vector<SkippedFunctionOption> skippedFunctions;
     std::vector<std::string> inlinedFunctions;
     unsigned int maxErrorCount;
 
