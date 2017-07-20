@@ -79,7 +79,7 @@ struct RecoveryInfo {
     llvm::Function *f;
     uint32_t sliceId;
     /* TODO: a bit strange that it is here, will be fixed later */
-    ExecutionState *snapshotState;
+    ref<ExecutionState> snapshotState;
     unsigned int snapshotIndex;
 
     RecoveryInfo() :
@@ -99,7 +99,7 @@ struct RecoveryInfo {
 
 struct Snapshot {
     /* TODO: should be ref<ExecutionState *> */
-    ExecutionState *state;
+    ref<ExecutionState> state;
     llvm::Function *f;
 
     /* TODO: is it required? */
@@ -110,7 +110,7 @@ struct Snapshot {
 
     };
 
-    Snapshot(ExecutionState *state, llvm::Function *f) :
+    Snapshot(ref<ExecutionState> state, llvm::Function *f) :
         state(state),
         f(f)
     {
@@ -133,6 +133,8 @@ struct RecoveryResult {
 class ExecutionState {
 public:
   typedef std::vector<StackFrame> stack_ty;
+  /* the reference count is used only for snapshot states */
+  unsigned int refCount;
 
 private:
   // unsupported, use copy constructor
@@ -259,7 +261,7 @@ public:
   void removeFnAlias(std::string fn);
 
 private:
-  ExecutionState() : ptreeNode(0) {}
+  ExecutionState() : refCount(0), ptreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);

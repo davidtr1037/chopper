@@ -64,6 +64,7 @@ StackFrame::~StackFrame() {
 
 ExecutionState::ExecutionState(KFunction *kf) :
     /* TODO: fix? */
+    refCount(0),
     type(NORMAL_STATE),
 
     /* state properties */
@@ -109,6 +110,7 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
+	refCount(0),
     fnAliases(state.fnAliases),
 
     type(state.type),
