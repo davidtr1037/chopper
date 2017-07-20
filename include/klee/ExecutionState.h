@@ -69,7 +69,7 @@ struct StackFrame {
 #define RECOVERY_STATE (1 << 1)
 
 struct RecoveryInfo {
-	unsigned int refCount;
+    unsigned int refCount;
 
     /* TODO: is it required? */
     llvm::Instruction *loadInst;
@@ -84,7 +84,7 @@ struct RecoveryInfo {
 
     RecoveryInfo() :
         refCount(0),
-    	loadInst(0),
+        loadInst(0),
         loadAddr(0),
         loadSize(0),
         f(0),
