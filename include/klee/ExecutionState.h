@@ -69,6 +69,8 @@ struct StackFrame {
 #define RECOVERY_STATE (1 << 1)
 
 struct RecoveryInfo {
+	unsigned int refCount;
+
     /* TODO: is it required? */
     llvm::Instruction *loadInst;
     uint64_t loadAddr;
@@ -77,11 +79,12 @@ struct RecoveryInfo {
     llvm::Function *f;
     uint32_t sliceId;
     /* TODO: a bit strange that it is here, will be fixed later */
-    ExecutionState *snapshotState;
+    ref<ExecutionState> snapshotState;
     unsigned int snapshotIndex;
 
     RecoveryInfo() :
-        loadInst(0),
+        refCount(0),
+    	loadInst(0),
         loadAddr(0),
         loadSize(0),
         f(0),
@@ -96,7 +99,7 @@ struct RecoveryInfo {
 
 struct Snapshot {
     /* TODO: should be ref<ExecutionState *> */
-    ExecutionState *state;
+    ref<ExecutionState> state;
     llvm::Function *f;
 
     /* TODO: is it required? */
@@ -107,7 +110,7 @@ struct Snapshot {
 
     };
 
-    Snapshot(ExecutionState *state, llvm::Function *f) :
+    Snapshot(ref<ExecutionState> state, llvm::Function *f) :
         state(state),
         f(f)
     {
@@ -130,6 +133,8 @@ struct RecoveryResult {
 class ExecutionState {
 public:
   typedef std::vector<StackFrame> stack_ty;
+  /* the reference count is used only for snapshot states */
+  unsigned int refCount;
 
 private:
   // unsupported, use copy constructor
@@ -167,7 +172,7 @@ private:
   uint32_t directRetSliceId;
   /* we use this to determine which recovery states must be run */
   /* TODO: not sure if queue is the best data structure for this... */
-  std::list<RecoveryInfo *> pendingRecoveryInfos;
+  std::list< ref<RecoveryInfo> > pendingRecoveryInfos;
 
   /* recovery state properties */
 
@@ -178,7 +183,7 @@ private:
   /* a reference to the originating state */
   ExecutionState *originatingState;
   /* TODO: should be ref<RecoveryInfo> */
-  RecoveryInfo *recoveryInfo;
+  ref<RecoveryInfo> recoveryInfo;
   /* we use this record while executing a recovery state  */
   AllocationRecord guidingAllocationRecord;
 
@@ -256,7 +261,7 @@ public:
   void removeFnAlias(std::string fn);
 
 private:
-  ExecutionState() : ptreeNode(0) {}
+  ExecutionState() : refCount(0), ptreeNode(0) {}
 
 public:
   ExecutionState(KFunction *kf);
@@ -455,12 +460,12 @@ public:
     originatingState = state;
   }
 
-  RecoveryInfo *getRecoveryInfo() {
+  ref<RecoveryInfo> getRecoveryInfo() {
     assert(isRecoveryState());
     return recoveryInfo;
   }
 
-  void setRecoveryInfo(RecoveryInfo *recoveryInfo) {
+  void setRecoveryInfo(ref<RecoveryInfo> recoveryInfo) {
     assert(isRecoveryState());
     this->recoveryInfo = recoveryInfo;
   }
@@ -597,12 +602,12 @@ public:
     directRetSliceId = id;
   }
 
-  std::list<RecoveryInfo *> &getPendingRecoveryInfos() {
+  std::list< ref<RecoveryInfo> > &getPendingRecoveryInfos() {
     return pendingRecoveryInfos;
   }
 
-  RecoveryInfo *getPendingRecoveryInfo() {
-    RecoveryInfo *ri = pendingRecoveryInfos.front();
+  ref<RecoveryInfo> getPendingRecoveryInfo() {
+    ref<RecoveryInfo> ri = pendingRecoveryInfos.front();
     pendingRecoveryInfos.pop_front();
     return ri;
   }

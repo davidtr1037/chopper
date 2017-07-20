@@ -14,6 +14,8 @@ using namespace llvm;
 using namespace klee;
 
 ASContext::ASContext(Cloner *cloner, std::vector<Instruction *> &callTrace, Instruction *allocInst) {
+	refCount = 0;
+
     for (std::vector<Instruction *>::iterator i = callTrace.begin(); i != callTrace.end(); i++) {
         Instruction *inst = *i;
         trace.push_back(getTranslatedInst(cloner, inst));
@@ -23,6 +25,7 @@ ASContext::ASContext(Cloner *cloner, std::vector<Instruction *> &callTrace, Inst
 }
 
 ASContext::ASContext(ASContext &other) :
+	refCount(0),
     trace(other.trace)    
 {
     
