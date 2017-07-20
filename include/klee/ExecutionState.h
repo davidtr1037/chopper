@@ -69,6 +69,8 @@ struct StackFrame {
 #define RECOVERY_STATE (1 << 1)
 
 struct RecoveryInfo {
+	unsigned int refCount;
+
     /* TODO: is it required? */
     llvm::Instruction *loadInst;
     uint64_t loadAddr;
@@ -81,7 +83,8 @@ struct RecoveryInfo {
     unsigned int snapshotIndex;
 
     RecoveryInfo() :
-        loadInst(0),
+        refCount(0),
+    	loadInst(0),
         loadAddr(0),
         loadSize(0),
         f(0),
@@ -167,7 +170,7 @@ private:
   uint32_t directRetSliceId;
   /* we use this to determine which recovery states must be run */
   /* TODO: not sure if queue is the best data structure for this... */
-  std::list<RecoveryInfo *> pendingRecoveryInfos;
+  std::list< ref<RecoveryInfo> > pendingRecoveryInfos;
 
   /* recovery state properties */
 
@@ -178,7 +181,7 @@ private:
   /* a reference to the originating state */
   ExecutionState *originatingState;
   /* TODO: should be ref<RecoveryInfo> */
-  RecoveryInfo *recoveryInfo;
+  ref<RecoveryInfo> recoveryInfo;
   /* we use this record while executing a recovery state  */
   AllocationRecord guidingAllocationRecord;
 
@@ -455,12 +458,12 @@ public:
     originatingState = state;
   }
 
-  RecoveryInfo *getRecoveryInfo() {
+  ref<RecoveryInfo> getRecoveryInfo() {
     assert(isRecoveryState());
     return recoveryInfo;
   }
 
-  void setRecoveryInfo(RecoveryInfo *recoveryInfo) {
+  void setRecoveryInfo(ref<RecoveryInfo> recoveryInfo) {
     assert(isRecoveryState());
     this->recoveryInfo = recoveryInfo;
   }
@@ -597,12 +600,12 @@ public:
     directRetSliceId = id;
   }
 
-  std::list<RecoveryInfo *> &getPendingRecoveryInfos() {
+  std::list< ref<RecoveryInfo> > &getPendingRecoveryInfos() {
     return pendingRecoveryInfos;
   }
 
-  RecoveryInfo *getPendingRecoveryInfo() {
-    RecoveryInfo *ri = pendingRecoveryInfos.front();
+  ref<RecoveryInfo> getPendingRecoveryInfo() {
+    ref<RecoveryInfo> ri = pendingRecoveryInfos.front();
     pendingRecoveryInfos.pop_front();
     return ri;
   }

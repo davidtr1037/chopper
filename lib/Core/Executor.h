@@ -466,7 +466,7 @@ private:
   void getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *kinst,
-    std::list<RecoveryInfo *> &result
+    std::list< ref<RecoveryInfo> > &result
   );
   void getLoadInfo(
     ExecutionState &state,
@@ -479,7 +479,7 @@ private:
   void resumeState(ExecutionState &state, bool implicitlyCreated);
   void notifyDependentState(ExecutionState &recoveryState);
   void onRecoveryStateExit(ExecutionState &state);
-  void startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo);
+  void startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recoveryInfo);
   void onRecoveryStateWrite(
     ExecutionState &state,
     ref<Expr> address,
