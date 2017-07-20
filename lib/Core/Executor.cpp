@@ -4703,13 +4703,11 @@ void Executor::unbindAll(ExecutionState *state, const MemoryObject *mo) {
     } while (next);
 }
 
-ExecutionState *Executor::forkDependentStates(ExecutionState *trueState, ExecutionState *falseState) {
+void Executor::forkDependentStates(ExecutionState *trueState, ExecutionState *falseState) {
     ExecutionState *current = trueState->getDependentState();
     ExecutionState *forked = NULL;
     ExecutionState *prevForked = falseState;
     ExecutionState *forkedOriginatingState = NULL;
-    ExecutionState *firstForked = NULL;
-    bool isFirst = true;
 
     /* fork the chain of dependent states */
     do {
@@ -4728,12 +4726,6 @@ ExecutionState *Executor::forkDependentStates(ExecutionState *trueState, Executi
         std::pair<PTree::Node*, PTree::Node*> res = processTree->split(current->ptreeNode, forked, current);
         forked->ptreeNode = res.first;
         current->ptreeNode = res.second;
-
-        /* first forked state */
-        if (isFirst) {
-            firstForked = forked;
-            isFirst = false;
-        }
 
         if (current->isRecoveryState()) {
             prevForked = forked;
@@ -4759,8 +4751,6 @@ ExecutionState *Executor::forkDependentStates(ExecutionState *trueState, Executi
             current = NULL;
         }
     } while (current);
-
-    return firstForked;
 }
 
 void Executor::mergeConstraintsForAll(ExecutionState &recoveryState, ref<Expr> condition) {
