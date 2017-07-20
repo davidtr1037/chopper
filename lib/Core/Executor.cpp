@@ -1438,7 +1438,8 @@ void Executor::executeCall(ExecutionState &state,
         DEBUG_BASIC,
         klee_message("%p: adding snapshot (index = %u)", &state, index)
       );
-      state.addSnapshot(Snapshot(createSnapshotState(state), f));
+      ref<ExecutionState> snapshotState(createSnapshotState(state));
+      state.addSnapshot(Snapshot(snapshotState, f));
       interpreterHandler->incSnapshotsCount();
       /* TODO: will be replaced later... */
       state.clearRecoveredAddresses();
@@ -4319,7 +4320,7 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
     DEBUG_BASIC,
     klee_message("starting recovery for function %s, load address %#lx", recoveryInfo->f->getName().str().c_str(), recoveryInfo->loadAddr)
   );
-  ExecutionState *snapshotState = recoveryInfo->snapshotState;
+  ref<ExecutionState> snapshotState = recoveryInfo->snapshotState;
 
   /* initialize recovery state */
   /* TODO: non-first snapshots hold normal state properties! */
