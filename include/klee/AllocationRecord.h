@@ -31,7 +31,7 @@ public:
     void dump();
 
 private:
-    typedef std::pair<ASContext *, std::list<MemoryObject *> > Entry;
+    typedef std::pair< ref<ASContext>, std::list<MemoryObject *> > Entry;
     typedef std::vector<Entry> Record;
 
     void incRefCount();

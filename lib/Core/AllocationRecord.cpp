@@ -61,7 +61,7 @@ void AllocationRecord::decRefCount() {
 void AllocationRecord::addAddr(ASContext &context, MemoryObject *mo) {
     Entry *entry = find(context);
     if (!entry) {
-        ASContext *c = new ASContext(context);
+        ref<ASContext> c(new ASContext(context));
         std::list<MemoryObject *> q;
         q.push_back(mo);
         record.push_back(std::make_pair(c, q));
@@ -115,7 +115,7 @@ void AllocationRecord::dump() {
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("allocation record:"));
         for (Record::iterator i = record.begin(); i != record.end(); i++) {
             Entry &entry = *i;
-            ASContext *c = entry.first;
+            ref<ASContext> c = entry.first;
             c->dump();
         }
     }
