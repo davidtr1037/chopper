@@ -4002,6 +4002,10 @@ bool Executor::isMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
     return false;
   }
 
+  if (ki->inst->hasNUses(0)) {
+    return false;
+  }
+
   if (!isRecoveryRequired(state, ki)) {
     return false;
   }
