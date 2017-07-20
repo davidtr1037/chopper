@@ -19,6 +19,7 @@ klee_add_component(kleeModule
   PhiCleaner.cpp
   RaiseAsm.cpp
   Scalarizer.cpp
+  ReturnToVoidFunctionPass.cpp
 )
 
 set(LLVM_COMPONENTS

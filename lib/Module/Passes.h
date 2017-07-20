@@ -10,12 +10,14 @@
 #ifndef KLEE_PASSES_H
 #define KLEE_PASSES_H
 
+#include "klee/Interpreter.h"
 #include "klee/Config/Version.h"
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/InstVisitor.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
@@ -178,6 +180,20 @@ public:
   bool runOnModule(llvm::Module &M);
   bool checkPassed() const { return instructionOperandsConform; }
 };
+
+class ReturnToVoidFunctionPass : public llvm::ModulePass {
+  static char ID;
+  const std::vector<Interpreter::SkippedFunctionOption> skippedFunctions;
+public:
+  ReturnToVoidFunctionPass(const std::vector<Interpreter::SkippedFunctionOption> _skippedFunctions): ModulePass(ID), skippedFunctions(_skippedFunctions) {}
+  virtual bool runOnModule(llvm::Module &M);
+  virtual bool runOnFunction(llvm::Function &f, llvm::Module &M);
+  llvm::Function *createWrapperFunction(llvm::Function &f, llvm::Module &M);
+  void replaceCalls(llvm::Function *f, llvm::Function *new_f, unsigned int line);
+  void replaceCall(llvm::CallInst *callInst, llvm::Function *f, llvm::Function *new_f);
+
+};
+
 }
 
 #endif

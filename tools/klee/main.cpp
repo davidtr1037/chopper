@@ -1210,10 +1210,14 @@ void parseSlicingParameter(
         if (!parseSlicedFunctionOption(token, fname, line)) {
             klee_error("slice option: invalid parameter: %s", token.c_str());
         }
-        if (!module->getFunction(fname)) {
+        Function *f = module->getFunction(fname);
+		if (!f) {
           klee_error("slice option: function '%s' not found in module.", fname.c_str());
         }
 
+		if (!f->getReturnType()->isVoidTy()) {
+		  fname = std::string("__wrap_") + fname;
+		}
         result.push_back(Interpreter::SkippedFunctionOption(fname, line));
     }
 }

@@ -445,7 +445,7 @@ const Module *Executor::setModule(llvm::Module *module,
     sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, true);
   }
 
-  kmodule->prepare(opts, interpreterHandler, hasSlicingParameter, ra, inliner, aa, mra, cloner, sliceGenerator);
+  kmodule->prepare(opts, interpreterOpts.skippedFunctions, interpreterHandler, hasSlicingParameter, ra, inliner, aa, mra, cloner, sliceGenerator);
 
   specialFunctionHandler->bind();
 
@@ -4602,7 +4602,7 @@ void Executor::mergeConstraints(ExecutionState &dependentState, ref<Expr> condit
 bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
     for (auto i = interpreterOpts.skippedFunctions.begin(), e = interpreterOpts.skippedFunctions.end(); i != e; i++) {
         const SkippedFunctionOption &option = *i;
-        if (option.name == f->getName().str()) {
+        if ((option.name == f->getName().str())) {
             Instruction *callInst = state.prevPC->inst;
             const InstructionInfo &info = kmodule->infos->getInfo(callInst);
             /* skip any call site */

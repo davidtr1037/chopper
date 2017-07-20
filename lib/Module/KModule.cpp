@@ -205,6 +205,7 @@ void KModule::addInternalFunction(const char* functionName){
 }
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
+		              const std::vector<Interpreter::SkippedFunctionOption> &slicingOptions,
                       InterpreterHandler *ih,
                       bool hasSlicingParameter,
                       ReachabilityAnalysis *ra,
@@ -220,6 +221,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // optimize is seeing what is as close as possible to the final
   // module.
   LegacyLLVMPassManagerTy pm;
+  pm.add(new ReturnToVoidFunctionPass(slicingOptions));
   pm.add(new RaiseAsmPass());
   // This pass will scalarize as much code as possible so that the Executor
   // does not need to handle operands of vector type for most instructions
