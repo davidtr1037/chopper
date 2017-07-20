@@ -14,7 +14,7 @@ class ExecutionState;
 class ASContext {
 public:
 
-    ASContext() {
+    ASContext() : refCount(0) {
 
     }
 
@@ -27,6 +27,8 @@ public:
     bool operator!=(ASContext &other);
 
     void dump();
+
+    unsigned int refCount;
 
 private:
 
