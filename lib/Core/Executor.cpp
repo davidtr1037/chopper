@@ -488,7 +488,11 @@ Executor::~Executor() {
     delete statsTracker;
   delete solver;
   /* TODO: is it the right place? */
-  delete cloner;
+  if (sliceGenerator) delete sliceGenerator;
+  if (cloner) delete cloner;
+  if (mra) delete mra;
+  if (inliner) delete inliner;
+  if (ra) delete ra;
   delete kmodule;
   while(!timers.empty()) {
     delete timers.back();
@@ -1460,7 +1464,7 @@ void Executor::executeCall(ExecutionState &state,
 
     /* TODO: fix this mess... */
     if (state.isRecoveryState()) {
-      RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
+      ref<RecoveryInfo> recoveryInfo = state.getRecoveryInfo();
       f = getSlice(f, recoveryInfo->sliceId, ModRefAnalysis::Modifier);
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
@@ -4048,7 +4052,7 @@ bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
 
 bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
   /* find which slices should be executed... */
-  std::list<RecoveryInfo *> &recoveryInfos = state.getPendingRecoveryInfos();
+  std::list< ref<RecoveryInfo> > &recoveryInfos = state.getPendingRecoveryInfos();
   getAllRecoveryInfo(state, ki, recoveryInfos);
   if (recoveryInfos.empty()) {
     /* we are not dependent on previously skipped functions */
@@ -4058,7 +4062,7 @@ bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
   /* TODO: move to another place? */
   state.pc = state.prevPC;
 
-  RecoveryInfo *ri = state.getPendingRecoveryInfo();
+  ref<RecoveryInfo> ri = state.getPendingRecoveryInfo();
   startRecoveryState(state, ri);
 
   if (!state.isSuspended()) {
@@ -4071,7 +4075,7 @@ bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
 void Executor::getAllRecoveryInfo(
     ExecutionState &state,
     KInstruction *ki,
-    std::list<RecoveryInfo *> &result
+    std::list< ref<RecoveryInfo> > &result
 ) {
   Instruction *loadInst;
   uint64_t loadAddr;
@@ -4093,7 +4097,7 @@ void Executor::getAllRecoveryInfo(
   mra->getApproximateModInfos(ki->getOrigInst(), preciseAllocSite, approximateModInfos);
 
   /* all the recovery information which may be required  */
-  std::list<RecoveryInfo *> required;
+  std::list< ref<RecoveryInfo> > required;
   /* the snapshots of the state */
   std::vector<Snapshot> &snapshots = state.getSnapshots();
   /* we start from the last snapshot which is not affected by an overwrite */
@@ -4128,7 +4132,7 @@ void Executor::getAllRecoveryInfo(
       uint32_t sliceId = entry->second;
 
       /* initialize... */
-      RecoveryInfo *recoveryInfo = new RecoveryInfo();
+      ref<RecoveryInfo> recoveryInfo(new RecoveryInfo());
       recoveryInfo->loadInst = loadInst;
       recoveryInfo->loadAddr = loadAddr;
       recoveryInfo->loadSize = loadSize;
@@ -4145,8 +4149,8 @@ void Executor::getAllRecoveryInfo(
   }
 
   /* do some filtering... */
-  for (std::list<RecoveryInfo *>::reverse_iterator i = required.rbegin(); i != required.rend(); i++) {
-    RecoveryInfo *recoveryInfo = *i;
+  for (std::list< ref<RecoveryInfo> >::reverse_iterator i = required.rbegin(); i != required.rend(); i++) {
+    ref<RecoveryInfo> recoveryInfo = *i;
     unsigned int index = recoveryInfo->snapshotIndex;
     unsigned int sliceId = recoveryInfo->sliceId;
 
@@ -4286,7 +4290,7 @@ void Executor::onRecoveryStateExit(ExecutionState &state) {
 
   /* check if we need to run another recovery state */
   if (dependentState->hasPendingRecoveryInfo()) {
-    RecoveryInfo *ri = dependentState->getPendingRecoveryInfo();
+    ref<RecoveryInfo> ri = dependentState->getPendingRecoveryInfo();
     startRecoveryState(*dependentState, ri);
   } else {
     notifyDependentState(state);
@@ -4310,7 +4314,7 @@ void Executor::notifyDependentState(ExecutionState &recoveryState) {
   }
 }
 
-void Executor::startRecoveryState(ExecutionState &state, RecoveryInfo *recoveryInfo) {
+void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recoveryInfo) {
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message("starting recovery for function %s, load address %#lx", recoveryInfo->f->getName().str().c_str(), recoveryInfo->loadAddr)
@@ -4424,7 +4428,7 @@ void Executor::onRecoveryStateWrite(
   );
 
   uint64_t storeAddr = dyn_cast<ConstantExpr>(address)->getZExtValue();
-  RecoveryInfo *recoveryInfo = state.getRecoveryInfo();
+  ref<RecoveryInfo> recoveryInfo = state.getRecoveryInfo();
   if (storeAddr != recoveryInfo->loadAddr) {
     return;
   }
