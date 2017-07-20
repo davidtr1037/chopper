@@ -10,11 +10,13 @@
 #ifndef KLEE_PASSES_H
 #define KLEE_PASSES_H
 
+#include "klee/Interpreter.h"
 #include "klee/Config/Version.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/InstVisitor.h"
 #include "llvm/IR/Module.h"
 #else
 #include "llvm/Constants.h"
@@ -178,6 +180,19 @@ private:
                      llvm::Value *value,
                      llvm::BasicBlock *origBlock,
                      llvm::BasicBlock *defaultBlock);
+};
+
+class ReturnToVoidFunctionPass : public llvm::ModulePass {
+  static char ID;
+  const std::vector<Interpreter::SkippedFunctionOption> skippedFunctions;
+public:
+  ReturnToVoidFunctionPass(const std::vector<Interpreter::SkippedFunctionOption> _skippedFunctions): ModulePass(ID), skippedFunctions(_skippedFunctions) {}
+  virtual bool runOnModule(llvm::Module &M);
+  virtual bool runOnFunction(llvm::Function &f, llvm::Module &M);
+  llvm::Function *createWrapperFunction(llvm::Function &f, llvm::Module &M);
+  void replaceCalls(llvm::Function *f, llvm::Function *new_f, unsigned int line);
+  void replaceCall(llvm::CallInst *callInst, llvm::Function *f, llvm::Function *new_f);
+
 };
 
 }

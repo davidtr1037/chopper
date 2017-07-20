@@ -245,6 +245,7 @@ void KModule::addInternalFunction(const char* functionName){
 }
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
+		              const std::vector<Interpreter::SkippedFunctionOption> &slicingOptions,
                       InterpreterHandler *ih,
                       bool hasSlicingParameter,
                       ReachabilityAnalysis *ra,
@@ -309,6 +310,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // optimize is seeing what is as close as possible to the final
   // module.
   PassManager pm;
+  pm.add(new ReturnToVoidFunctionPass(slicingOptions));
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
