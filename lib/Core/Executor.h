@@ -504,7 +504,7 @@ private:
   bool canSkipCallSite(ExecutionState &state, llvm::Function *f);
   void bindAll(ExecutionState *state, MemoryObject *mo, bool isLocal, bool zeroMemory);
   void unbindAll(ExecutionState *state, const MemoryObject *mo);
-  ExecutionState *forkDependentStates(ExecutionState *trueState, ExecutionState *falseState);
+  void forkDependentStates(ExecutionState *trueState, ExecutionState *falseState);
   void mergeConstraintsForAll(ExecutionState &recoveryState, ref<Expr> condition);
   llvm::Function *getSlice(llvm::Function *target, uint32_t sliceId, ModRefAnalysis::SideEffectType type);
   ExecutionState *createSnapshotState(ExecutionState &state);
