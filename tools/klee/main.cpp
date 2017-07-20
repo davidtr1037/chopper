@@ -1426,7 +1426,7 @@ int main(int argc, char **argv, char **envp) {
 
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
-  IOpts.slicingOptions = slicingOptions;
+  IOpts.skippedFunctions = slicingOptions;
   IOpts.inlinedFunctions = inlinedFunctions;
   IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
@@ -1605,7 +1605,7 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumTestCases() << "\n";
 
   /* these are relevant only when we have a slicing option */
-  if (!IOpts.slicingOptions.empty()) {
+  if (!IOpts.skippedFunctions.empty()) {
     stats << "KLEE: done: recovery states = "
           << handler->getRecoveryStatesCount() << "\n";
     stats << "KLEE: done: generated slices = "
