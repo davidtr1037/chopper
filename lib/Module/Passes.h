@@ -185,14 +185,19 @@ private:
 class ReturnToVoidFunctionPass : public llvm::ModulePass {
   static char ID;
   const std::vector<Interpreter::SkippedFunctionOption> skippedFunctions;
-public:
-  ReturnToVoidFunctionPass(const std::vector<Interpreter::SkippedFunctionOption> _skippedFunctions): ModulePass(ID), skippedFunctions(_skippedFunctions) {}
-  virtual bool runOnModule(llvm::Module &M);
-  virtual bool runOnFunction(llvm::Function &f, llvm::Module &M);
-  llvm::Function *createWrapperFunction(llvm::Function &f, llvm::Module &M);
-  void replaceCalls(llvm::Function *f, llvm::Function *new_f, unsigned int line);
-  void replaceCall(llvm::CallInst *callInst, llvm::Function *f, llvm::Function *new_f);
 
+public:
+  ReturnToVoidFunctionPass(const std::vector<Interpreter::SkippedFunctionOption> _skippedFunctions) :
+    ModulePass(ID),
+    skippedFunctions(_skippedFunctions)
+  {
+
+  }
+  virtual bool runOnModule(llvm::Module &module);
+  virtual bool runOnFunction(llvm::Function &f, llvm::Module &modue);
+  llvm::Function *createWrapperFunction(llvm::Function &f, llvm::Module &module);
+  void replaceCalls(llvm::Function *f, llvm::Function *wrapper, unsigned int line);
+  void replaceCall(llvm::CallInst *callInst, llvm::Function *f, llvm::Function *wrapper);
 };
 
 }
