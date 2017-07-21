@@ -104,22 +104,22 @@ void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *wrapper
   }
 }
 
-void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *callInst, Function *f, Function *wrapper) {
+void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Function *f, Function *wrapper) {
   Value *allocaInst = NULL;
   StoreInst *prevStoreInst = NULL;
-  for (auto ui = callInst->use_begin(), ue = callInst->use_end(); ui != ue; ui++) {
+  for (auto ui = origCallInst->use_begin(), ue = origCallInst->use_end(); ui != ue; ui++) {
     if (StoreInst *storeInst = dyn_cast<StoreInst>(*ui)) {
-      if (storeInst->getOperand(0) != callInst && isa<AllocaInst>(storeInst->getOperand(0))) {
+      if (storeInst->getOperand(0) != origCallInst && isa<AllocaInst>(storeInst->getOperand(0))) {
         allocaInst = storeInst->getOperand(0);
         prevStoreInst = storeInst;
-      } else if (storeInst->getOperand(1) != callInst && isa<AllocaInst>(storeInst->getOperand(1))) {
+      } else if (storeInst->getOperand(1) != origCallInst && isa<AllocaInst>(storeInst->getOperand(1))) {
         allocaInst = storeInst->getOperand(1);
         prevStoreInst = storeInst;
       }
     }
   }
 
-  IRBuilder<> builder(callInst);
+  IRBuilder<> builder(origCallInst);
   // insert alloca for return value
   if (!allocaInst)
     allocaInst = builder.CreateAlloca(f->getReturnType());
@@ -127,19 +127,20 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *callInst, Function *f
   // insert call for the wrapper function
   vector<Value *> argsForCall;
   argsForCall.push_back(allocaInst);
-  for (unsigned int i = 0; i < callInst->getNumArgOperands(); i++) {
-    argsForCall.push_back(callInst->getArgOperand(i));
+  for (unsigned int i = 0; i < origCallInst->getNumArgOperands(); i++) {
+    argsForCall.push_back(origCallInst->getArgOperand(i));
   }
-  builder.CreateCall(wrapper, makeArrayRef(argsForCall));
+  CallInst *callInst = builder.CreateCall(wrapper, makeArrayRef(argsForCall));
+  callInst->setDebugLoc(origCallInst->getDebugLoc());
 
   if (prevStoreInst) {
     prevStoreInst->eraseFromParent();
   } else {
     Value *load = builder.CreateLoad(allocaInst);
-    callInst->replaceAllUsesWith(load);
+    origCallInst->replaceAllUsesWith(load);
   }
 
-  callInst->eraseFromParent();
+  origCallInst->eraseFromParent();
 }
 
 bool klee::ReturnToVoidFunctionPass::runOnModule(Module &module) {
