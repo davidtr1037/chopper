@@ -4002,6 +4002,7 @@ bool Executor::isMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
     return false;
   }
 
+  /* there is no need for recovery, if the value is not used... */
   if (ki->inst->hasNUses(0)) {
     return false;
   }
