@@ -6,16 +6,16 @@
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-B
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-C
 
-// CHECK-PATHS: KLEE: done: completed paths = 2
-// CHECK-STATES: KLEE: done: recovery states = 4
+// CHECK-PATHS: KLEE: done: completed paths = 3
+// CHECK-STATES: KLEE: done: recovery states = 3
 // CHECK-SLICES: KLEE: done: generated slices = 2
-// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 3
+// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 2
 
 // CHECK-A: x = 1
 // CHECK-B: x = 2
 // CHECK-C: y = 7
 // CHECK-D: adding 0 guiding constraints
-// CHECK-E: adding 1 guiding constraints
+// CHECK-E: adding 2 guiding constraints
 
 #include <stdio.h>
 #include <assert.h>
@@ -50,8 +50,10 @@ int main(int argc, char *argv[], char *envp[]) {
     f(&o, k);
     printf("x = %d\n", o.x);
 
-    g(&o);
-    printf("y = %d\n", o.y);
+    if (k > 1) {
+        g(&o);
+        printf("y = %d\n", o.y);
+    }
 
     return 0;
 }
