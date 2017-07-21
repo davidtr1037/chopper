@@ -98,6 +98,8 @@ bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &module) 
   }
 }
 
+/// We replace a given CallInst to f with a new CallInst to __wrap_f
+/// If the original return value was used in a StoreInst, we use directly such variable, instead of creating a new one
 void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Function *f, Function *wrapper) {
   Value *allocaInst = NULL;
   StoreInst *prevStoreInst = NULL;
@@ -127,9 +129,11 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
   CallInst *callInst = builder.CreateCall(wrapper, makeArrayRef(argsForCall));
   callInst->setDebugLoc(origCallInst->getDebugLoc());
 
+  // if there was a StoreInst, we remove it
   if (prevStoreInst) {
     prevStoreInst->eraseFromParent();
   } else {
+    // otherwise, we create a LoadInst for the return value
     Value *load = builder.CreateLoad(allocaInst);
     origCallInst->replaceAllUsesWith(load);
   }
