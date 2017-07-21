@@ -42,6 +42,9 @@ bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &M) {
       return changed;
     }
 
+    /// We replace a returning function f with a void __wrap_f function that:
+    ///  1- takes as first argument a variable __result that will contain the result
+    ///  2- calls f and stores the return value in __result
     Function *klee::ReturnToVoidFunctionPass::createWrapperFunction(Function &f, Module &M) {
       // create new function parameters: *return_var + original function's parameters
       vector<Type *> paramTypes;
@@ -80,6 +83,8 @@ bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &M) {
       return new_f;
     }
 
+    /// Replaces calls to f with the wrapper function __wrap_f
+    /// The replacement will occur at all call sites only if the user has not specified a given line in the '-skip-functions' options
     void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *new_f, unsigned int line) {
       for (auto ui = f->use_begin(), ue = f->use_end(); ui != ue; ui++) {
         if (Instruction *inst = dyn_cast<Instruction>(*ui)) {
