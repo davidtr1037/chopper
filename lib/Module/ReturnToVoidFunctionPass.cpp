@@ -25,21 +25,18 @@ using namespace std;
 
 char klee::ReturnToVoidFunctionPass::ID = 0;
 
-bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &M) {
-	  // skip void functions
-      if (f.getReturnType()->isVoidTy()) {
-    	return false;
-      }
+bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &module) {
+  // skip void functions
+  if (f.getReturnType()->isVoidTy()) {
+    return false;
+  }
 
-      bool changed = false;
-      for (std::vector<Interpreter::SkippedFunctionOption>::const_iterator i = skippedFunctions.begin(); i != skippedFunctions.end(); i++) {
-    	if (string("__wrap_") + f.getName().str() == i->name) {
-    	  Function *new_f = createWrapperFunction(f, M);
-		  replaceCalls(&f, new_f, i->line);
-		  changed = true;
-    	}
-      }
-      return changed;
+  bool changed = false;
+  for (std::vector<Interpreter::SkippedFunctionOption>::const_iterator i = skippedFunctions.begin(); i != skippedFunctions.end(); i++) {
+    if (string("__wrap_") + f.getName().str() == i->name) {
+      Function *wrapper = createWrapperFunction(f, module);
+      replaceCalls(&f, wrapper, i->line);
+      changed = true;
     }
 
     /// We replace a returning function f with a void __wrap_f function that:
@@ -91,66 +88,59 @@ bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &M) {
           if (inst->getParent()->getParent() == new_f) {
             continue;
           }
-
-          if (line != 0) {
-			if (MDNode *N = inst->getMetadata("dbg")) {
-			  DILocation Loc(N);
-			  if (Loc.getLineNumber() != line) {
-				continue;
-			  }
-			}
-          }
-
-          if (isa<CallInst>(inst)) {
-            replaceCall(dyn_cast<CallInst>(inst), f, new_f);
-          }
-        }
-      }
-    }
-
-    void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *callInst, Function *f, Function *new_f) {
-      Value *allocaInst = NULL;
-      StoreInst *prevStoreInst = NULL;
-      for (auto ui = callInst->use_begin(), ue = callInst->use_end(); ui != ue; ui++) {
-        if (StoreInst *storeInst = dyn_cast<StoreInst>(*ui)) {
-          if (storeInst->getOperand(0) != callInst && isa<AllocaInst>(storeInst->getOperand(0))) {
-            allocaInst = storeInst->getOperand(0);
-            prevStoreInst = storeInst;
-          } else if (storeInst->getOperand(1) != callInst && isa<AllocaInst>(storeInst->getOperand(1))) {
-            allocaInst = storeInst->getOperand(1);
-            prevStoreInst = storeInst;
-          }
         }
       }
 
-      IRBuilder<> builder(callInst);
-      // insert alloca for return value
-      if (!allocaInst)
-        allocaInst = builder.CreateAlloca(f->getReturnType());
-
-      // insert call for the wrapper function
-      vector<Value *> argsForCall;
-      argsForCall.push_back(allocaInst);
-      for (unsigned int i = 0; i < callInst->getNumArgOperands(); i++) {
-        argsForCall.push_back(callInst->getArgOperand(i));
+      if (isa<CallInst>(inst)) {
+        replaceCall(dyn_cast<CallInst>(inst), f, wrapper);
       }
-      builder.CreateCall(new_f, makeArrayRef(argsForCall));
+    }
+  }
+}
 
-      if (prevStoreInst) {
-        prevStoreInst->eraseFromParent();
-      } else {
-        Value *load = builder.CreateLoad(allocaInst);
-        callInst->replaceAllUsesWith(load);
+void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *callInst, Function *f, Function *wrapper) {
+  Value *allocaInst = NULL;
+  StoreInst *prevStoreInst = NULL;
+  for (auto ui = callInst->use_begin(), ue = callInst->use_end(); ui != ue; ui++) {
+    if (StoreInst *storeInst = dyn_cast<StoreInst>(*ui)) {
+      if (storeInst->getOperand(0) != callInst && isa<AllocaInst>(storeInst->getOperand(0))) {
+        allocaInst = storeInst->getOperand(0);
+        prevStoreInst = storeInst;
+      } else if (storeInst->getOperand(1) != callInst && isa<AllocaInst>(storeInst->getOperand(1))) {
+        allocaInst = storeInst->getOperand(1);
+        prevStoreInst = storeInst;
       }
-
-      callInst->eraseFromParent();
     }
+  }
 
-    bool klee::ReturnToVoidFunctionPass::runOnModule(Module &M) {
-      // we assume to have everything linked inside the single .bc file
-      bool dirty = false;
-      for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
-        dirty |= runOnFunction(*f,M);
+  IRBuilder<> builder(callInst);
+  // insert alloca for return value
+  if (!allocaInst)
+    allocaInst = builder.CreateAlloca(f->getReturnType());
 
-      return dirty;
-    }
+  // insert call for the wrapper function
+  vector<Value *> argsForCall;
+  argsForCall.push_back(allocaInst);
+  for (unsigned int i = 0; i < callInst->getNumArgOperands(); i++) {
+    argsForCall.push_back(callInst->getArgOperand(i));
+  }
+  builder.CreateCall(wrapper, makeArrayRef(argsForCall));
+
+  if (prevStoreInst) {
+    prevStoreInst->eraseFromParent();
+  } else {
+    Value *load = builder.CreateLoad(allocaInst);
+    callInst->replaceAllUsesWith(load);
+  }
+
+  callInst->eraseFromParent();
+}
+
+bool klee::ReturnToVoidFunctionPass::runOnModule(Module &module) {
+  // we assume to have everything linked inside the single .bc file
+  bool dirty = false;
+  for (Module::iterator f = module.begin(), fe = module.end(); f != fe; ++f)
+    dirty |= runOnFunction(*f, module);
+
+  return dirty;
+}
