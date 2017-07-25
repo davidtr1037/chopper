@@ -138,7 +138,6 @@ namespace klee {
     void prepare(const Interpreter::ModuleOptions &opts,
                  const std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions,
                  InterpreterHandler *ihandler,
-                 bool hasSlicingParameter,
                  ReachabilityAnalysis *ra,
                  Inliner *inliner,
                  AAPass *aa,
@@ -149,7 +148,7 @@ namespace klee {
     /// Return an id for the given constant, creating a new one if necessary.
     unsigned getConstantID(llvm::Constant *c, KInstruction* ki);
 
-    void addFunction(KFunction *kf, bool hasSlicingParameter, Cloner *cloner, ModRefAnalysis *mra);
+    void addFunction(KFunction *kf, bool isSkippingFunctions, Cloner *cloner, ModRefAnalysis *mra);
 
   };
 } // End klee namespace
