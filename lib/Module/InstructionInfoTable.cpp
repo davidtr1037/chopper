@@ -105,7 +105,7 @@ bool InstructionInfoTable::getInstructionDebugInfo(const llvm::Instruction *I,
   return false;
 }
 
-InstructionInfoTable::InstructionInfoTable(Module *m, bool hasSlicingParameter, Cloner *cloner)
+InstructionInfoTable::InstructionInfoTable(Module *m, bool isSkippingFunctions, Cloner *cloner)
   : dummyString(""), dummyInfo(0, dummyString, 0, 0) {
   unsigned id = 0;
   std::map<const Instruction*, unsigned> lineTable;
@@ -142,7 +142,7 @@ InstructionInfoTable::InstructionInfoTable(Module *m, bool hasSlicingParameter, 
                                                   assemblyLine)));
     }
 
-    if (!hasSlicingParameter) {
+    if (!isSkippingFunctions) {
         continue;
     }
 
