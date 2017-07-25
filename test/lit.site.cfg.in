@@ -13,6 +13,7 @@ config.llvm_version_minor = "@LLVM_VERSION_MINOR@"
 # FIXME: use llvmcc not llvmgcc
 config.llvmgcc = "@LLVMCC@"
 config.llvmgxx = "@LLVMCXX@"
+config.opt = "@LLVM_TOOLS_DIR@/opt"
 
 config.cc = "@NATIVE_CC@"
 config.cxx = "@NATIVE_CXX@"
