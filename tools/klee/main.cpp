@@ -1244,11 +1244,11 @@ void parseSlicingParameter(
 
     while (std::getline(stream, token, ',')) {
         if (!parseSlicedFunctionOption(token, fname, line)) {
-            klee_error("slice option: invalid parameter: %s", token.c_str());
+            klee_error("skip-function option: invalid parameter: %s", token.c_str());
         }
         Function *f = module->getFunction(fname);
 		if (!f) {
-          klee_error("slice option: function '%s' not found in module.", fname.c_str());
+          klee_error("skip-function option: '%s' not found in module.", fname.c_str());
         }
 
 		if (!f->getReturnType()->isVoidTy()) {
@@ -1268,7 +1268,7 @@ void parseInlinedFunctions(
 
     while (std::getline(stream, fname, ',')) {
         if (!module->getFunction(fname)) {
-          klee_error("inline option: function '%s' not found in module.", fname.c_str());
+          klee_error("inline option: '%s' not found in module.", fname.c_str());
         }
 
         result.push_back(fname);

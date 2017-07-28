@@ -245,9 +245,8 @@ void KModule::addInternalFunction(const char* functionName){
 }
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
-		              const std::vector<Interpreter::SkippedFunctionOption> &slicingOptions,
+		              const std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions,
                       InterpreterHandler *ih,
-                      bool hasSlicingParameter,
                       ReachabilityAnalysis *ra,
                       Inliner *inliner,
                       AAPass *aa,
@@ -310,7 +309,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // optimize is seeing what is as close as possible to the final
   // module.
   PassManager pm;
-  pm.add(new ReturnToVoidFunctionPass(slicingOptions));
+  pm.add(new ReturnToVoidFunctionPass(skippedFunctions));
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
@@ -447,7 +446,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   kleeMergeFn = module->getFunction("klee_merge");
 
-  if (hasSlicingParameter) {
+  if (!skippedFunctions.empty()) {
     /* first, we need to do the inlining... */
     inliner->run();
 
@@ -468,7 +467,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   /* Build shadow structures */
 
-  infos = new InstructionInfoTable(module, hasSlicingParameter, cloner);
+  infos = new InstructionInfoTable(module, !skippedFunctions.empty(), cloner);
   
   for (Module::iterator it = module->begin(), ie = module->end();
        it != ie; ++it) {
@@ -480,7 +479,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     std::set<KFunction *> pool;
     pool.insert(new KFunction(f, this));
 
-    if (hasSlicingParameter) {
+    if (!skippedFunctions.empty()) {
       Cloner::SliceMap *sliceMap = cloner->getSlices(f);
       if (sliceMap != 0) {
         uint32_t retSliceId = 0;
@@ -505,7 +504,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     }
 
     for (std::set<KFunction *>::iterator kfi = pool.begin(); kfi != pool.end(); kfi++) {
-      addFunction(*kfi, hasSlicingParameter, cloner, mra);
+      addFunction(*kfi, !skippedFunctions.empty(), cloner, mra);
     }
   }
 
@@ -528,7 +527,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   }
 }
 
-void KModule::addFunction(KFunction *kf, bool hasSlicingParameter, Cloner *cloner, ModRefAnalysis *mra) {
+void KModule::addFunction(KFunction *kf, bool isSkippingFunctions, Cloner *cloner, ModRefAnalysis *mra) {
     for (unsigned i=0; i<kf->numInstructions; ++i) {
         KInstruction *ki = kf->instructions[i];
         ki->info = &infos->getInfo(ki->inst);
@@ -537,7 +536,7 @@ void KModule::addFunction(KFunction *kf, bool hasSlicingParameter, Cloner *clone
         ki->mayBlock = false;
         ki->mayOverride = false;
 
-        if (!hasSlicingParameter) {
+        if (!isSkippingFunctions) {
             continue;
         }
 

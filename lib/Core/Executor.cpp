@@ -440,8 +440,7 @@ const Module *Executor::setModule(llvm::Module *module,
 
   specialFunctionHandler = new SpecialFunctionHandler(*this);
 
-  bool hasSlicingParameter = !interpreterOpts.skippedFunctions.empty();
-  if (hasSlicingParameter) {
+  if (!interpreterOpts.skippedFunctions.empty()) {
     /* build target functions */
     std::vector<std::string> targets;
     for (auto i = interpreterOpts.skippedFunctions.begin(), e = interpreterOpts.skippedFunctions.end(); i != e; i++) {
@@ -463,7 +462,7 @@ const Module *Executor::setModule(llvm::Module *module,
     sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, true);
   }
 
-  kmodule->prepare(opts, interpreterOpts.skippedFunctions, interpreterHandler, hasSlicingParameter, ra, inliner, aa, mra, cloner, sliceGenerator);
+  kmodule->prepare(opts, interpreterOpts.skippedFunctions, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
 
   specialFunctionHandler->bind();
 
