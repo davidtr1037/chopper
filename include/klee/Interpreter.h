@@ -79,10 +79,10 @@ public:
   struct SkippedFunctionOption {
     std::string name;
     /* TODO: change to lines? */
-    unsigned int line;
+    std::vector<unsigned int> lines;
 
-    SkippedFunctionOption(std::string name, unsigned int line) :
-      name(name), line(line)
+    SkippedFunctionOption(std::string name, std::vector<unsigned int> &lines) :
+      name(name), lines(lines)
     {
 
     }

@@ -4637,8 +4637,10 @@ bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
         if ((option.name == f->getName().str())) {
             Instruction *callInst = state.prevPC->inst;
             const InstructionInfo &info = kmodule->infos->getInfo(callInst);
+            const std::vector<unsigned int> &lines = option.lines;
+
             /* skip any call site */
-            if (option.line == 0) {
+            if (lines.empty()) {
                 return true;
             }
 
@@ -4648,7 +4650,7 @@ bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
                 return true;
             }
 
-            return (option.line == info.line);
+            return std::find(lines.begin(), lines.end(), info.line) != lines.end();
         }
     }
 

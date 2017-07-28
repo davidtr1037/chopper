@@ -35,7 +35,7 @@ bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &module) 
   for (std::vector<Interpreter::SkippedFunctionOption>::const_iterator i = skippedFunctions.begin(); i != skippedFunctions.end(); i++) {
     if (string("__wrap_") + f.getName().str() == i->name) {
       Function *wrapper = createWrapperFunction(f, module);
-      replaceCalls(&f, wrapper, i->line);
+      replaceCalls(&f, wrapper, i->lines);
       changed = true;
     }
   }
@@ -86,17 +86,17 @@ Function *klee::ReturnToVoidFunctionPass::createWrapperFunction(Function &f, Mod
 
 /// Replaces calls to f with the wrapper function __wrap_f
 /// The replacement will occur at all call sites only if the user has not specified a given line in the '-skip-functions' options
-void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *wrapper, unsigned int line) {
+void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *wrapper, const vector<unsigned int> &lines) {
   for (auto ui = f->use_begin(), ue = f->use_end(); ui != ue; ui++) {
     if (Instruction *inst = dyn_cast<Instruction>(*ui)) {
       if (inst->getParent()->getParent() == wrapper) {
         continue;
       }
 
-      if (line != 0) {
+      if (!lines.empty()) {
         if (MDNode *N = inst->getMetadata("dbg")) {
           DILocation Loc(N);
-          if (Loc.getLineNumber() != line) {
+          if (find(lines.begin(), lines.end(), Loc.getLineNumber()) == lines.end()) {
             continue;
           }
         }

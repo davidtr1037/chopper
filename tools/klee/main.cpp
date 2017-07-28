@@ -1210,22 +1210,25 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 }
 #endif
 
-bool parseSlicedFunctionOption(std::string option, std::string &fname, unsigned int &line) {
+bool parseSlicedFunctionOption(
+    std::string option,
+    std::string &fname,
+    std::vector<unsigned int> &lines
+) {
     std::istringstream stream(option);
     std::string token;
     char *endptr;
 
-    line = 0;
-
     if (std::getline(stream, token, ':')) {
         fname = token;
-        if (std::getline(stream, token, ':')) {
+        while (std::getline(stream, token, '/')) {
             /* TODO: handle errors */
             const char *s = token.c_str();
-            line = strtol(s, &endptr, 10);
+            unsigned int line = strtol(s, &endptr, 10);
             if ((errno == ERANGE) || (endptr == s) || (*endptr != '\0')) {
                 return false;
             }
+            lines.push_back(line);
         }
     }
 
@@ -1240,10 +1243,10 @@ void parseSlicingParameter(
     std::istringstream stream(parameter);
     std::string token;
     std::string fname;
-    unsigned int line;
 
     while (std::getline(stream, token, ',')) {
-        if (!parseSlicedFunctionOption(token, fname, line)) {
+        std::vector<unsigned int> lines;
+        if (!parseSlicedFunctionOption(token, fname, lines)) {
             klee_error("skip-function option: invalid parameter: %s", token.c_str());
         }
         Function *f = module->getFunction(fname);
@@ -1254,7 +1257,7 @@ void parseSlicingParameter(
 		if (!f->getReturnType()->isVoidTy()) {
 		  fname = std::string("__wrap_") + fname;
 		}
-        result.push_back(Interpreter::SkippedFunctionOption(fname, line));
+        result.push_back(Interpreter::SkippedFunctionOption(fname, lines));
     }
 }
 
