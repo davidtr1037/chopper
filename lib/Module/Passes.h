@@ -195,7 +195,7 @@ public:
   virtual bool runOnModule(llvm::Module &module);
   virtual bool runOnFunction(llvm::Function &f, llvm::Module &modue);
   llvm::Function *createWrapperFunction(llvm::Function &f, llvm::Module &module);
-  void replaceCalls(llvm::Function *f, llvm::Function *wrapper, unsigned int line);
+  void replaceCalls(llvm::Function *f, llvm::Function *wrapper, const std::vector<unsigned int> &lines);
   void replaceCall(llvm::CallInst *origCallInst, llvm::Function *f, llvm::Function *wrapper);
 };
 
