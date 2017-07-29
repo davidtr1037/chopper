@@ -83,6 +83,7 @@ bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &module) 
 /// Replaces calls to f with the wrapper function __wrap_f
 /// The replacement will occur at all call sites only if the user has not specified a given line in the '-skip-functions' options
 void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *wrapper, const vector<unsigned int> &lines) {
+  vector<CallInst*> to_remove;
   for (auto ui = f->use_begin(), ue = f->use_end(); ui != ue; ui++) {
     if (Instruction *inst = dyn_cast<Instruction>(*ui)) {
       if (inst->getParent()->getParent() == wrapper) {
@@ -98,10 +99,14 @@ void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *wrapper
         }
       }
 
-      if (isa<CallInst>(inst)) {
-        replaceCall(dyn_cast<CallInst>(inst), f, wrapper);
+      if (CallInst *call = dyn_cast<CallInst>(inst)) {
+        replaceCall(call, f, wrapper);
+        to_remove.push_back(call);
       }
     }
+  }
+  for (auto ci = to_remove.begin(), ce = to_remove.end(); ci != ce; ci++) {
+    (*ci)->eraseFromParent();
   }
 }
 
@@ -141,15 +146,13 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
     prevStoreInst->eraseFromParent();
   } else {
     // otherwise, we create a LoadInst for the return value at each use
-    while(origCallInst->hasNUsesOrMore(1)) {
+    while(origCallInst->getNumUses() > 0) {
       llvm::Instruction *II = cast<llvm::Instruction>(*origCallInst->use_begin());
       IRBuilder<> builder_use(II);
       Value *load = builder_use.CreateLoad(allocaInst);
       II->replaceUsesOfWith(origCallInst, load);
     }
   }
-
-  origCallInst->eraseFromParent();
 }
 
 bool klee::ReturnToVoidFunctionPass::runOnModule(Module &module) {
