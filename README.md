@@ -81,7 +81,7 @@ klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
 ### Slicing
 The skipped functions are set using the following option:
 ```
--slice=<function1>[:line],<function2>[:line],...
+-slice=<function1>[:line1/line2/...],<function2>[:line1/line2/...],...
 ```
 ### Inlining
 In some cases, inlining can improve the precision of static analysis.
