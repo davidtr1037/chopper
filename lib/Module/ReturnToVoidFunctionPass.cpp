@@ -1,4 +1,4 @@
-//===-- PhiCleaner.cpp ----------------------------------------------------===//
+//===-- ReturnToVoidFunctionPass.cpp --------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -144,9 +144,13 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
   if (prevStoreInst) {
     prevStoreInst->eraseFromParent();
   } else {
-    // otherwise, we create a LoadInst for the return value
-    Value *load = builder.CreateLoad(allocaInst);
-    origCallInst->replaceAllUsesWith(load);
+    // otherwise, we create a LoadInst for the return value at each use
+    while(origCallInst->hasNUsesOrMore(1)) {
+      llvm::Instruction *II = cast<llvm::Instruction>(*origCallInst->use_begin());
+      IRBuilder<> builder_use(II);
+      Value *load = builder_use.CreateLoad(allocaInst);
+      II->replaceUsesOfWith(origCallInst, load);
+    }
   }
 
   origCallInst->eraseFromParent();
