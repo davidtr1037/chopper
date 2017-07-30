@@ -4738,9 +4738,6 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
             assert(sliceInfo);
         }
 
-        uint32_t retSliceId = 0;
-        bool hasRetSlice = mra->getRetSliceId(target, retSliceId);
-
         std::set<Function *> &reachable = ra->getReachableFunctions(target);
         for (std::set<Function *>::iterator i = reachable.begin(); i != reachable.end(); i++) {
             /* original function */
@@ -4755,9 +4752,6 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
             /* initialize KFunction */
             KFunction *kcloned = new KFunction(cloned, kmodule);
             kcloned->isCloned = true;
-            if (hasRetSlice) {
-                kcloned->isRetSlice = (sliceId == retSliceId);
-            }
 
             DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding function: %s", cloned->getName().data()));
             /* update debug info */

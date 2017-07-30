@@ -58,8 +58,6 @@ namespace klee {
     bool trackCoverage;
     
     bool isCloned;
-    /* relevant only for a cloned function */
-    bool isRetSlice;
 
   private:
     KFunction(const KFunction&);
