@@ -71,7 +71,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
     suspendStatus(false),
     recoveryState(0),
     blockingLoadStatus(true),
-    directRetSliceId(0),
 
     /* recovery state properties */
     exitInst(0),
@@ -126,7 +125,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     /* TODO: copy only for originating states */
     //guidingConstraints(state.guidingConstraints),
     writtenAddresses(state.writtenAddresses),
-    directRetSliceId(state.directRetSliceId),
     pendingRecoveryInfos(state.pendingRecoveryInfos),
 
     /* recovery state properties */

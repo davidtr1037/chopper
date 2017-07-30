@@ -168,10 +168,7 @@ private:
   std::set< ref<Expr> > guidingConstraints;
   /* we need to know if an address was written  */
   WrittenAddresses writtenAddresses;
-  /* TODO: add doc... */
-  uint32_t directRetSliceId;
   /* we use this to determine which recovery states must be run */
-  /* TODO: not sure if queue is the best data structure for this... */
   std::list< ref<RecoveryInfo> > pendingRecoveryInfos;
 
   /* recovery state properties */
@@ -553,53 +550,10 @@ public:
     return info.snapshotIndex + 1;
   }
 
-  //bool isAddressWritten(uint64_t address, size_t size) {
-  //  assert(isNormalState());
-  //  WrittenAddresses::iterator i = writtenAddresses.find(address);
-  //  if (i == writtenAddresses.end()) {
-  //    return false;
-  //  }
-
-  //  WrittenAddressInfo &info = *i;
-  //  std::set<size_t> &writtenSizes = i->second;
-  //  if (writtenSizes.size() != 1) {
-  //    /* TODO: something is wrong.... */
-  //    assert(false);
-  //  }
-
-  //  size_t writtenSize = *(writtenSizes.begin());
-  //  if (writtenSize != size) {
-  //    /* TODO: handle... */
-  //    assert(false);
-  //  }
-
-  //  /* cleanup... */
-  //  writtenAddresses.erase(i);
-
-  //  return true;
-  //}
-
-  bool isExecutingRetSlice() {
-    assert(isNormalState());
-    StackFrame &sf = stack.back();
-    KFunction *kf = sf.kf;
-    return kf->isCloned && kf->isRetSlice;
-  }
-
   bool isInDependentMode() {
     assert(isNormalState());
     /* TODO: add doc... */
-    return ((getSnapshots().size() > 1) || (getSnapshots().size() == 1 && !isExecutingRetSlice()));
-  }
-
-  uint32_t getDirectRetSliceId() {
-    assert(isNormalState());
-    return directRetSliceId;
-  }
-
-  void setDirectRetSliceId(uint32_t id) {
-    assert(isNormalState());
-    directRetSliceId = id;
+    return !getSnapshots().empty();
   }
 
   std::list< ref<RecoveryInfo> > &getPendingRecoveryInfos() {

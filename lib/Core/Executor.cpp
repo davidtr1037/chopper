@@ -1364,42 +1364,24 @@ void Executor::executeCall(ExecutionState &state,
       ref<ExecutionState> snapshotState(createSnapshotState(state));
       state.addSnapshot(Snapshot(snapshotState, f));
       interpreterHandler->incSnapshotsCount();
+
       /* TODO: will be replaced later... */
       state.clearRecoveredAddresses();
 
-      if (canSkipCallSite(state, f)) {
-        DEBUG_WITH_TYPE(
-          DEBUG_BASIC,
-          klee_message("%p: skipping function call to %s", &state, f->getName().data())
-        );
-        return;
-      }
-
-      /* execute the ret-slice without creating a recovery state */
-      DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("executing ret-slice directly"));
-      uint32_t retSliceId;
-      if (!mra->getRetSliceId(f, retSliceId)) {
-        /* TODO: this should not happen */
-        assert(false);
-      }
-      state.setDirectRetSliceId(retSliceId);
-      f = getSlice(f, retSliceId, ModRefAnalysis::ReturnValue);
+      DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("%p: skipping function call to %s", &state, f->getName().data())
+      );
+      return;
     }
 
-    /* TODO: fix this mess... */
+    /* inject the sliced function if needed */
     if (state.isRecoveryState()) {
       ref<RecoveryInfo> recoveryInfo = state.getRecoveryInfo();
       f = getSlice(f, recoveryInfo->sliceId, ModRefAnalysis::Modifier);
       DEBUG_WITH_TYPE(
         DEBUG_BASIC,
         klee_message("injecting slice: %s", f->getName().data())
-      );
-    }
-    if (state.isNormalState() && state.isExecutingRetSlice()) {
-      f = getSlice(f, state.getDirectRetSliceId(), ModRefAnalysis::ReturnValue);
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("injecting ret-slice...")
       );
     }
 
@@ -4624,21 +4606,6 @@ bool Executor::isFunctionToSkip(ExecutionState &state, Function *f) {
 
             return std::find(lines.begin(), lines.end(), info.line) != lines.end();
         }
-    }
-
-    return false;
-}
-
-bool Executor::canSkipCallSite(ExecutionState &state, Function *f) {
-    if (f->getReturnType()->isVoidTy()) {
-        return true;
-    }
-
-    CallInst *callInst = dyn_cast<CallInst>(state.prevPC->inst);
-    Value *returnValue = dyn_cast<Value>(callInst);
-
-    if (returnValue->hasNUses(0)) {
-        return true;
     }
 
     return false;
