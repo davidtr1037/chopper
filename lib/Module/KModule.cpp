@@ -482,9 +482,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     if (!skippedFunctions.empty()) {
       Cloner::SliceMap *sliceMap = cloner->getSlices(f);
       if (sliceMap != 0) {
-        uint32_t retSliceId = 0;
-        bool hasRetSlice = mra->getRetSliceId(f, retSliceId);
-
         for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
           uint32_t id = s->first;
           Cloner::SliceInfo &sliceInfo = s->second;
@@ -495,9 +492,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
           KFunction *kcloned = new KFunction(sliceInfo.f, this);
           kcloned->isCloned = true;
-          if (hasRetSlice) {
-            kcloned->isRetSlice = (id == retSliceId);
-          }
           pool.insert(kcloned);
         }
       }
@@ -614,8 +608,7 @@ KFunction::KFunction(llvm::Function *_function,
     numArgs(function->arg_size()),
     numInstructions(0),
     trackCoverage(true),
-    isCloned(false),
-    isRetSlice(false) {
+    isCloned(false) {
   for (llvm::Function::iterator bbit = function->begin(), 
          bbie = function->end(); bbit != bbie; ++bbit) {
     BasicBlock *bb = bbit;
