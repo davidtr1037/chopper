@@ -11,9 +11,11 @@
 
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/CFG.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/InstVisitor.h"
 #include "llvm/DebugInfo.h"
 #include "llvm/Support/raw_ostream.h"
@@ -115,6 +117,7 @@ void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *wrapper
 void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Function *f, Function *wrapper) {
   Value *allocaInst = NULL;
   StoreInst *prevStoreInst = NULL;
+  bool hasPhi = false;
   for (auto ui = origCallInst->use_begin(), ue = origCallInst->use_end(); ui != ue; ui++) {
     if (StoreInst *storeInst = dyn_cast<StoreInst>(*ui)) {
       if (storeInst->getOperand(0) != origCallInst && isa<AllocaInst>(storeInst->getOperand(0))) {
@@ -124,6 +127,8 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
         allocaInst = storeInst->getOperand(1);
         prevStoreInst = storeInst;
       }
+    } else if (isa<PHINode>(*ui)) {
+      hasPhi = true;
     }
   }
 
@@ -146,11 +151,20 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
     prevStoreInst->eraseFromParent();
   } else {
     // otherwise, we create a LoadInst for the return value at each use
-    while(origCallInst->getNumUses() > 0) {
-      llvm::Instruction *II = cast<llvm::Instruction>(*origCallInst->use_begin());
-      IRBuilder<> builder_use(II);
-      Value *load = builder_use.CreateLoad(allocaInst);
-      II->replaceUsesOfWith(origCallInst, load);
+    if (hasPhi) {
+      // FIXME: phi nodes are not easy to handle: 1) we can't add the load as
+      // first instruction of the basic block, 2) we need to find a
+      // precedessor which dominates all the uses.
+      // now relying on unoptimized creation of load
+      Value *load = builder.CreateLoad(allocaInst);
+      origCallInst->replaceAllUsesWith(load);
+    } else {
+      while (origCallInst->getNumUses() > 0) {
+        llvm::Instruction *II = cast<llvm::Instruction>(*origCallInst->use_begin());
+        IRBuilder<> builder_use(II);
+        Value *load = builder_use.CreateLoad(allocaInst);
+        II->replaceUsesOfWith(origCallInst, load);
+      }
     }
   }
 }
