@@ -122,17 +122,20 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
   Value *allocaInst = NULL;
   StoreInst *prevStoreInst = NULL;
   bool hasPhi = false;
-  for (auto ui = origCallInst->use_begin(), ue = origCallInst->use_end(); ui != ue; ui++) {
-    if (StoreInst *storeInst = dyn_cast<StoreInst>(*ui)) {
-      if (storeInst->getOperand(0) != origCallInst && isa<AllocaInst>(storeInst->getOperand(0))) {
-        allocaInst = storeInst->getOperand(0);
-        prevStoreInst = storeInst;
-      } else if (storeInst->getOperand(1) != origCallInst && isa<AllocaInst>(storeInst->getOperand(1))) {
-        allocaInst = storeInst->getOperand(1);
-        prevStoreInst = storeInst;
+  // We can perform this optimization only when the return value is stored, and
+  // that is the _only_ use
+  if (origCallInst->getNumUses() == 1) {
+    for (auto ui = origCallInst->use_begin(), ue = origCallInst->use_end();
+         ui != ue; ui++) {
+      if (StoreInst *storeInst = dyn_cast<StoreInst>(*ui)) {
+        if (storeInst->getOperand(0) == origCallInst &&
+            isa<AllocaInst>(storeInst->getOperand(1))) {
+          allocaInst = storeInst->getOperand(1);
+          prevStoreInst = storeInst;
+        }
+      } else if (isa<PHINode>(*ui)) {
+        hasPhi = true;
       }
-    } else if (isa<PHINode>(*ui)) {
-      hasPhi = true;
     }
   }
 
