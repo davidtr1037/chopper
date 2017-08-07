@@ -11,11 +11,11 @@
 #include <stdio.h>
 
 int foo(int a) {
-    return ++a;
+	return ++a;
 }
 
 int main(int argc, char *argv[], char *envp[]) {
-    int ret = foo(10);
+	int ret = foo(10);
     int a;
 
     klee_make_symbolic(&a, sizeof(a), "a");
