@@ -4,18 +4,18 @@
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-PATHS -check-prefix=CHECK-RECOVERY -check-prefix=CHECK-SLICES -check-prefix=CHECK-SNAPSHOTS
 
 // CHECK-PATHS: KLEE: done: completed paths = 3
-// CHECK-RECOVERY: KLEE: done: recovery states = 1
+// CHECK-RECOVERY: KLEE: done: recovery states = 0
 // CHECK-SLICES: KLEE: done: generated slices = 1
 // CHECK-SNAPSHOTS: KLEE: done: created snapshots = 1
 
 #include <stdio.h>
 
 int foo(int a) {
-    return ++a;
+	return ++a;
 }
 
 int main(int argc, char *argv[], char *envp[]) {
-    int ret = foo(10);
+	int ret = foo(10);
     int a;
 
     klee_make_symbolic(&a, sizeof(a), "a");
