@@ -133,6 +133,11 @@ namespace {
 		   cl::desc("Dump test cases for all active states on exit (default=on)"));
   
   cl::opt<bool>
+  PrintFunctionCalls("print-functions",
+                     cl::init(false),
+                     cl::desc("Print function calls (default=off)"));
+
+  cl::opt<bool>
   AllowExternalSymCalls("allow-external-sym-calls",
                         cl::init(false),
 			cl::desc("Allow calls with symbolic arguments to external functions.  This concretizes the symbolic arguments.  (default=off)"));
@@ -1356,6 +1361,10 @@ void Executor::executeCall(ExecutionState &state,
                            Function *f,
                            std::vector< ref<Expr> > &arguments) {
   Instruction *i = ki->inst;
+
+  if (f && PrintFunctionCalls)
+    klee_message("Function: %s", f->getName().str().c_str());
+
   if (f && f->isDeclaration()) {
     switch(f->getIntrinsicID()) {
     case Intrinsic::not_intrinsic:
