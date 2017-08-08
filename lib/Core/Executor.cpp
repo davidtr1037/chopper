@@ -4523,7 +4523,7 @@ MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, boo
             klee_message("%p: reusing allocated address: %lx, size: %lu", &state, mo->address, size)
         );
     } else {
-        mo = memory->allocate(size, isLocal, false, allocInst);
+        mo = memory->allocate(size, isLocal, false, allocInst, getAllocationAlignment(allocInst));
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
             klee_message("%p: allocating new address: %lx, size: %lu", &state, mo->address, size)

@@ -213,13 +213,12 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       ModRefAnalysis *mra,
                       Cloner *cloner,
                       SliceGenerator *sliceGenerator) {
-  LLVMContext &ctx = module->getContext();
 
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
   // module.
-  LegacyLLVMPassManagerTy pm;
+  PassManager pm;
   pm.add(new ReturnToVoidFunctionPass(skippedFunctions));
   pm.add(new RaiseAsmPass());
   // This pass will scalarize as much code as possible so that the Executor

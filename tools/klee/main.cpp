@@ -309,18 +309,10 @@ public:
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
-  : m_interpreter(0),
-    m_pathWriter(0),
-    m_symPathWriter(0),
-    m_infoFile(0),
-    m_outputDirectory(),
-    m_testIndex(0),
-    m_pathsExplored(0),
-    m_recoveryStatesCount(0),
-    m_generatedSlicesCount(0),
-    m_snapshotsCount(0),
-    m_argc(argc),
-    m_argv(argv) {
+: m_interpreter(0), m_pathWriter(0), m_symPathWriter(0), m_infoFile(0),
+  m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
+  m_pathsExplored(0), m_recoveryStatesCount(0), m_generatedSlicesCount(0),
+  m_snapshotsCount(0), m_argc(argc), m_argv(argv) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
