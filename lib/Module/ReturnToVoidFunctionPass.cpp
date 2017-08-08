@@ -40,47 +40,51 @@ bool klee::ReturnToVoidFunctionPass::runOnFunction(Function &f, Module &module) 
       replaceCalls(&f, wrapper, i->lines);
       changed = true;
     }
+  }
 
-    /// We replace a returning function f with a void __wrap_f function that:
-    ///  1- takes as first argument a variable __result that will contain the result
-    ///  2- calls f and stores the return value in __result
-    Function *klee::ReturnToVoidFunctionPass::createWrapperFunction(Function &f, Module &M) {
-      // create new function parameters: *return_var + original function's parameters
-      vector<Type *> paramTypes;
-      Type *returnType = f.getReturnType();
-      paramTypes.push_back(PointerType::get(returnType, 0));
-      paramTypes.insert(paramTypes.end(), f.getFunctionType()->param_begin(), f.getFunctionType()->param_end());
+  return changed;
+}
 
-      // create new void function
-      FunctionType *newFunctionType = FunctionType::get(Type::getVoidTy(getGlobalContext()), makeArrayRef(paramTypes), f.isVarArg());
-      string wrappedName = string("__wrap_") + f.getName().str();
-      Function *new_f = cast<Function>(M.getOrInsertFunction(wrappedName, newFunctionType));
+/// We replace a returning function f with a void __wrap_f function that:
+///  1- takes as first argument a variable __result that will contain the result
+///  2- calls f and stores the return value in __result
+Function *klee::ReturnToVoidFunctionPass::createWrapperFunction(Function &f, Module &module) {
+  // create new function parameters: *return_var + original function's parameters
+  vector<Type *> paramTypes;
+  Type *returnType = f.getReturnType();
+  paramTypes.push_back(PointerType::get(returnType, 0));
+  paramTypes.insert(paramTypes.end(), f.getFunctionType()->param_begin(), f.getFunctionType()->param_end());
 
-      // set the arguments' name: __result + original parameters' name
-      vector<Value *> argsForCall;
-      Function::arg_iterator i = new_f->arg_begin();
-      Value *resultArg = i++;
-      resultArg->setName("__result");
-      for (Function::arg_iterator j = f.arg_begin(); j != f.arg_end(); j++) {
-        Value *origArg = j;
-        Value *arg = i++;
-        arg->setName(origArg->getName());
-        argsForCall.push_back(arg);
-      }
+  // create new void function
+  FunctionType *newFunctionType = FunctionType::get(Type::getVoidTy(getGlobalContext()), makeArrayRef(paramTypes), f.isVarArg());
+  string wrappedName = string("__wrap_") + f.getName().str();
+  Function *wrapper = cast<Function>(module.getOrInsertFunction(wrappedName, newFunctionType));
 
-      // create basic block 'entry' in the new function
-      BasicBlock *block = BasicBlock::Create(getGlobalContext(), "entry", new_f);
-      IRBuilder<> builder(block);
+  // set the arguments' name: __result + original parameters' name
+  vector<Value *> argsForCall;
+  Function::arg_iterator i = wrapper->arg_begin();
+  Value *resultArg = i++;
+  resultArg->setName("__result");
+  for (Function::arg_iterator j = f.arg_begin(); j != f.arg_end(); j++) {
+    Value *origArg = j;
+    Value *arg = i++;
+    arg->setName(origArg->getName());
+    argsForCall.push_back(arg);
+  }
 
-      // insert call to the original function
-      Value *callInst = builder.CreateCall(&f, makeArrayRef(argsForCall), "__call");
-      // insert store for the return value to __result parameter
-      builder.CreateStore(callInst, resultArg);
-      // terminate function with void return
-      builder.CreateRetVoid();
+  // create basic block 'entry' in the new function
+  BasicBlock *block = BasicBlock::Create(getGlobalContext(), "entry", wrapper);
+  IRBuilder<> builder(block);
 
-      return new_f;
-    }
+  // insert call to the original function
+  Value *callInst = builder.CreateCall(&f, makeArrayRef(argsForCall), "__call");
+  // insert store for the return value to __result parameter
+  builder.CreateStore(callInst, resultArg);
+  // terminate function with void return
+  builder.CreateRetVoid();
+
+  return wrapper;
+}
 
 /// Replaces calls to f with the wrapper function __wrap_f
 /// The replacement will occur at all call sites only if the user has not specified a given line in the '-skip-functions' options
