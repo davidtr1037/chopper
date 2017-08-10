@@ -527,13 +527,13 @@ public:
     std::set<size_t> &writtenSizes = i->second.sizes;
     if (writtenSizes.size() != 1) {
       /* TODO: handle.... */
-      assert(false);
+      llvm::llvm_unreachable_internal("Size written during recovery is greater than 1");
     }
 
     size_t writtenSize = *(writtenSizes.begin());
-    if (writtenSize != size) {
+    if (writtenSize > size) {
       /* TODO: handle... */
-      assert(false);
+      llvm::llvm_unreachable_internal("Size written during recovery is greater than expected size");
     }
 
     info = i->second;
