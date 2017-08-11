@@ -180,8 +180,7 @@ void InstructionInfoTable::addClonedInfo(Cloner *cloner, Function *f) {
             /* add original instruction information */
             Instruction *origInst = dyn_cast<Instruction>(value);
             if (!origInst) {
-                /* TODO: something is wrong with the cloner mapping */
-                assert(false);
+                llvm_unreachable("something is wrong with the cloner mapping");
             }
 
             const InstructionInfo &info = getInfo(origInst);
