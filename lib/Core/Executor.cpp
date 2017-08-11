@@ -4121,8 +4121,7 @@ void Executor::getAllRecoveryInfo(
       ModRefAnalysis::ModInfoToIdMap &modInfoToIdMap = mra->getModInfoToIdMap();
       ModRefAnalysis::ModInfoToIdMap::iterator entry = modInfoToIdMap.find(modInfo);
       if (entry == modInfoToIdMap.end()) {
-        /* TODO: this should not happen... */
-        assert(false);
+        llvm_unreachable("ModInfoToIdMap is empty");
       }
 
       uint32_t sliceId = entry->second;

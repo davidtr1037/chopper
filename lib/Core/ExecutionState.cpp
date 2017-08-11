@@ -182,9 +182,9 @@ ExecutionState *ExecutionState::branch() {
 
   /* TODO remove assertions */
   if (this->isNormalState()) {
-    assert(falseState->isNormalState());
+    assert(falseState->isNormalState() && "false state is not a normal state");
   } else {
-    assert(falseState->isRecoveryState());
+    assert(falseState->isRecoveryState() && "false state is not a recovery state");
   }
 
   return falseState;
