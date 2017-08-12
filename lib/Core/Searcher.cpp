@@ -715,18 +715,18 @@ void SplittedSearcher::update(
     if (es == recoveryStates.back()) {
       recoveryStates.pop_back();
     } else {
-      bool ok = false;
+      bool found = false;
 
       for (std::vector<ExecutionState*>::iterator it = recoveryStates.begin(),
              ie = recoveryStates.end(); it != ie; ++it) {
-        if (es==*it) {
+        if (es == *it) {
           recoveryStates.erase(it);
-          ok = true;
+          found = true;
           break;
         }
       }
 
-      assert(ok && "invalid state removed");
+      assert(found && "invalid state removed");
     }
   }
 }
