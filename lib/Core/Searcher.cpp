@@ -646,3 +646,91 @@ void InterleavedSearcher::update(
          ie = searchers.end(); it != ie; ++it)
     (*it)->update(current, addedStates, removedStates);
 }
+
+/* optimized searcher */
+SplittedSearcher::SplittedSearcher(Searcher *baseSearcher)
+  : baseSearcher(baseSearcher)
+{
+
+}
+
+SplittedSearcher::~SplittedSearcher() {
+  delete baseSearcher;
+}
+
+ExecutionState &SplittedSearcher::selectState() {
+  /* give priority to non-recovery states */
+  if (!baseSearcher->empty()) {
+    return baseSearcher->selectState();
+  }
+
+  /* we handle recovery states in a DFS manner */
+  return *recoveryStates.back();
+}
+
+void SplittedSearcher::update(
+  ExecutionState *current,
+  const std::vector<ExecutionState *> &addedStates,
+  const std::vector<ExecutionState *> &removedStates
+) {
+  std::vector<ExecutionState *> addedOriginatingStates;
+  std::vector<ExecutionState *> addedRecoveryStates;
+  std::vector<ExecutionState *> removedOriginatingStates;
+  std::vector<ExecutionState *> removedRecoveryStates;
+
+  /* split added states */
+  for (auto i = addedStates.begin(); i != addedStates.end(); i++) {
+    ExecutionState *es = *i;
+    if (es->isRecoveryState()) {
+      addedRecoveryStates.push_back(es);
+    } else {
+      addedOriginatingStates.push_back(es);
+    }
+  }
+
+  /* split removed states */
+  for (auto i = removedStates.begin(); i != removedStates.end(); i++) {
+    ExecutionState *es = *i;
+    if (es->isRecoveryState()) {
+      removedRecoveryStates.push_back(es);
+    } else {
+      removedOriginatingStates.push_back(es);
+    }
+  }
+
+  if (current && current->isRecoveryState()) {
+    baseSearcher->update(NULL, addedOriginatingStates, removedOriginatingStates);
+  } else {
+    baseSearcher->update(current, addedOriginatingStates, removedOriginatingStates);
+  }
+
+  /* we handle recovery states in a DFS manner */
+  recoveryStates.insert(recoveryStates.end(), addedRecoveryStates.begin(), addedRecoveryStates.end());
+
+  for (std::vector<ExecutionState *>::const_iterator it = removedRecoveryStates.begin(),
+                                                     ie = removedRecoveryStates.end();
+       it != ie; ++it) {
+    ExecutionState *es = *it;
+
+    if (es == recoveryStates.back()) {
+      recoveryStates.pop_back();
+    } else {
+      bool ok = false;
+
+      for (std::vector<ExecutionState*>::iterator it = recoveryStates.begin(),
+             ie = recoveryStates.end(); it != ie; ++it) {
+        if (es==*it) {
+          recoveryStates.erase(it);
+          ok = true;
+          break;
+        }
+      }
+
+      assert(ok && "invalid state removed");
+    }
+  }
+}
+
+bool SplittedSearcher::empty() {
+  return baseSearcher->empty() && recoveryStates.empty();
+}
