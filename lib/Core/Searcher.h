@@ -314,7 +314,9 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates);
     bool empty();
     void printName(llvm::raw_ostream &os) {
-      os << "SplittedSearcher (ratio = " << ratio << ")\n";
+      os << "SplittedSearcher (ratio = " << ratio << ")" << ", base searcher:\n";
+      baseSearcher->printName(os);
+      os << "\n";
     }
   };
 
