@@ -4228,21 +4228,20 @@ void Executor::getLoadInfo(
 
   if (!success) {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Unable to resolve address..."));
-    // FIXME: this should be handled somehow. However, if we fail some coreutil programs
-    // will not run with this KLEE version
-    std::string str;
-    llvm::raw_string_ostream ss(str);
-    address.get()->print(ss);
-    std::string str2;
-    llvm::raw_string_ostream ss2(str2);
-    printFileLine(state, ki, ss2);
-    klee_warning("Unable to resolve address 0x%s from %s", ss.str().c_str(), ss2.str().c_str());
+    // TODO: this should be handled somehow.
+    state.dumpStack(llvm::errs());
+    llvm_unreachable("Unable to resolve address (resolveOne)");
     return;
   }
 
   /* get load address */
   ce = dyn_cast<ConstantExpr>(address);
-  assert(ce);
+  if (!ce) {
+    /* TODO: in order to support symbolic addresses, we have to use the resolve() API */
+    state.dumpStack(llvm::errs());
+    llvm_unreachable("getLoadInfo() does not support symbolic addresses");
+  }
+
   loadAddr = ce->getZExtValue();
 
   /* get load size */
