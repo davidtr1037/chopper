@@ -62,6 +62,11 @@ namespace {
            cl::desc("Enable support for klee_merge() (extra experimental)"));
 
   cl::opt<bool> UseSplittedSearcher("split-search", cl::desc("..."));
+
+  cl::opt<unsigned int>
+  SplitRatio("split-ratio",
+            cl::desc("ratio for choosing recovery states (default = 20)"),
+            cl::init(20));
 }
 
 
@@ -134,7 +139,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   }
 
   if (UseSplittedSearcher) {
-    searcher = new SplittedSearcher(searcher);
+    searcher = new SplittedSearcher(searcher, SplitRatio);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

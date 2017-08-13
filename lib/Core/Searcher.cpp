@@ -648,8 +648,8 @@ void InterleavedSearcher::update(
 }
 
 /* optimized searcher */
-SplittedSearcher::SplittedSearcher(Searcher *baseSearcher)
-  : baseSearcher(baseSearcher)
+SplittedSearcher::SplittedSearcher(Searcher *baseSearcher, unsigned int ratio)
+  : baseSearcher(baseSearcher), ratio(ratio)
 {
 
 }
@@ -659,13 +659,23 @@ SplittedSearcher::~SplittedSearcher() {
 }
 
 ExecutionState &SplittedSearcher::selectState() {
-  /* give priority to non-recovery states */
-  if (!baseSearcher->empty()) {
+  if (baseSearcher->empty()) {
+    /* the recovery states are supposed to be not empty */
+    return *recoveryStates.back();
+  }
+
+  if (recoveryStates.empty()) {
+    /* the base searcher is supposed to be not empty */
     return baseSearcher->selectState();
   }
 
-  /* we handle recovery states in a DFS manner */
-  return *recoveryStates.back();
+  /* in this case, both searchers are supposed to be not empty */
+  if (baseSearcher->empty() || theRNG.getInt32() % 100 < ratio) {
+    /* we handle recovery states in a DFS manner */
+    return *recoveryStates.back();
+  } else {
+    return baseSearcher->selectState();
+  }
 }
 
 void SplittedSearcher::update(

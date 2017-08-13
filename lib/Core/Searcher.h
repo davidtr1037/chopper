@@ -301,10 +301,11 @@ namespace klee {
 
   class SplittedSearcher : public Searcher {
     Searcher *baseSearcher;
+    unsigned int ratio;
     std::vector<ExecutionState *> recoveryStates;
 
   public:
-    SplittedSearcher(Searcher *baseSearcher);
+    SplittedSearcher(Searcher *baseSearcher, unsigned int ratio);
     ~SplittedSearcher();
 
     ExecutionState &selectState();
@@ -313,7 +314,7 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates);
     bool empty();
     void printName(llvm::raw_ostream &os) {
-      os << "SplittedSearcher\n";
+      os << "SplittedSearcher (ratio = " << ratio << ")\n";
     }
   };
 
