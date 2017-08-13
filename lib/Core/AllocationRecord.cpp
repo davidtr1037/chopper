@@ -4,6 +4,8 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/Debug.h"
 
+#include "llvm/Support/ErrorHandling.h"
+
 #include <map>
 #include <list>
 
@@ -76,12 +78,12 @@ void AllocationRecord::addAddr(ASContext &context, MemoryObject *mo) {
 MemoryObject *AllocationRecord::getAddr(ASContext &context) {
     Entry *entry = find(context);
     if (entry == NULL) {
-        assert(false);
+      llvm_unreachable("Could not find any entry for the context");
     }
     
     std::list<MemoryObject *> &q = entry->second;
     if (q.empty()) {
-        assert(false);
+      llvm_unreachable("Could not find any MemoryObject for the context");
     }
 
     MemoryObject *mo = q.front();

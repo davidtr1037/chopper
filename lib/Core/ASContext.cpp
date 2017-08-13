@@ -36,7 +36,7 @@ Instruction *ASContext::getTranslatedInst(Cloner *cloner, Instruction *inst) {
     Value *value = cloner->translateValue(inst);
     if (!isa<Instruction>(value)) {
         /* why... */
-        assert(false);
+        llvm_unreachable("Translated value is not an instruction");
     }
 
     return dyn_cast<Instruction>(value);

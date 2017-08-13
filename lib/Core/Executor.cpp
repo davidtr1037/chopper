@@ -4121,8 +4121,7 @@ void Executor::getAllRecoveryInfo(
       ModRefAnalysis::ModInfoToIdMap &modInfoToIdMap = mra->getModInfoToIdMap();
       ModRefAnalysis::ModInfoToIdMap::iterator entry = modInfoToIdMap.find(modInfo);
       if (entry == modInfoToIdMap.end()) {
-        /* TODO: this should not happen... */
-        assert(false);
+        llvm_unreachable("ModInfoToIdMap is empty");
       }
 
       uint32_t sliceId = entry->second;
@@ -4229,12 +4228,20 @@ void Executor::getLoadInfo(
 
   if (!success) {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Unable to resolve address..."));
-    assert(false);
+    // TODO: this should be handled somehow.
+    state.dumpStack(llvm::errs());
+    llvm_unreachable("Unable to resolve address (resolveOne)");
+    return;
   }
 
   /* get load address */
   ce = dyn_cast<ConstantExpr>(address);
-  assert(ce);
+  if (!ce) {
+    /* TODO: in order to support symbolic addresses, we have to use the resolve() API */
+    state.dumpStack(llvm::errs());
+    llvm_unreachable("getLoadInfo() does not support symbolic addresses");
+  }
+
   loadAddr = ce->getZExtValue();
 
   /* get load size */
