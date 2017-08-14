@@ -4199,13 +4199,9 @@ void Executor::getAllRecoveryInfo(
   }
 }
 
-void Executor::getLoadInfo(
-    ExecutionState &state,
-    KInstruction *ki,
-    uint64_t &loadAddr,
-    uint64_t &loadSize,
-    ModRefAnalysis::AllocSite &allocSite
-) {
+void Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
+                           uint64_t &loadAddr, uint64_t &loadSize,
+                           ModRefAnalysis::AllocSite &allocSite) {
   ObjectPair op;
   bool success;
   ConstantExpr *ce;
@@ -4226,41 +4222,43 @@ void Executor::getLoadInfo(
   }
   solver->setTimeout(0);
 
-  if (!success) {
+  if (success) {
+    /* get load address */
+    ce = dyn_cast<ConstantExpr>(address);
+    if (!ce) {
+      /* TODO: in order to support symbolic addresses, we have to use the
+       * resolve() API */
+      state.dumpStack(llvm::errs());
+      llvm_unreachable("getLoadInfo() does not support symbolic addresses");
+    }
+
+    loadAddr = ce->getZExtValue();
+
+    /* get load size */
+    Expr::Width width = getWidthForLLVMType(ki->inst->getType());
+    loadSize = Expr::getMinBytesForWidth(width);
+
+    /* get allocation site value and offset */
+    const MemoryObject *mo = op.first;
+    ref<Expr> offsetExpr = mo->getOffsetExpr(address);
+    offsetExpr = toConstant(state, offsetExpr, "...");
+    ce = dyn_cast<ConstantExpr>(offsetExpr);
+    assert(ce);
+
+    /* translate value... */
+    const Value *translatedValue =
+        cloner->translateValue((Value *)(mo->allocSite));
+    uint64_t offset = ce->getZExtValue();
+
+    /* get the precise allocation site */
+    allocSite = std::make_pair(translatedValue, offset);
+  } else {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Unable to resolve address..."));
     // TODO: this should be handled somehow.
     state.dumpStack(llvm::errs());
     llvm_unreachable("Unable to resolve address (resolveOne)");
     return;
   }
-
-  /* get load address */
-  ce = dyn_cast<ConstantExpr>(address);
-  if (!ce) {
-    /* TODO: in order to support symbolic addresses, we have to use the resolve() API */
-    state.dumpStack(llvm::errs());
-    llvm_unreachable("getLoadInfo() does not support symbolic addresses");
-  }
-
-  loadAddr = ce->getZExtValue();
-
-  /* get load size */
-  Expr::Width width = getWidthForLLVMType(ki->inst->getType());
-  loadSize = Expr::getMinBytesForWidth(width);
-
-  /* get allocation site value and offset */
-  const MemoryObject *mo = op.first;
-  ref<Expr> offsetExpr = mo->getOffsetExpr(address);
-  offsetExpr = toConstant(state, offsetExpr, "...");
-  ce = dyn_cast<ConstantExpr>(offsetExpr);
-  assert(ce);
-
-  /* translate value... */
-  const Value *translatedValue = cloner->translateValue((Value *)(mo->allocSite));
-  uint64_t offset = ce->getZExtValue();
-
-  /* get the precise allocation site */
-  allocSite = std::make_pair(translatedValue, offset);
 }
 
 void Executor::suspendState(ExecutionState &state) {
