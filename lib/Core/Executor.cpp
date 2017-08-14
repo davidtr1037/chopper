@@ -4253,11 +4253,73 @@ void Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
     /* get the precise allocation site */
     allocSite = std::make_pair(translatedValue, offset);
   } else {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Unable to resolve address..."));
-    // TODO: this should be handled somehow.
-    state.dumpStack(llvm::errs());
-    llvm_unreachable("Unable to resolve address (resolveOne)");
-    return;
+    DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("Unable to resolve address to one memory object"));
+    Expr::Width type = getWidthForLLVMType(ki->inst->getType());
+    unsigned bytes = Expr::getMinBytesForWidth(type);
+    ResolutionList rl;
+    solver->setTimeout(coreSolverTimeout);
+    bool incomplete = state.addressSpace.resolve(state, solver, address, rl, 0,
+                                                 coreSolverTimeout);
+    solver->setTimeout(0);
+
+    // XXX there is some query wasteage here. who cares?
+    ExecutionState *unbound = &state;
+
+    for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
+      const MemoryObject *mo = i->first;
+      const ObjectState *os = i->second;
+      ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
+
+      StatePair branches = fork(*unbound, inBounds, true);
+      ExecutionState *bound = branches.first;
+
+      if (bound) {
+        /* get load address */
+        ce = dyn_cast<ConstantExpr>(address);
+        if (!ce) {
+          /* TODO: in order to support symbolic addresses, we have to use the
+           * resolve() API */
+          state.dumpStack(llvm::errs());
+          llvm_unreachable("getLoadInfo() does not support symbolic addresses");
+        }
+
+        loadAddr = ce->getZExtValue();
+
+        /* get load size */
+        Expr::Width width = getWidthForLLVMType(ki->inst->getType());
+        loadSize = Expr::getMinBytesForWidth(width);
+
+        /* get allocation site value and offset */
+        const MemoryObject *mo = op.first;
+        ref<Expr> offsetExpr = mo->getOffsetExpr(address);
+        offsetExpr = toConstant(state, offsetExpr, "...");
+        ce = dyn_cast<ConstantExpr>(offsetExpr);
+        assert(ce);
+
+        /* translate value... */
+        const Value *translatedValue =
+            cloner->translateValue((Value *)(mo->allocSite));
+        uint64_t offset = ce->getZExtValue();
+
+        /* get the precise allocation site */
+        allocSite = std::make_pair(translatedValue, offset);
+      }
+
+      unbound = branches.second;
+      if (!unbound)
+        break;
+    }
+
+    if (unbound) {
+      if (incomplete) {
+        terminateStateEarly(*unbound, "Query timed out (resolve).");
+      } else {
+        terminateStateOnError(*unbound, "memory error: out of bound pointer",
+                              Ptr, NULL, getAddressInfo(*unbound, address));
+      }
+    }
   }
 }
 
