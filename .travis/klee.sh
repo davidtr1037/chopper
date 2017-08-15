@@ -10,8 +10,8 @@ SVN_BRANCH="release_$( echo ${LLVM_VERSION} | sed 's/\.//g')"
 # Select the compiler to use to generate LLVM bitcode
 ###############################################################################
 if [ "${LLVM_VERSION}" != "2.9" ]; then
-    KLEE_CC=/usr/bin/clang-${LLVM_VERSION}
-    KLEE_CXX=/usr/bin/clang++-${LLVM_VERSION}
+    KLEE_CC=clang-${LLVM_VERSION}
+    KLEE_CXX=clang++-${LLVM_VERSION}
 else
     # Just use pre-built llvm-gcc downloaded earlier
     KLEE_CC=${BUILD_DIR}/llvm-gcc/bin/llvm-gcc
@@ -32,7 +32,7 @@ fi
 if [ "${KLEE_UCLIBC}" != "0" ]; then
     git clone --depth 1 -b ${KLEE_UCLIBC} git://github.com/klee/klee-uclibc.git
     cd klee-uclibc
-    ./configure --make-llvm-lib --with-cc "${KLEE_CC}" --with-llvm-config /usr/bin/llvm-config-${LLVM_VERSION}
+    ./configure --make-llvm-lib --with-cc "${KLEE_CC}" --with-llvm-config /usr/local/bin/llvm-config
     make
     if [ "X${USE_CMAKE}" == "X1" ]; then
       KLEE_UCLIBC_CONFIGURE_OPTION="-DENABLE_KLEE_UCLIBC=TRUE -DKLEE_UCLIBC_PATH=$(pwd) -DENABLE_POSIX_RUNTIME=TRUE"
@@ -136,10 +136,10 @@ if [ "X${USE_CMAKE}" == "X1" ]; then
     CMAKE_BUILD_TYPE="Debug"
   fi
   # Compute CMake build type
-  CXXFLAGS="${COVERAGE_FLAGS} ${SANITIZER_CXX_FLAGS}" \
+  CXXFLAGS="${COVERAGE_FLAGS} ${SANITIZER_CXX_FLAGS} -fno-rtti" \
   CFLAGS="${COVERAGE_FLAGS} ${SANITIZER_C_FLAGS}" \
   cmake \
-    -DLLVM_CONFIG_BINARY="/usr/lib/llvm-${LLVM_VERSION}/bin/llvm-config" \
+    -DLLVM_CONFIG_BINARY="/usr/local/lib/bin/llvm-config" \
     -DLLVMCC="${KLEE_CC}" \
     -DLLVMCXX="${KLEE_CXX}" \
     ${KLEE_STP_CONFIGURE_OPTION} \
@@ -147,13 +147,17 @@ if [ "X${USE_CMAKE}" == "X1" ]; then
     ${KLEE_METASMT_CONFIGURE_OPTION} \
     ${KLEE_UCLIBC_CONFIGURE_OPTION} \
     ${TCMALLOC_OPTION} \
-    -DGTEST_SRC_DIR=${GTEST_SRC_DIR} \
+    -DENABLE_UNIT_TESTS=OFF \
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
     ${KLEE_ASSERTS_OPTION} \
     -DENABLE_UNIT_TESTS=TRUE \
     -DENABLE_SYSTEM_TESTS=TRUE \
     -DLIT_ARGS="-v" \
+    -DSVF_ROOT_DIR=/home/klee/SVF \
+    -DDG_ROOT_DIR=/home/klee/dg \
+    -DSLICING_ROOT_DIR=/home/klee/se-slicing \
     ${KLEE_SRC}
+  export LD_LIBRARY_PATH=${BUILD_DIR}/build-svf/lib:${BUILD_DIR}/build-svf/lib/CUDD:${BUILD_DIR}/build-dg/src
   make
 else
   # Build KLEE
@@ -234,14 +238,14 @@ if [ ${COVERAGE} -eq 1 ]; then
     cd zcov
 
 #these files are not where zcov expects them to be after install so we move them
-    sudo cp js/sorttable.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sorttable.js 
-    sudo cp js/sourceview.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sourceview.js 
+    sudo cp js/sorttable.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sorttable.js
+    sudo cp js/sourceview.js /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/js/sourceview.js
     sudo cp style.css /usr/local/lib/python2.7/dist-packages/zcov-0.3.0.dev0-py2.7.egg/zcov/style.css
 
 #install zcov dependency
     sudo apt-get install -y enscript
 
-#update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause 
+#update gcov from v4.6 to v4.8. This is becauase gcda files are made for v4.8 and cause
 #a segmentation fault in v4.6
     sudo apt-get install -y ggcov
     sudo rm /usr/bin/gcov
