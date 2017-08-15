@@ -2268,7 +2268,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Load: {
     if (state.isNormalState() && state.isInDependentMode()) {
       if (state.isBlockingLoadRecovered() && isMayBlockingLoad(state, ki)) {
-        bool isBlocking = handleMayBlockingLoad(state, ki);
+        bool success;
+        bool isBlocking = handleMayBlockingLoad(state, ki, success);
+        if (!success)
+          return;
         if (isBlocking) {
           /* TODO: break? */
           return;
@@ -3043,6 +3046,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 }
 
 void Executor::terminateState(ExecutionState &state) {
+  errs() << "TERMINATE STATE " << &state << "\n";
   if (replayKTest && replayPosition!=replayKTest->numObjects) {
     klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");
@@ -3076,8 +3080,11 @@ void Executor::terminateStateEarly(ExecutionState &state,
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
-  /* TODO: handle recovery states */
-  terminateState(state);
+  if (state.isRecoveryState()) {
+    terminateStateRecursively(state);
+  } else {
+    terminateState(state);
+  }
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
@@ -4046,10 +4053,15 @@ bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
   return true;
 }
 
-bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
+bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki,
+                                     bool &success) {
+  success = true;
   /* find which slices should be executed... */
   std::list< ref<RecoveryInfo> > &recoveryInfos = state.getPendingRecoveryInfos();
-  getAllRecoveryInfo(state, ki, recoveryInfos);
+  if (!getAllRecoveryInfo(state, ki, recoveryInfos)) {
+    success = false;
+    return false;
+  }
   if (recoveryInfos.empty()) {
     /* we are not dependent on previously skipped functions */
     return false;
@@ -4068,11 +4080,8 @@ bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki) {
   return true;
 }
 
-void Executor::getAllRecoveryInfo(
-    ExecutionState &state,
-    KInstruction *ki,
-    std::list< ref<RecoveryInfo> > &result
-) {
+bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
+                                  std::list<ref<RecoveryInfo> > &result) {
   Instruction *loadInst;
   uint64_t loadAddr;
   uint64_t loadSize;
@@ -4086,7 +4095,8 @@ void Executor::getAllRecoveryInfo(
   );
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
-  getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite);
+  if (!getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite))
+    return false;
 
   /* get the allocation site computed by static analysis */
   std::set<ModRefAnalysis::ModInfo> approximateModInfos;
@@ -4197,9 +4207,10 @@ void Executor::getAllRecoveryInfo(
       result.push_front(recoveryInfo);
     }
   }
+  return true;
 }
 
-void Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
+bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
                            uint64_t &loadAddr, uint64_t &loadSize,
                            ModRefAnalysis::AllocSite &allocSite) {
   ObjectPair op;
@@ -4253,12 +4264,31 @@ void Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
     /* get the precise allocation site */
     allocSite = std::make_pair(translatedValue, offset);
   } else {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Unable to resolve address..."));
-    // TODO: this should be handled somehow.
-    state.dumpStack(llvm::errs());
-    llvm_unreachable("Unable to resolve address (resolveOne)");
-    return;
+    DEBUG_WITH_TYPE(
+        DEBUG_BASIC,
+        klee_message("Unable to resolve address to one memory object"));
+    ResolutionList rl;
+    solver->setTimeout(coreSolverTimeout);
+    bool incomplete = state.addressSpace.resolve(state, solver, address, rl, 0,
+                                                 coreSolverTimeout);
+    solver->setTimeout(0);
+
+    if (rl.empty()) {
+      if (!incomplete) {
+        klee_warning(
+            "Unable to resolve blocking load address. Terminating state");
+        terminateState(state);
+      } else {
+        klee_warning("Solver timeout");
+        terminateState(state);
+      }
+      return false;
+    }
+    klee_warning("Multiple resolutions");
+    terminateState(state);
+    return false;
   }
+  return true;
 }
 
 void Executor::suspendState(ExecutionState &state) {
@@ -4603,23 +4633,21 @@ void Executor::onExecuteFree(ExecutionState *state, const MemoryObject *mo) {
 }
 
 void Executor::terminateStateRecursively(ExecutionState &state) {
-    ExecutionState *current = &state;
-    ExecutionState *next = NULL;
+  ExecutionState *current = &state;
+  ExecutionState *next = NULL;
 
-    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("recursively terminating..."));
-    do {
-        if (current->isRecoveryState()) {
-            next = current->getDependentState();
-            assert(next);
-        } else {
-            next = NULL;
-        }
-
-        DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating state %p", current));
-        terminateState(*current);
-
-        current = next;
-    } while (current);
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("recursively terminating..."));
+  while (current) {
+    if (current->isRecoveryState()) {
+      next = current->getDependentState();
+      assert(next);
+    } else {
+      next = NULL;
+    }
+    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating state %p", current));
+    terminateState(*current);
+    current = next;
+  }
 }
 
 void Executor::mergeConstraints(ExecutionState &dependentState, ref<Expr> condition) {

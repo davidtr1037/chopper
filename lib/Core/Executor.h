@@ -454,19 +454,13 @@ private:
 
   bool isMayBlockingLoad(ExecutionState &state, KInstruction *ki);
   bool isRecoveryRequired(ExecutionState &state, KInstruction *ki);
-  bool handleMayBlockingLoad(ExecutionState &state, KInstruction *ki);
-  void getAllRecoveryInfo(
-    ExecutionState &state,
-    KInstruction *kinst,
-    std::list< ref<RecoveryInfo> > &result
-  );
-  void getLoadInfo(
-    ExecutionState &state,
-    KInstruction *kinst,
-    uint64_t &loadAddr,
-    uint64_t &loadSize,
-    ModRefAnalysis::AllocSite &allocSite
-  );
+  bool handleMayBlockingLoad(ExecutionState &state, KInstruction *ki,
+                             bool &success);
+  bool getAllRecoveryInfo(ExecutionState &state, KInstruction *kinst,
+                          std::list<ref<RecoveryInfo> > &result);
+  bool getLoadInfo(ExecutionState &state, KInstruction *kinst,
+                   uint64_t &loadAddr, uint64_t &loadSize,
+                   ModRefAnalysis::AllocSite &allocSite);
   void suspendState(ExecutionState &state);
   void resumeState(ExecutionState &state, bool implicitlyCreated);
   void notifyDependentState(ExecutionState &recoveryState);
