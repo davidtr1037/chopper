@@ -177,6 +177,11 @@ namespace {
 		cl::init(false));
 
   cl::opt<bool>
+  WithSymArgsRuntime("sym-arg-runtime",
+		cl::desc("Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len>"),
+		cl::init(false));
+
+  cl::opt<bool>
   OptimizeModule("optimize",
                  cl::desc("Optimize before execution"),
 		 cl::init(false));
@@ -743,12 +748,22 @@ static int initEnv(Module *mainModule) {
   std::vector<const Type*> params;
   params.push_back(Type::getInt32Ty(getGlobalContext()));
   params.push_back(Type::getInt32Ty(getGlobalContext()));
-  Function* initEnvFn =
+
+  Function* initEnvFn;
+  if (WithPOSIXRuntime)
+  initEnvFn =
     cast<Function>(mainModule->getOrInsertFunction("klee_init_env",
                                                    Type::getVoidTy(getGlobalContext()),
                                                    argcPtr->getType(),
                                                    argvPtr->getType(),
                                                    NULL));
+  if (WithSymArgsRuntime)
+	  initEnvFn =
+	    cast<Function>(mainModule->getOrInsertFunction("klee_init_args",
+	                                                   Type::getVoidTy(getGlobalContext()),
+	                                                   argcPtr->getType(),
+	                                                   argvPtr->getType(),
+	                                                   NULL));
   assert(initEnvFn);
   std::vector<Value*> args;
   args.push_back(argcPtr);
@@ -1401,7 +1416,7 @@ int main(int argc, char **argv, char **envp) {
   }
 #endif
 
-  if (WithPOSIXRuntime) {
+  if (WithPOSIXRuntime || WithSymArgsRuntime) {
     int r = initEnv(mainModule);
     if (r != 0)
       return r;
