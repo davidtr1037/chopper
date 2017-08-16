@@ -461,7 +461,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     klee_message("Runnining mod-ref analysis...");
     mra->run();
 
-    klee_message("Computing slices...");
+    /* TODO: rename... */
     sliceGenerator->generate();
   }
 
