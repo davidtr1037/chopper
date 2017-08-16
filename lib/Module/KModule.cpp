@@ -483,7 +483,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       Cloner::SliceMap *sliceMap = cloner->getSlices(f);
       if (sliceMap != 0) {
         for (Cloner::SliceMap::iterator s = sliceMap->begin(); s != sliceMap->end(); s++ ) {
-          uint32_t id = s->first;
           Cloner::SliceInfo &sliceInfo = s->second;
           if (!sliceInfo.isSliced) {
               /* don't add a cloned function which was not sliced */
