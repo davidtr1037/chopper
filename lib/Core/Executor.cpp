@@ -4277,17 +4277,18 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
       if (!incomplete) {
         klee_warning(
             "Unable to resolve blocking load to any address. Terminating state");
-        terminateState(state);
+        terminateStateOnError(
+            state, "Unable to resolve blocking load to any address", Unhandled);
       } else {
         klee_warning("Unable to resolve blocking load address: Solver timeout");
-        terminateStateEarly(state,
-	    "Unable to resolve blocking load address: solver timeout");
+        terminateStateEarly(
+            state, "Unable to resolve blocking load address: solver timeout");
       }
-      return false;
+    } else {
+      klee_warning("Resolving blocking load address: multiple resolutions");
+      terminateStateEarly(
+          state, "Resolving blocking load address: multiple resolutions");
     }
-    klee_warning("Unable to resolve blocking load address: multiple resolutions");
-    terminateStateEarly(state,
-	    "Unable to resolve blocking load address: multiple resolutions");
     return false;
   }
   return true;
