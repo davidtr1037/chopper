@@ -16,6 +16,7 @@
 #include "klee/Expr.h"
 #include "klee/AllocationRecord.h"
 #include "klee/Internal/ADT/TreeStream.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
@@ -119,7 +120,7 @@ struct Snapshot {
 };
 
 struct WrittenAddressInfo {
-    std::set<size_t> sizes;
+  size_t maxSize;
     unsigned int snapshotIndex;
 };
 
@@ -511,32 +512,28 @@ public:
   void addWrittenAddress(uint64_t address, size_t size, unsigned int snapshotIndex) {
     assert(isNormalState() && "Adding written addresses to non-normal state");
     WrittenAddressInfo &info = writtenAddresses[address];
-    info.sizes.insert(size);
+    if (size > info.maxSize)
+      info.maxSize = size;
     info.snapshotIndex = snapshotIndex;
   }
 
-  /* TODO: check size */
-  bool getWrittenAddressInfo(uint64_t address, size_t size, WrittenAddressInfo &info) {
+  bool getWrittenAddressInfo(uint64_t address, size_t loadSize,
+                             WrittenAddressInfo &info) {
     assert(isNormalState() && "Obtaining written addresses to non-normal state");
     WrittenAddresses::iterator i = writtenAddresses.find(address);
     if (i == writtenAddresses.end()) {
       return false;
     }
 
-    std::set<size_t> &writtenSizes = i->second.sizes;
-    if (writtenSizes.size() != 1) {
-      /* TODO: handle.... */
-      llvm::llvm_unreachable_internal("Size written during recovery is greater than 1");
-    }
-
-    size_t writtenSize = *(writtenSizes.begin());
-    if (writtenSize > size) {
-      /* TODO: handle... */
-      llvm::llvm_unreachable_internal("Size written during recovery is greater than expected size");
-    }
-
     info = i->second;
-    return true;
+
+    size_t writtenSize = i->second.maxSize;
+    if (writtenSize >= loadSize) {
+      return true; // we have a complete overwrite iff we write at least
+                   // loadSize bits
+    } else {
+      return false;
+    }
   }
 
   unsigned int getStartingIndex(uint64_t address, size_t size) {
