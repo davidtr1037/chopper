@@ -303,7 +303,6 @@ public:
   }
 
   bool isSuspended() {
-    assert(isNormalState());
     return suspendStatus;
   }
 
