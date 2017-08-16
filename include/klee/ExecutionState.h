@@ -504,12 +504,12 @@ public:
   }
 
   void clearGuidingConstraints() {
-    assert(isNormalState());
+    assert(isNormalState() && "Adding guiding constraints to non-normal state");
     guidingConstraints.clear();
   }
 
   void addWrittenAddress(uint64_t address, size_t size, unsigned int snapshotIndex) {
-    assert(isNormalState());
+    assert(isNormalState() && "Adding written addresses to non-normal state");
     WrittenAddressInfo &info = writtenAddresses[address];
     info.sizes.insert(size);
     info.snapshotIndex = snapshotIndex;
@@ -517,7 +517,7 @@ public:
 
   /* TODO: check size */
   bool getWrittenAddressInfo(uint64_t address, size_t size, WrittenAddressInfo &info) {
-    assert(isNormalState());
+    assert(isNormalState() && "Obtaining written addresses to non-normal state");
     WrittenAddresses::iterator i = writtenAddresses.find(address);
     if (i == writtenAddresses.end()) {
       return false;
