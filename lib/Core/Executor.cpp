@@ -4265,7 +4265,7 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
   } else {
     DEBUG_WITH_TYPE(
         DEBUG_BASIC,
-        klee_message("Unable to resolve address to one memory object"));
+        klee_message("Unable to resolve blocking load address to one memory object"));
     ResolutionList rl;
     solver->setTimeout(coreSolverTimeout);
     bool incomplete = state.addressSpace.resolve(state, solver, address, rl, 0,
@@ -4275,16 +4275,18 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
     if (rl.empty()) {
       if (!incomplete) {
         klee_warning(
-            "Unable to resolve blocking load address. Terminating state");
+            "Unable to resolve blocking load to any address. Terminating state");
         terminateState(state);
       } else {
-        klee_warning("Solver timeout");
-        terminateState(state);
+        klee_warning("Unable to resolve blocking load address: Solver timeout");
+        terminateStateEarly(state,
+	    "Unable to resolve blocking load address: solver timeout");
       }
       return false;
     }
-    klee_warning("Multiple resolutions");
-    terminateState(state);
+    klee_warning("Unable to resolve blocking load address: multiple resolutions");
+    terminateStateEarly(state,
+	    "Unable to resolve blocking load address: multiple resolutions");
     return false;
   }
   return true;
