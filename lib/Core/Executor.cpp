@@ -2767,6 +2767,7 @@ void Executor::updateStates(ExecutionState *current) {
     if (it2 == states.end()) {
       /* TODO: trying to handle removal of suspended states. Find a better solution... */
       assert(es->isNormalState() && es->isSuspended());
+      continue;
     } else {
       states.erase(it2);
     }
