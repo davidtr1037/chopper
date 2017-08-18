@@ -2860,7 +2860,15 @@ void Executor::checkMemoryUsage() {
         unsigned numStates = states.size();
         unsigned toKill = std::max(1U, numStates - numStates * MaxMemory / mbs);
         klee_warning("killing %d states (over memory cap)", toKill);
-        std::vector<ExecutionState *> arr(states.begin(), states.end());
+        std::vector<ExecutionState *> arr;
+	for (std::set<ExecutionState *>::iterator i = states.begin(); i != states.end(); i++) {
+	  ExecutionState *toremove = *i;
+	  if ((toremove->isNormalState() && toremove->isSuspended()) ||
+	      toremove->isRecoveryState())  {
+	    continue;
+	  }
+	  arr.push_back(toremove);
+	}
         for (unsigned i = 0, N = arr.size(); N && i < toKill; ++i, --N) {
           unsigned idx = rand() % N;
           // Make two pulls to try and not hit a state that
