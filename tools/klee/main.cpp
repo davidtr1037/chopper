@@ -749,7 +749,7 @@ static int initEnv(Module *mainModule) {
   params.push_back(Type::getInt32Ty(getGlobalContext()));
   params.push_back(Type::getInt32Ty(getGlobalContext()));
 
-  Function* initEnvFn;
+  Function* initEnvFn = NULL;
   if (WithPOSIXRuntime)
   initEnvFn =
     cast<Function>(mainModule->getOrInsertFunction("klee_init_env",
