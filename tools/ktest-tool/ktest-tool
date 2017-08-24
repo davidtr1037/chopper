@@ -91,6 +91,7 @@ def main(args):
     op.add_option('','--write-ints', dest='writeInts', action='store_true',
                   default=False,
                   help='convert 4-byte sequences to integers')
+    op.add_option('-d','--dump-file', dest='dump_file')
     
     opts,args = op.parse_args()
     if not args:
@@ -113,6 +114,8 @@ def main(args):
             if opts.writeInts and len(data) == 4: 
                 print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
             else:
+                if opts.dump_file is not None:
+                    open(opts.dump_file, "w+").write(str)
                 print('object %4d: data: %r' % (i, str))
         if file != args[-1]:
             print()
