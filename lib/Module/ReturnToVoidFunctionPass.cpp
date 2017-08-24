@@ -121,7 +121,8 @@ void klee::ReturnToVoidFunctionPass::replaceCalls(Function *f, Function *wrapper
 void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Function *f, Function *wrapper) {
   Value *allocaInst = NULL;
   StoreInst *prevStoreInst = NULL;
-  bool hasPhi = false;
+  bool hasPhiUse = false;
+
   // We can perform this optimization only when the return value is stored, and
   // that is the _only_ use
   if (origCallInst->getNumUses() == 1) {
@@ -133,9 +134,14 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
           allocaInst = storeInst->getOperand(1);
           prevStoreInst = storeInst;
         }
-      } else if (isa<PHINode>(*ui)) {
-        hasPhi = true;
       }
+    }
+  }
+
+  /* check if we have a PHI use */
+  for (auto ui = origCallInst->use_begin(), ue = origCallInst->use_end(); ui != ue; ui++) {
+    if (isa<PHINode>(*ui)) {
+      hasPhiUse = true;
     }
   }
 
@@ -158,7 +164,7 @@ void klee::ReturnToVoidFunctionPass::replaceCall(CallInst *origCallInst, Functio
     prevStoreInst->eraseFromParent();
   } else {
     // otherwise, we create a LoadInst for the return value at each use
-    if (hasPhi) {
+    if (hasPhiUse) {
       // FIXME: phi nodes are not easy to handle: 1) we can't add the load as
       // first instruction of the basic block, 2) we need to find a
       // precedessor which dominates all the uses.
