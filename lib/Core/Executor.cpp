@@ -4440,6 +4440,7 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
   std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
   recoveryState->ptreeNode = res.first;
   state.ptreeNode = res.second;
+  recoveryState->setPriority(PRIORITY_HIGH);
   addedStates.push_back(recoveryState);
 
   /* update statistics */
