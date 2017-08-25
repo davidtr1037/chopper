@@ -130,6 +130,11 @@ struct RecoveryResult {
     bool modified;
 };
 
+enum {
+    PRIORITY_LOW,
+    PRIORITY_HIGH,
+};
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
@@ -184,6 +189,8 @@ private:
   ref<RecoveryInfo> recoveryInfo;
   /* we use this record while executing a recovery state  */
   AllocationRecord guidingAllocationRecord;
+  /* search priority */
+  int priority;
 
 public:
   // Execution - Control Flow specific
@@ -564,6 +571,16 @@ public:
 
   bool hasPendingRecoveryInfo() {
     return !pendingRecoveryInfos.empty();
+  }
+
+  int getPriority() {
+    assert(isRecoveryState());
+    return priority;
+  }
+
+  void setPriority(int _priority) {
+    assert(isRecoveryState());
+    priority = _priority;
   }
 
 };
