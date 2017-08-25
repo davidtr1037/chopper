@@ -63,6 +63,8 @@ namespace {
 
   cl::opt<bool> UseSplittedSearcher("split-search", cl::desc("..."));
 
+  cl::opt<bool> UseOptimizedSplittedSearcher("opt-split-search", cl::desc("..."));
+
   cl::opt<unsigned int>
   SplitRatio("split-ratio",
             cl::desc("ratio for choosing recovery states (default = 20)"),
@@ -140,6 +142,10 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   if (UseSplittedSearcher) {
     searcher = new SplittedSearcher(searcher, SplitRatio);
+  }
+
+  if (UseOptimizedSplittedSearcher) {
+    searcher = new OptimizedSplittedSearcher(searcher, new DFSSearcher(), new DFSSearcher(), SplitRatio);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();
