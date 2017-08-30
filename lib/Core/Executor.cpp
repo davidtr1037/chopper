@@ -3598,7 +3598,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
             onRecoveryStateWrite(state, address, mo, offset, value);
           }
           if (state.isNormalState()) {
-            onNormalStateWrite(state, address, mo, offset, value);
+            onNormalStateWrite(state, address, value);
           }
         }          
       } else {
@@ -4502,8 +4502,6 @@ void Executor::onRecoveryStateWrite(
 void Executor::onNormalStateWrite(
   ExecutionState &state,
   ref<Expr> address,
-  const MemoryObject *mo,
-  ref<Expr> offset,
   ref<Expr> value
 ) {
   if (!state.isInDependentMode()) {

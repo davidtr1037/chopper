@@ -476,8 +476,6 @@ private:
   void onNormalStateWrite(
     ExecutionState &state,
     ref<Expr> address,
-    const MemoryObject *mo,
-    ref<Expr> offset,
     ref<Expr> value
   );
   bool isOverridingStore(KInstruction *kinst);
