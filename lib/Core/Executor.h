@@ -482,8 +482,6 @@ private:
   void onNormalStateRead(
     ExecutionState &state,
     ref<Expr> address,
-    const MemoryObject *mo,
-    ref<Expr> offset,
     Expr::Width width
   );
   void dumpConstrains(ExecutionState &state);

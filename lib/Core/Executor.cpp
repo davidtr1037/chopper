@@ -3604,7 +3604,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       } else {
         ref<Expr> result = os->read(offset, type);
         if (state.isNormalState()) {
-          onNormalStateRead(state, address, mo, offset, type);
+          onNormalStateRead(state, address, type);
         }
         
         if (interpreterOpts.MakeConcreteSymbolic)
@@ -4544,8 +4544,6 @@ bool Executor::isOverridingStore(KInstruction *ki) {
 void Executor::onNormalStateRead(
   ExecutionState &state,
   ref<Expr> address,
-  const MemoryObject *mo,
-  ref<Expr> offset,
   Expr::Width width
 ) {
   if (!state.isInDependentMode()) {
