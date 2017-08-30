@@ -4535,7 +4535,7 @@ void Executor::onNormalStateWrite(
   );
 }
 
-/* checking if a store may override a sliced function stores ... */
+/* checking if a store may override a skipped function stores ... */
 bool Executor::isOverridingStore(KInstruction *ki) {
   assert(ki->inst->getOpcode() == Instruction::Store);
   return ki->mayOverride;
@@ -4557,7 +4557,6 @@ void Executor::onNormalStateRead(
   }
 
   assert(isa<ConstantExpr>(address));
-  assert(isa<ConstantExpr>(offset));
 
   ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
   uint64_t addr = ce->getZExtValue();
