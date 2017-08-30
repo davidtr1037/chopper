@@ -4520,7 +4520,6 @@ void Executor::onNormalStateWrite(
   }
 
   assert(isa<ConstantExpr>(address));
-  assert(isa<ConstantExpr>(offset));
 
   uint64_t concreteAddress = dyn_cast<ConstantExpr>(address)->getZExtValue();
   size_t sizeInBytes = value->getWidth() / 8;
