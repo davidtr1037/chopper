@@ -4031,11 +4031,11 @@ bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
   Expr::Width width = getWidthForLLVMType(ki->inst->getType());
   size_t size = Expr::getMinBytesForWidth(width);
 
-  /* check if already resolved */
+  /* check if already recovered */
   if (state.isAddressRecovered(address)) {
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
-      klee_message("%p: load from %#lx is already resolved", &state, address)
+      klee_message("%p: load from %#lx is already recovered", &state, address)
     );
     return false;
   }
@@ -4047,7 +4047,7 @@ bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
     return true;
   }
 
-  /* TODO: handle resolved loads... */
+  /* TODO: handle recovered loads... */
   if (state.getCurrentSnapshotIndex() == info.snapshotIndex) {
     /* TODO: hack... */
     state.markLoadAsNotRecovered();
@@ -4523,7 +4523,7 @@ void Executor::onNormalStateWrite(
   size_t sizeInBytes = value->getWidth() / 8;
   assert(sizeInBytes * 8 == value->getWidth());
 
-  /* TODO: don't add if already resolved */
+  /* TODO: don't add if already recovered */
   state.addWrittenAddress(concreteAddress, sizeInBytes, state.getCurrentSnapshotIndex());
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
@@ -4559,7 +4559,7 @@ void Executor::onNormalStateRead(
   ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
   uint64_t addr = ce->getZExtValue();
 
-  /* update resolved loads */
+  /* update recovered loads */
   state.addRecoveredAddress(addr);
   state.markLoadAsRecovered();
 }
