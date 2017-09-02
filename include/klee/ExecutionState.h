@@ -357,7 +357,7 @@ public:
   }
 
   /* TODO: rename/re-implement */
-  void markLoadAsNotRecovered() {
+  void markLoadAsUnrecovered() {
     assert(isNormalState());
     blockingLoadStatus = false;
   }
@@ -505,12 +505,12 @@ public:
   }
 
   void clearGuidingConstraints() {
-    assert(isNormalState() && "Adding guiding constraints to non-normal state");
+    assert(isNormalState());
     guidingConstraints.clear();
   }
 
   void addWrittenAddress(uint64_t address, size_t size, unsigned int snapshotIndex) {
-    assert(isNormalState() && "Adding written addresses to non-normal state");
+    assert(isNormalState());
     WrittenAddressInfo &info = writtenAddresses[address];
     if (size > info.maxSize) {
       info.maxSize = size;
@@ -520,7 +520,7 @@ public:
 
   bool getWrittenAddressInfo(uint64_t address, size_t loadSize,
                              WrittenAddressInfo &info) {
-    assert(isNormalState() && "Obtaining written addresses to non-normal state");
+    assert(isNormalState());
     WrittenAddresses::iterator i = writtenAddresses.find(address);
     if (i == writtenAddresses.end()) {
       return false;
@@ -528,13 +528,9 @@ public:
 
     info = i->second;
 
+    // we have a complete overwrite iff we write at least loadSize bits
     size_t writtenSize = i->second.maxSize;
-    if (writtenSize >= loadSize) {
-      return true; // we have a complete overwrite iff we write at least
-                   // loadSize bits
-    } else {
-      return false;
-    }
+    return writtenSize >= loadSize;
   }
 
   unsigned int getStartingIndex(uint64_t address, size_t size) {

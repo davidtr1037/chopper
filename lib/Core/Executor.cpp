@@ -2268,10 +2268,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Load: {
     if (state.isNormalState() && state.isInDependentMode()) {
       if (state.isBlockingLoadRecovered() && isMayBlockingLoad(state, ki)) {
+        /* TODO: rename variable */
         bool success;
         bool isBlocking = handleMayBlockingLoad(state, ki, success);
-        if (!success)
+        if (!success) {
           return;
+        }
         if (isBlocking) {
           /* TODO: break? */
           return;
@@ -4049,7 +4051,7 @@ bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
   /* TODO: handle recovered loads... */
   if (state.getCurrentSnapshotIndex() == info.snapshotIndex) {
     /* TODO: hack... */
-    state.markLoadAsNotRecovered();
+    state.markLoadAsUnrecovered();
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
       klee_message("location (%lx, %zu) was written, recovery is not required", address, size);
@@ -4244,8 +4246,7 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
     /* get load address */
     ce = dyn_cast<ConstantExpr>(address);
     if (!ce) {
-      /* TODO: in order to support symbolic addresses, we have to use the
-       * resolve() API */
+      /* TODO: use the resolve() API in order to support symbolic addresses */
       state.dumpStack(llvm::errs());
       llvm_unreachable("getLoadInfo() does not support symbolic addresses");
     }
@@ -4264,16 +4265,16 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
     assert(ce);
 
     /* translate value... */
-    const Value *translatedValue =
-        cloner->translateValue((Value *)(mo->allocSite));
+    const Value *translatedValue = cloner->translateValue((Value *)(mo->allocSite));
     uint64_t offset = ce->getZExtValue();
 
     /* get the precise allocation site */
     allocSite = std::make_pair(translatedValue, offset);
   } else {
     DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("Unable to resolve blocking load address to one memory object"));
+      DEBUG_BASIC,
+      klee_message("Unable to resolve blocking load address to one memory object")
+    );
     ResolutionList rl;
     solver->setTimeout(coreSolverTimeout);
     bool incomplete = state.addressSpace.resolve(state, solver, address, rl, 0,
@@ -4311,7 +4312,7 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("resuming: %p", &state));
   state.setResumed();
   state.setRecoveryState(0);
-  state.markLoadAsNotRecovered();
+  state.markLoadAsUnrecovered();
   if (implicitlyCreated) {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding an implicitly created state: %p", &state));
     addedStates.push_back(&state);
@@ -4648,6 +4649,7 @@ void Executor::terminateStateRecursively(ExecutionState &state) {
     } else {
       next = NULL;
     }
+
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating state %p", current));
     terminateState(*current);
     current = next;
