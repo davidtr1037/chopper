@@ -444,6 +444,7 @@ const Module *Executor::setModule(llvm::Module *module,
                       (Expr::Width) TD->getPointerSizeInBits());
 
   specialFunctionHandler = new SpecialFunctionHandler(*this);
+  specialFunctionHandler->prepare();
 
   if (!interpreterOpts.skippedFunctions.empty()) {
     /* build target functions */
@@ -455,7 +456,6 @@ const Module *Executor::setModule(llvm::Module *module,
     logFile = interpreterHandler->openOutputFile("sa.log");
 
     std::string entry = "main";
-    specialFunctionHandler->prepare();
     ra = new ReachabilityAnalysis(module, entry, targets, *logFile);
     inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions, *logFile);
     aa = new AAPass();
