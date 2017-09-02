@@ -512,8 +512,9 @@ public:
   void addWrittenAddress(uint64_t address, size_t size, unsigned int snapshotIndex) {
     assert(isNormalState() && "Adding written addresses to non-normal state");
     WrittenAddressInfo &info = writtenAddresses[address];
-    if (size > info.maxSize)
+    if (size > info.maxSize) {
       info.maxSize = size;
+    }
     info.snapshotIndex = snapshotIndex;
   }
 
