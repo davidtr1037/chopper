@@ -447,17 +447,24 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   kleeMergeFn = module->getFunction("klee_merge");
 
   if (!skippedFunctions.empty()) {
+    /* prepare reachability analysis */
+    ra->prepare();
+
     /* first, we need to do the inlining... */
     inliner->run();
 
-    klee_message("Runnining reachability analysis...");
-    ra->run();
-
+    /* run pointer analysis */
     klee_message("Runnining pointer analysis...");
     PassManager passManager;
     passManager.add(aa);
     passManager.run(*module);
 
+    /* run reachability analysis */
+    klee_message("Runnining reachability analysis...");
+    ra->usePA(aa);
+    ra->run(true);
+
+    /* run mod-ref analysis */
     klee_message("Runnining mod-ref analysis...");
     mra->run();
 
