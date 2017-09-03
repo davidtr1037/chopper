@@ -1468,6 +1468,15 @@ void Executor::executeCall(ExecutionState &state,
         DEBUG_BASIC,
         klee_message("injecting slice: %s", f->getName().data())
       );
+
+      /* handle fully sliced functions */
+      if (f->isDeclaration()) {
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("ignoring fully sliced function: %s", f->getName().data())
+        );
+        return;
+      }
     }
 
     KFunction *kf = kmodule->functionMap[f];
@@ -4824,6 +4833,10 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
 
             /* get the cloned function (using the slice id) */
             Function *cloned = cloner->getSliceInfo(f, sliceId)->f;
+            if (cloned->isDeclaration()) {
+                /* a sliced function can become empty (a decleration) */
+                continue;
+            }
 
             /* initialize KFunction */
             KFunction *kcloned = new KFunction(cloned, kmodule);
