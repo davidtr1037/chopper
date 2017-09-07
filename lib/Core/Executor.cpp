@@ -444,6 +444,7 @@ const Module *Executor::setModule(llvm::Module *module,
                       (Expr::Width) TD->getPointerSizeInBits());
 
   specialFunctionHandler = new SpecialFunctionHandler(*this);
+  specialFunctionHandler->prepare();
 
   if (!interpreterOpts.skippedFunctions.empty()) {
     /* build target functions */
@@ -455,7 +456,6 @@ const Module *Executor::setModule(llvm::Module *module,
     logFile = interpreterHandler->openOutputFile("sa.log");
 
     std::string entry = "main";
-    specialFunctionHandler->prepare();
     ra = new ReachabilityAnalysis(module, entry, targets, *logFile);
     inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions, *logFile);
     aa = new AAPass();
@@ -1468,6 +1468,15 @@ void Executor::executeCall(ExecutionState &state,
         DEBUG_BASIC,
         klee_message("injecting slice: %s", f->getName().data())
       );
+
+      /* handle fully sliced functions */
+      if (f->isDeclaration()) {
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("ignoring fully sliced function: %s", f->getName().data())
+        );
+        return;
+      }
     }
 
     KFunction *kf = kmodule->functionMap[f];
@@ -2268,10 +2277,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Load: {
     if (state.isNormalState() && state.isInDependentMode()) {
       if (state.isBlockingLoadRecovered() && isMayBlockingLoad(state, ki)) {
+        /* TODO: rename variable */
         bool success;
         bool isBlocking = handleMayBlockingLoad(state, ki, success);
-        if (!success)
+        if (!success) {
           return;
+        }
         if (isBlocking) {
           /* TODO: break? */
           return;
@@ -2861,14 +2872,13 @@ void Executor::checkMemoryUsage() {
         unsigned toKill = std::max(1U, numStates - numStates * MaxMemory / mbs);
         klee_warning("killing %d states (over memory cap)", toKill);
         std::vector<ExecutionState *> arr;
-	for (std::set<ExecutionState *>::iterator i = states.begin(); i != states.end(); i++) {
-	  ExecutionState *toremove = *i;
-	  if ((toremove->isNormalState() && toremove->isSuspended()) ||
-	      toremove->isRecoveryState())  {
-	    continue;
-	  }
-	  arr.push_back(toremove);
-	}
+        for (std::set<ExecutionState *>::iterator i = states.begin(); i != states.end(); i++) {
+          ExecutionState *toremove = *i;
+          if ((toremove->isNormalState() && toremove->isSuspended()) || toremove->isRecoveryState())  {
+            continue;
+          }
+          arr.push_back(toremove);
+        }
         for (unsigned i = 0, N = arr.size(); N && i < toKill; ++i, --N) {
           unsigned idx = rand() % N;
           // Make two pulls to try and not hit a state that
@@ -3598,13 +3608,13 @@ void Executor::executeMemoryOperation(ExecutionState &state,
             onRecoveryStateWrite(state, address, mo, offset, value);
           }
           if (state.isNormalState()) {
-            onNormalStateWrite(state, address, mo, offset, value);
+            onNormalStateWrite(state, address, value);
           }
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
         if (state.isNormalState()) {
-          onNormalStateRead(state, address, mo, offset, type);
+          onNormalStateRead(state, address, type);
         }
         
         if (interpreterOpts.MakeConcreteSymbolic)
@@ -4031,11 +4041,11 @@ bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
   Expr::Width width = getWidthForLLVMType(ki->inst->getType());
   size_t size = Expr::getMinBytesForWidth(width);
 
-  /* check if already resolved */
+  /* check if already recovered */
   if (state.isAddressRecovered(address)) {
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
-      klee_message("%p: load from %#lx is already resolved", &state, address)
+      klee_message("%p: load from %#lx is already recovered", &state, address)
     );
     return false;
   }
@@ -4047,10 +4057,10 @@ bool Executor::isRecoveryRequired(ExecutionState &state, KInstruction *ki) {
     return true;
   }
 
-  /* TODO: handle resolved loads... */
+  /* TODO: handle recovered loads... */
   if (state.getCurrentSnapshotIndex() == info.snapshotIndex) {
     /* TODO: hack... */
-    state.markLoadAsNotRecovered();
+    state.markLoadAsUnrecovered();
     DEBUG_WITH_TYPE(
       DEBUG_BASIC,
       klee_message("location (%lx, %zu) was written, recovery is not required", address, size);
@@ -4245,8 +4255,7 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
     /* get load address */
     ce = dyn_cast<ConstantExpr>(address);
     if (!ce) {
-      /* TODO: in order to support symbolic addresses, we have to use the
-       * resolve() API */
+      /* TODO: use the resolve() API in order to support symbolic addresses */
       state.dumpStack(llvm::errs());
       llvm_unreachable("getLoadInfo() does not support symbolic addresses");
     }
@@ -4265,16 +4274,16 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
     assert(ce);
 
     /* translate value... */
-    const Value *translatedValue =
-        cloner->translateValue((Value *)(mo->allocSite));
+    const Value *translatedValue = cloner->translateValue((Value *)(mo->allocSite));
     uint64_t offset = ce->getZExtValue();
 
     /* get the precise allocation site */
     allocSite = std::make_pair(translatedValue, offset);
   } else {
     DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("Unable to resolve blocking load address to one memory object"));
+      DEBUG_BASIC,
+      klee_message("Unable to resolve blocking load address to one memory object")
+    );
     ResolutionList rl;
     solver->setTimeout(coreSolverTimeout);
     bool incomplete = state.addressSpace.resolve(state, solver, address, rl, 0,
@@ -4312,7 +4321,7 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("resuming: %p", &state));
   state.setResumed();
   state.setRecoveryState(0);
-  state.markLoadAsNotRecovered();
+  state.markLoadAsUnrecovered();
   if (implicitlyCreated) {
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("adding an implicitly created state: %p", &state));
     addedStates.push_back(&state);
@@ -4503,8 +4512,6 @@ void Executor::onRecoveryStateWrite(
 void Executor::onNormalStateWrite(
   ExecutionState &state,
   ref<Expr> address,
-  const MemoryObject *mo,
-  ref<Expr> offset,
   ref<Expr> value
 ) {
   if (!state.isInDependentMode()) {
@@ -4521,13 +4528,12 @@ void Executor::onNormalStateWrite(
   }
 
   assert(isa<ConstantExpr>(address));
-  assert(isa<ConstantExpr>(offset));
 
   uint64_t concreteAddress = dyn_cast<ConstantExpr>(address)->getZExtValue();
   size_t sizeInBytes = value->getWidth() / 8;
   assert(sizeInBytes * 8 == value->getWidth());
 
-  /* TODO: don't add if already resolved */
+  /* TODO: don't add if already recovered */
   state.addWrittenAddress(concreteAddress, sizeInBytes, state.getCurrentSnapshotIndex());
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
@@ -4539,7 +4545,7 @@ void Executor::onNormalStateWrite(
   );
 }
 
-/* checking if a store may override a sliced function stores ... */
+/* checking if a store may override a skipped function stores ... */
 bool Executor::isOverridingStore(KInstruction *ki) {
   assert(ki->inst->getOpcode() == Instruction::Store);
   return ki->mayOverride;
@@ -4548,8 +4554,6 @@ bool Executor::isOverridingStore(KInstruction *ki) {
 void Executor::onNormalStateRead(
   ExecutionState &state,
   ref<Expr> address,
-  const MemoryObject *mo,
-  ref<Expr> offset,
   Expr::Width width
 ) {
   if (!state.isInDependentMode()) {
@@ -4561,12 +4565,11 @@ void Executor::onNormalStateRead(
   }
 
   assert(isa<ConstantExpr>(address));
-  assert(isa<ConstantExpr>(offset));
 
   ConstantExpr *ce = dyn_cast<ConstantExpr>(address);
   uint64_t addr = ce->getZExtValue();
 
-  /* update resolved loads */
+  /* update recovered loads */
   state.addRecoveredAddress(addr);
   state.markLoadAsRecovered();
 }
@@ -4656,6 +4659,7 @@ void Executor::terminateStateRecursively(ExecutionState &state) {
     } else {
       next = NULL;
     }
+
     DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("terminating state %p", current));
     terminateState(*current);
     current = next;
@@ -4830,6 +4834,10 @@ Function *Executor::getSlice(Function *target, uint32_t sliceId, ModRefAnalysis:
 
             /* get the cloned function (using the slice id) */
             Function *cloned = cloner->getSliceInfo(f, sliceId)->f;
+            if (cloned->isDeclaration()) {
+                /* a sliced function can become empty (a decleration) */
+                continue;
+            }
 
             /* initialize KFunction */
             KFunction *kcloned = new KFunction(cloned, kmodule);
