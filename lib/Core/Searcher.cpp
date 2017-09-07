@@ -838,7 +838,6 @@ void OptimizedSplittedSearcher::update(
           recoverySearcher->addState(&rs);
           count++;
         }
-        //llvm::errs() << "flushing high priority searcher: " << count << "\n";
       } else {
         removedRecoveryStates.push_back(es);
       }
