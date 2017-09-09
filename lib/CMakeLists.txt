@@ -6,6 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
+add_subdirectory(Analysis)
 add_subdirectory(Basic)
 add_subdirectory(Support)
 add_subdirectory(Expr)
