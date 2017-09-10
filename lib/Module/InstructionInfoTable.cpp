@@ -46,7 +46,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#include <Cloner.h>
+#include "klee/Internal/Analysis/Cloner.h"
 
 #include <map>
 #include <string>

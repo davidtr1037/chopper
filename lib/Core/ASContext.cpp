@@ -6,7 +6,7 @@
 
 #include "llvm/IR/Instruction.h"
 
-#include "Cloner.h"
+#include "klee/Internal/Analysis/Cloner.h"
 
 #include <vector>
 

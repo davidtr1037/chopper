@@ -94,12 +94,12 @@
 
 #include "llvm/PassManager.h"
 
-#include <ReachabilityAnalysis.h>
-#include <Inliner.h>
-#include <AAPass.h>
-#include <ModRefAnalysis.h>
-#include <Cloner.h>
-#include <SliceGenerator.h>
+#include "klee/Internal/Analysis/ReachabilityAnalysis.h"
+#include "klee/Internal/Analysis/Inliner.h"
+#include "klee/Internal/Analysis/AAPass.h"
+#include "klee/Internal/Analysis/ModRefAnalysis.h"
+#include "klee/Internal/Analysis/Cloner.h"
+#include "klee/Internal/Analysis/SliceGenerator.h"
 
 #ifdef HAVE_ZLIB_H
 #include "klee/Internal/Support/CompressionStream.h"

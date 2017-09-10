@@ -10,7 +10,7 @@
 #ifndef KLEE_LIB_INSTRUCTIONINFOTABLE_H
 #define KLEE_LIB_INSTRUCTIONINFOTABLE_H
 
-#include <Cloner.h>
+#include "klee/Internal/Analysis/Cloner.h"
 
 #include <map>
 #include <string>

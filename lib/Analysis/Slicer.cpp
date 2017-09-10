@@ -77,8 +77,7 @@
 #include "analysis/PointsTo/PointsToFlowSensitive.h"
 #include "analysis/PointsTo/Pointer.h"
 
-#include "SVFPointerAnalysis.h"
-
+#include "klee/Internal/Analysis/SVFPointerAnalysis.h"
 #include "klee/Internal/Analysis/Cloner.h"
 #include "klee/Internal/Analysis/Slicer.h"
 
