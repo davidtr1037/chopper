@@ -1,14 +1,17 @@
-KLEE/Slicing Project
+KLEE/CSE Project
 =============================
 An extension of KLEE (http://klee.github.io).
 
 ## Build
-Build the Slicing Library:
-* https://github.com/davidtr1037/se-slicing
+Build SVF (Pointer Analysis)
+* https://github.com/davidtr1037/SVF/tree/master
+
+Build DG (Static Slicing)
+* https://github.com/davidtr1037/dg/tree/master
 
 Build KLEE:
 ```
-git checkout multiple-calls
+git checkout master
 mkdir klee_build
 cd klee_build
 CXXFLAGS="-fno-rtti" cmake \
@@ -22,9 +25,7 @@ CXXFLAGS="-fno-rtti" cmake \
     -DENABLE_SYSTEM_TESTS=ON \
     -DSVF_ROOT_DIR=<SVF_PROJECT_DIR> \
     -DDG_ROOT_DIR=<DG_PROJECT_DIR> \
-    -DSLICING_ROOT_DIR=<SLICING_PROJECT_DIR> \
     <KLEE_ROOT_DIR>
-export LD_LIBRARY_PATH=<SVF_BUILD_DIR>/lib:<SVF_BUILD_DIR>/lib/CUDD:<DG_BUILD_DIR>/src
 make
 ```
 
@@ -72,16 +73,15 @@ opt -mem2reg main.bc -o main.bc (required for better pointer analysis)
 ```
 
 Run KLEE (static analysis related debug messages are written to stdout):
-```
-export LD_LIBRARY_PATH=<SVF_BUILD_DIR>/lib:<SVF_BUILD_DIR>/lib/CUDD:<DG_BUILD_DIR>/src
-klee -libc=klee -search=dfs -slice=f main.bc 1>out.log
+```bash
+klee -libc=klee -search=dfs -slice=f main.bc
 ```
 
 ## Options
-### Slicing
+### Skipping Functions
 The skipped functions are set using the following option:
 ```
--slice=<function1>[:line1/line2/...],<function2>[:line1/line2/...],...
+-skip-functions=<function1>[:line1/line2/...],<function2>[:line1/line2/...],...
 ```
 ### Inlining
 In some cases, inlining can improve the precision of static analysis.
@@ -92,9 +92,9 @@ Functions can be inlined using the following option:
 ### Debugging
 More verbose debug messages can be produced using the following option:
 ```
--debug-only=basic```
+-debug-only=basic
 ```
 
 ## Notes:
-* Currently, the supported search heuristics are: dfs, bfs, random-state.
+* Currently, the supported search heuristics are: dfs, bfs, random-state, nurs:covnew.
 * When using klee-libc, some files (memcpy.c, memset.c) should be recompiled with `-O1` to avoid vector instructions.
