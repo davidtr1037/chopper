@@ -17,8 +17,8 @@
 #include "MSSA/MemRegion.h"
 #include "MSSA/MemPartition.h"
 
-#include "AAPass.h"
-#include "ModRefAnalysis.h"
+#include "klee/Internal/Analysis/AAPass.h"
+#include "klee/Internal/Analysis/ModRefAnalysis.h"
 
 using namespace std;
 using namespace llvm;

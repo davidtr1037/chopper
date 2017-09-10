@@ -14,8 +14,8 @@
 #include <llvm/Transforms/Utils/ValueMapper.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include "ReachabilityAnalysis.h"
-#include "Cloner.h"
+#include "klee/Internal/Analysis/ReachabilityAnalysis.h"
+#include "klee/Internal/Analysis/Cloner.h"
 
 using namespace std;
 using namespace llvm;

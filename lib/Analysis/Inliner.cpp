@@ -12,8 +12,8 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#include "ReachabilityAnalysis.h"
-#include "Inliner.h"
+#include "klee/Internal/Analysis/ReachabilityAnalysis.h"
+#include "klee/Internal/Analysis/Inliner.h"
 
 using namespace std;
 using namespace llvm;

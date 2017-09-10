@@ -6,13 +6,13 @@
 
 #include "llvm/analysis/PointsTo/PointsTo.h"
 
-#include "AAPass.h"
-#include "ModRefAnalysis.h"
-#include "Annotator.h"
-#include "Cloner.h"
-#include "SVFPointerAnalysis.h"
-#include "Slicer.h"
-#include "SliceGenerator.h"
+#include "klee/Internal/Analysis/AAPass.h"
+#include "klee/Internal/Analysis/ModRefAnalysis.h"
+#include "klee/Internal/Analysis/Annotator.h"
+#include "klee/Internal/Analysis/Cloner.h"
+#include "klee/Internal/Analysis/SVFPointerAnalysis.h"
+#include "klee/Internal/Analysis/Slicer.h"
+#include "klee/Internal/Analysis/SliceGenerator.h"
 
 using namespace std;
 using namespace llvm;

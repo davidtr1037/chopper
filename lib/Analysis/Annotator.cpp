@@ -12,8 +12,8 @@
 
 #include <llvm-c/Core.h>
 
-#include "ModRefAnalysis.h"
-#include "Annotator.h"
+#include "klee/Internal/Analysis/ModRefAnalysis.h"
+#include "klee/Internal/Analysis/Annotator.h"
 
 using namespace std;
 using namespace llvm;

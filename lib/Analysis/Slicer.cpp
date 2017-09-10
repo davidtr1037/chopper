@@ -79,8 +79,8 @@
 
 #include "SVFPointerAnalysis.h"
 
-#include "Cloner.h"
-#include "Slicer.h"
+#include "klee/Internal/Analysis/Cloner.h"
+#include "klee/Internal/Analysis/Slicer.h"
 
 using namespace dg;
 using llvm::errs;

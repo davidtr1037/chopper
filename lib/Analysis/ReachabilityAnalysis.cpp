@@ -13,8 +13,8 @@
 #include <llvm/Support/InstIterator.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include "AAPass.h"
-#include "ReachabilityAnalysis.h"
+#include "klee/Internal/Analysis/AAPass.h"
+#include "klee/Internal/Analysis/ReachabilityAnalysis.h"
 
 using namespace std;
 using namespace llvm;

@@ -2,7 +2,7 @@
 #include <WPA/Andersen.h>
 #include <WPA/FlowSensitive.h>
 
-#include "AAPass.h"
+#include "klee/Internal/Analysis/AAPass.h"
 
 using namespace llvm;
 
