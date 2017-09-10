@@ -34,7 +34,7 @@ void ReachabilityAnalysis::removeUnusedValues() {
     } while (changed);
 }
 
-bool ReachabilityAnalysis::removeUnusedValues(bool &changed) {
+void ReachabilityAnalysis::removeUnusedValues(bool &changed) {
     std::set<Function *> functions;
     set<string> keep;
 

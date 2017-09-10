@@ -70,7 +70,7 @@ private:
 
     void removeUnusedValues();
 
-    bool removeUnusedValues(bool &changed);
+    void removeUnusedValues(bool &changed);
 
     void computeFunctionTypeMap();
 
