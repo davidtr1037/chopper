@@ -14,8 +14,8 @@
 #include "analysis/PointsTo/PointerSubgraph.h"
 #include "analysis/Offset.h"
 
-#include "AAPass.h"
-#include "SVFPointerAnalysis.h"
+#include "klee/Internal/Analysis/AAPass.h"
+#include "klee/Internal/Analysis/SVFPointerAnalysis.h"
 
 using namespace llvm;
 using namespace dg::analysis::pta;
