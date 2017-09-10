@@ -53,6 +53,7 @@ target_include_directories(kleeCore PUBLIC
     ${DG_ROOT_DIR}/tools
 )
 target_link_libraries(kleeCore PRIVATE
+  kleeAnalysis
   kleeBasic
   kleeModule
   kleaverSolver
