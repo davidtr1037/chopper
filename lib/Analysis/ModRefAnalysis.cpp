@@ -433,6 +433,7 @@ void ModRefAnalysis::dumpModSetMap() {
         Function *f = i->first;
         InstructionSet &modSet = i->second;
 
+        debugs << "# " << f->getName() << " #\n";
         for (InstructionSet::iterator j = modSet.begin(); j != modSet.end(); j++) {
             Instruction *inst = *j;
             dumpInst(inst);
