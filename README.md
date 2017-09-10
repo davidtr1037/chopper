@@ -73,7 +73,7 @@ opt -mem2reg main.bc -o main.bc (required for better pointer analysis)
 ```
 
 Run KLEE (static analysis related debug messages are written to stdout):
-```bash
+```
 klee -libc=klee -search=dfs -slice=f main.bc
 ```
 
