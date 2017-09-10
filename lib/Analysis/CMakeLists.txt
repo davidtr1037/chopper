@@ -15,6 +15,7 @@ klee_add_component(kleeAnalysis
     Annotator.cpp
     Cloner.cpp
     Slicer.cpp
+    SVFPointerAnalysis.cpp
     SliceGenerator.cpp
 )
 
