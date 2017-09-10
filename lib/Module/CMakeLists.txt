@@ -36,6 +36,7 @@ endif()
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
 target_link_libraries(kleeModule PUBLIC ${LLVM_LIBS})
 target_link_libraries(kleeModule PRIVATE
+  kleeAnalysis
   kleeSupport
   # FIXME:
   # There is a circular dependency between `kleeModule` and `kleeCore`.
