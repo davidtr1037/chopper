@@ -8,7 +8,14 @@
 #===------------------------------------------------------------------------===#
 
 klee_add_component(kleeAnalysis
-
+    ReachabilityAnalysis.cpp
+    Inliner.cpp
+    AAPass.cpp
+    ModRefAnalysis.cpp
+    Annotator.cpp
+    Cloner.cpp
+    Slicer.cpp
+    SliceGenerator.cpp
 )
 
 # TODO: Work out what the correct LLVM components are for kleeCore.
@@ -24,11 +31,25 @@ else()
   list(APPEND LLVM_COMPONENTS jit engine)
 endif()
 
+find_library(SVF_LIB Svf.so HINTS ${SVF_ROOT_DIR}/build/lib)
+find_library(CUDD_LIB Cudd.so HINTS ${SVF_ROOT_DIR}/build/lib/CUDD)
+find_library(LLVMDG_LIB LLVMdg HINTS ${DG_ROOT_DIR}/build/src)
+find_library(LLVMPTA_LIB LLVMpta HINTS ${DG_ROOT_DIR}/build/src)
+find_library(PTA_LIB PTA HINTS ${DG_ROOT_DIR}/build/src)
+find_library(RD_LIB RD HINTS ${DG_ROOT_DIR}/build/src)
 
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeANalysis PUBLIC ${LLVM_LIBS})
+#target_link_libraries(kleeAnalysis PUBLIC ${LLVMDG_LIBS})
+target_link_libraries(kleeAnalysis PUBLIC
+    ${SVF_LIB}
+    ${CUDD_LIB}
+    ${LLVMDG_LIB}
+    ${LLVMPTA_LIB}
+    ${PTA_LIB}
+    ${RD_LIB}
+    ${LLVM_LIBS}
+)
 target_include_directories(kleeAnalysis PUBLIC
-    ${SLICING_ROOT_DIR}
     ${SVF_ROOT_DIR}/include
     ${DG_ROOT_DIR}/src
     ${DG_ROOT_DIR}/tools

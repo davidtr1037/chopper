@@ -48,7 +48,6 @@ endif()
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
 target_link_libraries(kleeCore PUBLIC ${LLVM_LIBS})
 target_include_directories(kleeCore PUBLIC
-    ${SLICING_ROOT_DIR}
     ${SVF_ROOT_DIR}/include
     ${DG_ROOT_DIR}/src
     ${DG_ROOT_DIR}/tools
