@@ -28,7 +28,6 @@ target_link_libraries(kleeBasic PRIVATE
   kleaverSolver
 )
 target_include_directories(kleeBasic PUBLIC
-    ${SLICING_ROOT_DIR}
     ${SVF_ROOT_DIR}/include
     ${DG_ROOT_DIR}/src
     ${DG_ROOT_DIR}/tools
