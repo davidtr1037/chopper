@@ -44,7 +44,6 @@ target_link_libraries(kleeModule PRIVATE
   kleeCore
 )
 target_include_directories(kleeModule PUBLIC
-    ${SLICING_ROOT_DIR}
     ${SVF_ROOT_DIR}/include
     ${DG_ROOT_DIR}/src
     ${DG_ROOT_DIR}/tools
