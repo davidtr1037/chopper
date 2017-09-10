@@ -31,9 +31,6 @@ void SVFPointerAnalysis::run() {
 }
 
 void SVFPointerAnalysis::handleNode(PSNode *node) {
-    Value *node_value = node->getUserData<Value>();
-    //errs() << "NODE VALUE: "; node_value->print(errs()); errs() << "\n";
-
     switch (node->getType()) {
     case LOAD:
         handleLoad(node);
@@ -269,8 +266,6 @@ uint64_t SVFPointerAnalysis::getAllocNodeOffset(GepObjPN *node) {
     LocationSet ls = node->getLocationSet();
     assert(ls.isConstantOffset());
 
-    /* flat index */
-    unsigned offset = ls.getOffset();
     /* offset in bytes */
     unsigned offsetInBytes = ls.getAccOffset();
 
