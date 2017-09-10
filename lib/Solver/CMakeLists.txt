@@ -41,7 +41,6 @@ target_link_libraries(kleaverSolver PRIVATE
   kleeSupport
   ${KLEE_SOLVER_LIBRARIES})
 target_include_directories(kleaverSolver PUBLIC
-    ${SLICING_ROOT_DIR}
     ${SVF_ROOT_DIR}/include
     ${DG_ROOT_DIR}/src
     ${DG_ROOT_DIR}/tools
