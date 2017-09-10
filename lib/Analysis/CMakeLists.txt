@@ -40,7 +40,6 @@ find_library(PTA_LIB PTA HINTS ${DG_ROOT_DIR}/build/src)
 find_library(RD_LIB RD HINTS ${DG_ROOT_DIR}/build/src)
 
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-#target_link_libraries(kleeAnalysis PUBLIC ${LLVMDG_LIBS})
 target_link_libraries(kleeAnalysis PUBLIC
     ${SVF_LIB}
     ${CUDD_LIB}
