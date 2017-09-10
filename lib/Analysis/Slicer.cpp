@@ -166,53 +166,6 @@ llvm::cl::opt<CD_ALG> CdAlgorithm("cd-alg",
          ),
     llvm::cl::init(CLASSIC), llvm::cl::cat(SlicingOpts));
 
-static bool createEmptyMain(llvm::Module *M)
-{
-    llvm::Function *main_func = M->getFunction("main");
-    if (!main_func) {
-        errs() << "No main function found in module. This seems like bug since\n"
-                  "here we should have the graph build from main\n";
-        return false;
-    }
-
-    // delete old function body
-    main_func->deleteBody();
-
-    // create new function body that just returns
-    llvm::LLVMContext& ctx = M->getContext();
-    llvm::BasicBlock* blk = llvm::BasicBlock::Create(ctx, "entry", main_func);
-    llvm::Type *Ty = main_func->getReturnType();
-    llvm::Value *retval = nullptr;
-    if (Ty->isIntegerTy())
-        retval = llvm::ConstantInt::get(Ty, 0);
-    llvm::ReturnInst::Create(ctx, retval, blk);
-
-    return true;
-}
-
-static std::vector<std::string> splitList(const std::string& opt)
-{
-    std::vector<std::string> ret;
-    if (opt.empty())
-        return ret;
-
-    size_t old_pos = 0;
-    size_t pos = 0;
-    while (true) {
-        old_pos = pos;
-
-        pos = opt.find(',', pos);
-        ret.push_back(opt.substr(old_pos, pos - old_pos));
-
-        if (pos == std::string::npos)
-            break;
-        else
-            ++pos;
-    }
-
-    return ret;
-}
-
 static bool array_match(llvm::StringRef name, const char *names[])
 {
     unsigned idx = 0;
@@ -435,7 +388,7 @@ bool Slicer::mark()
     // of main and keep the return value
     if (!got_slicing_criterion) {
         /* TODO: decide what to do... */
-        return 0; //createEmptyMain(M);
+        return 0;
     }
 
     /* TODO: check what happens with the slicing... */
