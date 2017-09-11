@@ -1440,23 +1440,26 @@ void Executor::executeCall(ExecutionState &state,
 
     /* TODO: make it more readable... */
     if (state.isNormalState() && !state.isRecoveryState() && isFunctionToSkip(state, f)) {
-      /* create snapshot, recovery state will be created on demand... */
-      unsigned int index = state.getSnapshots().size();
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("%p: adding snapshot (index = %u)", &state, index)
-      );
-      ref<ExecutionState> snapshotState(createSnapshotState(state));
-      state.addSnapshot(Snapshot(snapshotState, f));
-      interpreterHandler->incSnapshotsCount();
+      /* first, check if the skipped function has side effects */
+      if (mra->hasSideEffects(f)) {
+        /* create snapshot, recovery state will be created on demand... */
+        unsigned int index = state.getSnapshots().size();
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("%p: adding snapshot (index = %u)", &state, index)
+        );
+        ref<ExecutionState> snapshotState(createSnapshotState(state));
+        state.addSnapshot(Snapshot(snapshotState, f));
+        interpreterHandler->incSnapshotsCount();
 
-      /* TODO: will be replaced later... */
-      state.clearRecoveredAddresses();
+        /* TODO: will be replaced later... */
+        state.clearRecoveredAddresses();
 
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("%p: skipping function call to %s", &state, f->getName().data())
-      );
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("%p: skipping function call to %s", &state, f->getName().data())
+        );
+      }
       return;
     }
 
