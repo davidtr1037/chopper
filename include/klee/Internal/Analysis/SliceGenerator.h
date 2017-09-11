@@ -17,54 +17,33 @@
 
 class SliceGenerator {
 public:
+  SliceGenerator(llvm::Module *module, ReachabilityAnalysis *ra, AAPass *aa,
+                 ModRefAnalysis *mra, Cloner *cloner, llvm::raw_ostream &debugs,
+                 bool lazyMode = false)
+      : module(module), ra(ra), aa(aa), mra(mra), cloner(cloner),
+        debugs(debugs), lazyMode(lazyMode), annotator(0), llvmpta(0) {}
 
-    SliceGenerator(
-        llvm::Module *module,
-        ReachabilityAnalysis *ra,
-        AAPass *aa,
-        ModRefAnalysis *mra,
-        Cloner *cloner,
-        llvm::raw_ostream &debugs,
-        bool lazyMode = false
-    ) :
-        module(module), 
-        ra(ra),
-        aa(aa), 
-        mra(mra), 
-        cloner(cloner),
-        debugs(debugs),
-        lazyMode(lazyMode),
-        annotator(0),
-        llvmpta(0)
-    {
+  ~SliceGenerator();
 
-    }
+  void generate();
 
-    ~SliceGenerator();
+  void generateSlice(llvm::Function *f, uint32_t sliceId,
+                     ModRefAnalysis::SideEffectType type);
 
-    void generate();
-
-    void generateSlice(
-        llvm::Function *f,
-        uint32_t sliceId,
-        ModRefAnalysis::SideEffectType type
-    );
-
-    void dumpSlice(llvm::Function *f, uint32_t sliceId, bool recursively = false);
+  void dumpSlice(llvm::Function *f, uint32_t sliceId, bool recursively = false);
 
 private:
+  void markAsSliced(llvm::Function *sliceEntry, uint32_t sliceId);
 
-    void markAsSliced(llvm::Function *sliceEntry, uint32_t sliceId);
-
-    llvm::Module *module;
-    ReachabilityAnalysis *ra;
-    AAPass *aa;
-    ModRefAnalysis *mra;
-    Cloner *cloner;
-    llvm::raw_ostream &debugs;
-    bool lazyMode;
-    Annotator *annotator;
-    dg::LLVMPointerAnalysis *llvmpta;
+  llvm::Module *module;
+  ReachabilityAnalysis *ra;
+  AAPass *aa;
+  ModRefAnalysis *mra;
+  Cloner *cloner;
+  llvm::raw_ostream &debugs;
+  bool lazyMode;
+  Annotator *annotator;
+  dg::LLVMPointerAnalysis *llvmpta;
 };
 
 #endif

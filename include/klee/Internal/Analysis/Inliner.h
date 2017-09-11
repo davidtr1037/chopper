@@ -11,36 +11,24 @@
 
 class Inliner {
 public:
+  Inliner(llvm::Module *module, ReachabilityAnalysis *ra,
+          std::vector<std::string> targets, std::vector<std::string> functions,
+          llvm::raw_ostream &debugs)
+      : module(module), ra(ra), targets(targets), functions(functions),
+        debugs(debugs) {}
 
-    Inliner(
-        llvm::Module *module,
-        ReachabilityAnalysis *ra,
-        std::vector<std::string> targets,
-        std::vector<std::string> functions,
-        llvm::raw_ostream &debugs
-    ) :
-        module(module),
-        ra(ra),
-        targets(targets),
-        functions(functions),
-        debugs(debugs)
-    {
+  ~Inliner() {};
 
-    }
-
-    ~Inliner() {};
-
-    void run();
+  void run();
 
 private:
-    
-    void inlineCalls(llvm::Function *f, std::vector<std::string> functions);
+  void inlineCalls(llvm::Function *f, std::vector<std::string> functions);
 
-    llvm::Module *module;
-    ReachabilityAnalysis *ra;
-    std::vector<std::string> targets;
-    std::vector<std::string> functions;
-    llvm::raw_ostream &debugs;
+  llvm::Module *module;
+  ReachabilityAnalysis *ra;
+  std::vector<std::string> targets;
+  std::vector<std::string> functions;
+  llvm::raw_ostream &debugs;
 };
 
 #endif /* INLINER_H */

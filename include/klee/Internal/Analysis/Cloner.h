@@ -16,44 +16,45 @@
 class Cloner {
 public:
 
-    typedef std::map<llvm::Value *, llvm::Value *> ValueTranslationMap;
-    struct SliceInfo {
-        /* the cloned/sliced function */
-        llvm::Function *f;
-        /* we have to know if it was already sliced */
-        bool isSliced;
-        /* translates an original value to a cloned one */
-        llvm::ValueToValueMapTy *v2vmap;
-    };
-    typedef std::map<uint32_t, SliceInfo> SliceMap;
-    typedef std::map<llvm::Function *, SliceMap> FunctionMap;
-    typedef std::map<llvm::Function *, ValueTranslationMap *> CloneInfoMap;
-    typedef std::set<llvm::Function *> FunctionSet;
-    typedef std::map<llvm::Function *, FunctionSet> ReachabilityMap;
+  struct SliceInfo {
+    /* the cloned/sliced function */
+    llvm::Function *f;
+    /* we have to know if it was already sliced */
+    bool isSliced;
+    /* translates an original value to a cloned one */
+    llvm::ValueToValueMapTy *v2vmap;
+  };
 
-    Cloner(llvm::Module *module, ReachabilityAnalysis *ra, llvm::raw_ostream &debugs);
+  typedef std::map<llvm::Value *, llvm::Value *> ValueTranslationMap;
+  typedef std::map<uint32_t, SliceInfo> SliceMap;
+  typedef std::map<llvm::Function *, SliceMap> FunctionMap;
+  typedef std::map<llvm::Function *, ValueTranslationMap *> CloneInfoMap;
+  typedef std::set<llvm::Function *> FunctionSet;
+  typedef std::map<llvm::Function *, FunctionSet> ReachabilityMap;
 
-    ~Cloner();
+  Cloner(llvm::Module *module, ReachabilityAnalysis *ra,
+         llvm::raw_ostream &debugs);
 
-    void clone(llvm::Function *f, uint32_t sliceId);
+  ~Cloner();
 
-    SliceMap *getSlices(llvm::Function *function);
+  void clone(llvm::Function *f, uint32_t sliceId);
 
-    SliceInfo *getSliceInfo(llvm::Function *function, uint32_t sliceId);
+  SliceMap *getSlices(llvm::Function *function);
 
-    llvm::Value *translateValue(llvm::Value *);
+  SliceInfo *getSliceInfo(llvm::Function *function, uint32_t sliceId);
+
+  llvm::Value *translateValue(llvm::Value *);
 
 private:
+  void cloneFunction(llvm::Function *f, uint32_t sliceId);
 
-    void cloneFunction(llvm::Function *f, uint32_t sliceId);
+  ValueTranslationMap *buildReversedMap(llvm::ValueToValueMapTy *vmap);
 
-    ValueTranslationMap *buildReversedMap(llvm::ValueToValueMapTy *vmap);
-
-    llvm::Module *module;
-    ReachabilityAnalysis *ra;
-    FunctionMap functionMap;
-    CloneInfoMap cloneInfoMap;
-    llvm::raw_ostream &debugs;
+  llvm::Module *module;
+  ReachabilityAnalysis *ra;
+  FunctionMap functionMap;
+  CloneInfoMap cloneInfoMap;
+  llvm::raw_ostream &debugs;
 };
 
 #endif
