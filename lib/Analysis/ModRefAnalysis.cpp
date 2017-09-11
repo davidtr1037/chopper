@@ -108,6 +108,11 @@ ModRefAnalysis::SideEffects &ModRefAnalysis::getSideEffects() {
     return sideEffects;
 }
 
+bool ModRefAnalysis::hasSideEffects(Function *f) {
+    InstructionSet &modSet = modSetMap[f];
+    return !modSet.empty();
+}
+
 ModRefAnalysis::InstructionSet &ModRefAnalysis::getOverridingStores() {
     return overridingStores;
 }
