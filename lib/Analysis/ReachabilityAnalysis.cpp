@@ -270,7 +270,6 @@ void ReachabilityAnalysis::resolveIndirectCallByPA(Value *calledValue, FunctionS
     PointsTo &pts = aa->getPTA()->getPts(id);
 
     if (pts.empty()) {
-        debugs << "WARNING: no points-to for: " << *calledValue << "\n";
         return;
     }
 
