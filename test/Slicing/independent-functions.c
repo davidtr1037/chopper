@@ -10,7 +10,7 @@
 // CHECK-PATHS: KLEE: done: completed paths = 2
 // CHECK-STATES: KLEE: done: recovery states = 2
 // CHECK-SLICES: KLEE: done: generated slices = 2
-// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 3
+// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 2
 
 // CHECK-A:a is 3
 // CHECK-B:b is 2

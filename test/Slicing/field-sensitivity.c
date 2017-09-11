@@ -10,7 +10,7 @@
 // CHECK-PATHS: KLEE: done: completed paths = 1
 // CHECK-STATES: KLEE: done: recovery states = 0
 // CHECK-SLICES: KLEE: done: generated slices = 0
-// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 1
+// CHECK-SNAPSHOTS: KLEE: done: created snapshots = 0
 
 #include <stdio.h>
 
