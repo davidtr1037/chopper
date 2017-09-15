@@ -661,8 +661,8 @@ void InterleavedSearcher::update(
 }
 
 /* splitted searcher */
-SplittedSearcher::SplittedSearcher(Searcher *baseSearcher, unsigned int ratio)
-  : baseSearcher(baseSearcher), ratio(ratio)
+SplittedSearcher::SplittedSearcher(Searcher *baseSearcher, Searcher *recoverySearcher, unsigned int ratio)
+  : baseSearcher(baseSearcher), recoverySearcher(recoverySearcher), ratio(ratio)
 {
 
 }
@@ -674,18 +674,18 @@ SplittedSearcher::~SplittedSearcher() {
 ExecutionState &SplittedSearcher::selectState() {
   if (baseSearcher->empty()) {
     /* the recovery states are supposed to be not empty */
-    return *recoveryStates.back();
+    return recoverySearcher->selectState();
   }
 
-  if (recoveryStates.empty()) {
+  if (recoverySearcher->empty()) {
     /* the base searcher is supposed to be not empty */
     return baseSearcher->selectState();
   }
 
   /* in this case, both searchers are supposed to be not empty */
-  if (baseSearcher->empty() || theRNG.getInt32() % 100 < ratio) {
+  if (theRNG.getInt32() % 100 < ratio) {
     /* we handle recovery states in a DFS manner */
-    return *recoveryStates.back();
+    return recoverySearcher->selectState();
   } else {
     return baseSearcher->selectState();
   }
@@ -727,35 +727,15 @@ void SplittedSearcher::update(
     baseSearcher->update(current, addedOriginatingStates, removedOriginatingStates);
   }
 
-  /* we handle recovery states in a DFS manner */
-  recoveryStates.insert(recoveryStates.end(), addedRecoveryStates.begin(), addedRecoveryStates.end());
-
-  for (std::vector<ExecutionState *>::const_iterator it = removedRecoveryStates.begin(),
-                                                     ie = removedRecoveryStates.end();
-       it != ie; ++it) {
-    ExecutionState *es = *it;
-
-    if (es == recoveryStates.back()) {
-      recoveryStates.pop_back();
-    } else {
-      bool found = false;
-
-      for (std::vector<ExecutionState*>::iterator it = recoveryStates.begin(),
-             ie = recoveryStates.end(); it != ie; ++it) {
-        if (es == *it) {
-          recoveryStates.erase(it);
-          found = true;
-          break;
-        }
-      }
-
-      assert(found && "invalid state removed");
-    }
+  if (current && !current->isRecoveryState()) {
+    recoverySearcher->update(NULL, addedRecoveryStates, removedRecoveryStates);
+  } else {
+    recoverySearcher->update(current, addedRecoveryStates, removedRecoveryStates);
   }
 }
 
 bool SplittedSearcher::empty() {
-  return baseSearcher->empty() && recoveryStates.empty();
+  return baseSearcher->empty() && recoverySearcher->empty();
 }
 
 /* optimized splitted searcher */
@@ -796,7 +776,7 @@ ExecutionState &OptimizedSplittedSearcher::selectState() {
   }
 
   /* in this case, both searchers are supposed to be not empty */
-  if (baseSearcher->empty() || theRNG.getInt32() % 100 < ratio) {
+  if (theRNG.getInt32() % 100 < ratio) {
     /* we handle recovery states in a DFS manner */
     return recoverySearcher->selectState();
   } else {

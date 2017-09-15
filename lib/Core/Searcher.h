@@ -301,11 +301,11 @@ namespace klee {
 
   class SplittedSearcher : public Searcher {
     Searcher *baseSearcher;
+    Searcher *recoverySearcher;
     unsigned int ratio;
-    std::vector<ExecutionState *> recoveryStates;
 
   public:
-    SplittedSearcher(Searcher *baseSearcher, unsigned int ratio);
+    SplittedSearcher(Searcher *baseSearcher, Searcher *recoverySearcher, unsigned int ratio);
     ~SplittedSearcher();
 
     ExecutionState &selectState();

@@ -141,10 +141,12 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   }
 
   if (UseSplittedSearcher) {
-    searcher = new SplittedSearcher(searcher, SplitRatio);
+    /* TODO: the recovery searcher should be configurable */
+    searcher = new SplittedSearcher(searcher, new DFSSearcher(), SplitRatio);
   }
 
   if (UseOptimizedSplittedSearcher) {
+    /* TODO: the recovery searchers (log/high) should be configurable */
     searcher = new OptimizedSplittedSearcher(searcher, new DFSSearcher(), new DFSSearcher(), SplitRatio);
   }
 
