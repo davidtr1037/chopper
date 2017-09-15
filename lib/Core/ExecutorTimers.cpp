@@ -118,16 +118,13 @@ void Executor::processTimers(ExecutionState *current,
   }
 
   if (ticks || dumpPTree || dumpStates) {
-    if (dumpPTree) {
-      char name[32];
-      sprintf(name, "ptree%08d.dot", (int) stats::instructions);
-      llvm::raw_ostream *os = interpreterHandler->openOutputFile(name);
+    if (dumpPTree && processTree->changed) {
+      llvm::raw_ostream *os = interpreterHandler->openOutputFile("ptree.dot");
       if (os) {
         processTree->dump(*os);
         delete os;
       }
-      
-      dumpPTree = 0;
+      getchar();
     }
 
     if (dumpStates) {

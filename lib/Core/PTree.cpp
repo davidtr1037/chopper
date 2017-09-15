@@ -10,6 +10,7 @@
 #include "PTree.h"
 
 #include <klee/Expr.h>
+#include <klee/ExecutionState.h>
 #include <klee/util/ExprPPrinter.h>
 
 #include <vector>
@@ -18,8 +19,8 @@ using namespace klee;
 
   /* *** */
 
-PTree::PTree(const data_type &_root) : root(new Node(0,_root)) {
-}
+PTree::PTree(const data_type &_root)
+    : root(new Node(0, _root)), changed(false) {}
 
 PTree::~PTree() {}
 
@@ -30,6 +31,7 @@ PTree::split(Node *n,
   assert(n && !n->left && !n->right);
   n->left = new Node(n, leftData);
   n->right = new Node(n, rightData);
+  changed = true;
   return std::make_pair(n->left, n->right);
 }
 
@@ -48,6 +50,7 @@ void PTree::remove(Node *n) {
     delete n;
     n = p;
   } while (n && !n->left && !n->right);
+  changed = true;
 }
 
 void PTree::dump(llvm::raw_ostream &os) {
@@ -58,7 +61,7 @@ void PTree::dump(llvm::raw_ostream &os) {
   os << "\tratio=fill;\n";
   os << "\trotate=90;\n";
   os << "\tcenter = \"true\";\n";
-  os << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n";
+  os << "\tnode [style=\"filled\",width=1,height=1,fontname=\"Terminus\"]\n";
   os << "\tedge [arrowsize=.3]\n";
   std::vector<PTree::Node*> stack;
   stack.push_back(root);
@@ -72,8 +75,17 @@ void PTree::dump(llvm::raw_ostream &os) {
       pp->print(n->condition);
       os << "\",shape=diamond";
     }
-    if (n->data)
-      os << ",fillcolor=green";
+    if (n->data) {
+      ExecutionState *es = n->data;
+      if (es->isNormalState()) {
+        os << ",fillcolor=green";
+      } else if (es->isRecoveryState()) {
+        os << ",fillcolor=blue";
+      }
+      if (es->isSuspended()) {
+        os << ",shape=square";
+      }
+    }
     os << "];\n";
     if (n->left) {
       os << "\tn" << n << " -> n" << n->left << ";\n";
@@ -85,6 +97,7 @@ void PTree::dump(llvm::raw_ostream &os) {
     }
   }
   os << "}\n";
+  changed = false;
   delete pp;
 }
 
