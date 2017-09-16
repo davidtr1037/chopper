@@ -117,8 +117,18 @@ void AllocationRecord::dump() {
         DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("allocation record:"));
         for (Record::iterator i = record.begin(); i != record.end(); i++) {
             Entry &entry = *i;
+
+            /* dump context */
             ref<ASContext> c = entry.first;
             c->dump();
+
+            /* dump addresses */
+            MemoryObjectList &memoryObjects = entry.second;
+            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("memory objects:"));
+            for (MemoryObjectList::iterator j = memoryObjects.begin(); j != memoryObjects.end(); j++) {
+                MemoryObject *mo = *j;
+                DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("-- %lx", mo->address));
+            }
         }
     }
 }

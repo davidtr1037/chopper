@@ -32,7 +32,8 @@ public:
 
 private:
     /*  TODO: change ref<ASContext> to ASContext? */
-    typedef std::pair< ref<ASContext>, std::list<MemoryObject *> > Entry;
+    typedef std::list<MemoryObject *> MemoryObjectList;
+    typedef std::pair<ref<ASContext>, MemoryObjectList> Entry;
     typedef std::vector<Entry> Record;
 
     void incRefCount();
