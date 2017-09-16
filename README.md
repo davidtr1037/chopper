@@ -74,7 +74,7 @@ opt -mem2reg main.bc -o main.bc (required for better pointer analysis)
 
 Run KLEE (static analysis related debug messages are written to stdout):
 ```
-klee -libc=klee -search=dfs -slice=f main.bc
+klee -libc=klee -search=dfs -skip-functions=f main.bc
 ```
 
 ## Options
