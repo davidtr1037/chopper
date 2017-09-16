@@ -4594,11 +4594,12 @@ MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, boo
     ASContext context(cloner, callTrace, allocInst);
 
     ExecutionState *dependentState = state.getDependentState();
+    AllocationRecord &guidingAllocationRecord = state.getGuidingAllocationRecord();
     AllocationRecord &allocationRecord = dependentState->getAllocationRecord();
-    /* TODO: the same context may appear in a loop... */
-    if (allocationRecord.exists(context)) {
+
+    if (guidingAllocationRecord.exists(context)) {
         /* the address should be already bound */
-        mo = state.getGuidingAllocationRecord().getAddr(context);
+        mo = guidingAllocationRecord.getAddr(context);
         DEBUG_WITH_TYPE(
             DEBUG_BASIC,
             klee_message("%p: reusing allocated address: %lx, size: %lu", &state, mo->address, size)
