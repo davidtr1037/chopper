@@ -360,7 +360,7 @@ const char *Executor::TerminateReasonNames[] = {
   [ Unhandled ] = "xxx",
 };
 
-Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
+Executor::Executor(InterpreterOptions &opts, InterpreterHandler *ih)
     : Interpreter(opts), kmodule(0), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher()), statsTracker(0),
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
@@ -3229,8 +3229,25 @@ void Executor::terminateStateOnError(ExecutionState &state,
 
   if (shouldExitOn(termReason)) {
     unsigned int maxCount = interpreterOpts.maxErrorCount;
-    if (maxCount == 0 || maxCount == errorCount) {
-      haltExecution = true;
+
+    if (interpreterOpts.errorLocation.empty()) {
+      if (maxCount == 0 || maxCount == errorCount) {
+        haltExecution = true;
+      }
+    } else if (ii.file != "") {
+    	for (std::vector<ErrorLocationOption>::size_type i = 0; i < interpreterOpts.errorLocation.size(); ++i) {
+    		std::map<std::string, std::vector<unsigned> >::iterator itFilenames = interpreterOpts.errorLocation.find(ii.file.substr(ii.file.find_last_of("/\\") + 1));
+    		if (itFilenames != interpreterOpts.errorLocation.end()) {
+    			(*itFilenames).second.erase(std::remove((*itFilenames).second.begin(), (*itFilenames).second.end(), ii.line), (*itFilenames).second.end());
+    			if ((*itFilenames).second.empty()) {
+                  interpreterOpts.errorLocation.erase(itFilenames);
+    			}
+    			break;
+    		}
+    	}
+    	if (interpreterOpts.errorLocation.empty()) {
+    		haltExecution = true;
+    	}
     }
   }
 }
@@ -4009,7 +4026,7 @@ Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
 
 ///
 
-Interpreter *Interpreter::create(const InterpreterOptions &opts,
+Interpreter *Interpreter::create(InterpreterOptions &opts,
                                  InterpreterHandler *ih) {
   return new Executor(opts, ih);
 }

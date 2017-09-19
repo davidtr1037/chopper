@@ -500,7 +500,7 @@ private:
   ExecutionState *createSnapshotState(ExecutionState &state);
 
 public:
-  Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
+  Executor(InterpreterOptions &opts, InterpreterHandler *ie);
   virtual ~Executor();
 
   const InterpreterHandler& getHandler() {

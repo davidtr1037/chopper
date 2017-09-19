@@ -89,6 +89,14 @@ public:
 
   };
 
+  struct ErrorLocationOption {
+    std::string filename;
+    std::vector<unsigned> lines;
+
+    ErrorLocationOption(std::string _filename, std::vector<unsigned> &_lines) :
+    	filename(_filename), lines(_lines) {}
+  };
+
   /// InterpreterOptions - Options varying the runtime behavior during
   /// interpretation.
   struct InterpreterOptions {
@@ -98,6 +106,7 @@ public:
     unsigned MakeConcreteSymbolic;
     std::vector<SkippedFunctionOption> skippedFunctions;
     std::vector<std::string> inlinedFunctions;
+    std::map<std::string, std::vector<unsigned> > errorLocation;
     unsigned int maxErrorCount;
 
     InterpreterOptions() : 
@@ -109,16 +118,16 @@ public:
   };
 
 protected:
-  const InterpreterOptions interpreterOpts;
+  InterpreterOptions interpreterOpts;
 
-  Interpreter(const InterpreterOptions &_interpreterOpts)
+  Interpreter(InterpreterOptions &_interpreterOpts)
     : interpreterOpts(_interpreterOpts)
   {}
 
 public:
   virtual ~Interpreter() {}
 
-  static Interpreter *create(const InterpreterOptions &_interpreterOpts,
+  static Interpreter *create(InterpreterOptions &_interpreterOpts,
                              InterpreterHandler *ih);
 
   /// Register the module to be executed.  
