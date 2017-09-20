@@ -25,8 +25,8 @@ public:
   ReachabilityAnalysis(llvm::Module *module, std::string entry,
                        std::vector<std::string> targets,
                        llvm::raw_ostream &debugs)
-      : module(module), entry(entry), targets(targets), entryFunction(NULL), aa(NULL),
-        debugs(debugs) {}
+      : module(module), entry(entry), targets(targets), entryFunction(NULL),
+        aa(NULL), debugs(debugs) {}
 
   ~ReachabilityAnalysis() {};
 
