@@ -455,14 +455,12 @@ const Module *Executor::setModule(llvm::Module *module,
 
     logFile = interpreterHandler->openOutputFile("sa.log");
 
-    std::string entry = "main";
-    ra = new ReachabilityAnalysis(module, entry, targets, *logFile);
+    ra = new ReachabilityAnalysis(module, opts.EntryPoint, targets, *logFile);
     inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions, *logFile);
     aa = new AAPass();
     aa->setPAType(PointerAnalysis::Andersen_WPA);
 
-    /* TODO: fix hard coded entry point... */
-    mra = new ModRefAnalysis(kmodule->module, ra, aa, entry, targets, *logFile);
+    mra = new ModRefAnalysis(kmodule->module, ra, aa, opts.EntryPoint, targets, *logFile);
     cloner = new Cloner(module, ra, *logFile);
     sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, true);
   }
