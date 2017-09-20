@@ -28,12 +28,13 @@ void ReachabilityAnalysis::prepare() {
 
 void ReachabilityAnalysis::removeUnusedValues() {
   bool changed = true;
+  set<string> keep;
+
+  /* entry function must not be removed */
+  keep.insert(entry);
 
   while (changed) {
     std::set<Function *> functions;
-    set<string> keep;
-
-    keep.insert(entry);
 
     for (Module::iterator i = module->begin(); i != module->end(); i++) {
       Function *f = &*i;
@@ -50,6 +51,7 @@ void ReachabilityAnalysis::removeUnusedValues() {
       debugs << "erasing: " << f->getName() << "\n";
       f->eraseFromParent();
     }
+
     changed = !functions.empty();
   }
 }

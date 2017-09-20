@@ -87,23 +87,22 @@ namespace {
 
   cl::opt<std::string>
   InlinedFunctions("inline",
-                   cl::desc("Comma-separated list of functions to be inlined "
-                            "(e.g. <function1>,<function2>,..)"),
+                   cl::desc("Comma-separated list of functions to be inlined (e.g. <function1>,<function2>,..)"),
                    cl::init(""));
 
   cl::opt<unsigned int>
   MaxErrorCount("max-error-count",
-               cl::desc("max error count before exit"),
-               cl::init(0));
+                cl::desc("max error count before exit"),
+                cl::init(0));
 
   cl::opt<std::string>
   ErrorLocation("error-location",
-               cl::desc("Comma-separated list of locations where a failure is expected (e.g. <file1>[:line],<file2>[:line],..)"));
+                cl::desc("Comma-separated list of locations where a failure is expected (e.g. <file1>[:line],<file2>[:line],..)"));
 
   cl::opt<std::string>
   EntryPoint("entry-point",
-               cl::desc("Consider the function with the given name as the entrypoint"),
-               cl::init("main"));
+             cl::desc("Consider the function with the given name as the entrypoint"),
+             cl::init("main"));
 
   cl::opt<std::string>
   RunInDir("run-in", cl::desc("Change to the given directory prior to executing"));
@@ -1298,11 +1297,11 @@ void parseErrorLocationParameter(std::string parameter, std::map<std::string, st
     std::string fname;
 
     while (std::getline(stream, token, ',')) {
-    	std::vector<unsigned int> lines;
-		if (!parseNameLineOption(token, fname, lines)) {
-			klee_error("error-location option: invalid parameter: %s", token.c_str());
-		}
-		result.insert(std::pair<std::string, std::vector<unsigned> >(fname, lines));
+        std::vector<unsigned int> lines;
+        if (!parseNameLineOption(token, fname, lines)) {
+            klee_error("error-location option: invalid parameter: %s", token.c_str());
+        }
+        result.insert(std::pair<std::string, std::vector<unsigned> >(fname, lines));
     }
 }
 

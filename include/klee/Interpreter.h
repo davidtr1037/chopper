@@ -93,8 +93,8 @@ public:
     std::string filename;
     std::vector<unsigned> lines;
 
-    ErrorLocationOption(std::string _filename, std::vector<unsigned> &_lines) :
-    	filename(_filename), lines(_lines) {}
+    ErrorLocationOption(std::string filename, std::vector<unsigned> &lines) :
+        filename(filename), lines(lines) {}
   };
 
   /// InterpreterOptions - Options varying the runtime behavior during
