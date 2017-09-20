@@ -106,6 +106,11 @@ namespace {
   cl::opt<bool>
   DebugPrintEscapingFunctions("debug-print-escaping-functions", 
                               cl::desc("Print functions whose address is taken."));
+
+  cl::opt<bool>
+  UseSVFPTA("use-svf-analysis",
+            cl::desc("Use SVF pointer analysis for slicing (default=on)"),
+            cl::init(true));
 }
 
 KModule::KModule(Module *_module) 
@@ -462,7 +467,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     /* run reachability analysis */
     klee_message("Runnining reachability analysis...");
     ra->usePA(aa);
-    ra->run(true);
+    ra->run(UseSVFPTA);
 
     /* run mod-ref analysis */
     klee_message("Runnining mod-ref analysis...");
