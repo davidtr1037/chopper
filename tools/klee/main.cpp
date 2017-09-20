@@ -1543,7 +1543,7 @@ int main(int argc, char **argv, char **envp) {
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   IOpts.skippedFunctions = skippingOptions;
   IOpts.inlinedFunctions = inlinedFunctions;
-  IOpts.errorLocation = errorLocationOptions;
+  IOpts.errorLocations = errorLocationOptions;
   IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
