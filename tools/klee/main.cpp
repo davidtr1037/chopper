@@ -97,6 +97,10 @@ namespace {
                cl::init(0));
 
   cl::opt<std::string>
+  ErrorLocation("error-location",
+               cl::desc("Comma-separated list of locations where a failure is expected (e.g. <file1>[:line],<file2>[:line],..)"));
+
+  cl::opt<std::string>
   EntryPoint("entry-point",
                cl::desc("Consider the function with the given name as the entrypoint"),
                cl::init("main"));
@@ -1220,7 +1224,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
 }
 #endif
 
-bool parseSlicedFunctionOption(
+bool parseNameLineOption(
     std::string option,
     std::string &fname,
     std::vector<unsigned int> &lines
@@ -1256,7 +1260,7 @@ void parseSlicingParameter(
 
     while (std::getline(stream, token, ',')) {
         std::vector<unsigned int> lines;
-        if (!parseSlicedFunctionOption(token, fname, lines)) {
+        if (!parseNameLineOption(token, fname, lines)) {
             klee_error("skip-function option: invalid parameter: %s", token.c_str());
         }
         Function *f = module->getFunction(fname);
@@ -1285,6 +1289,20 @@ void parseInlinedFunctions(
         }
 
         result.push_back(fname);
+    }
+}
+
+void parseErrorLocationParameter(std::string parameter, std::map<std::string, std::vector<unsigned> > &result) {
+    std::istringstream stream(parameter);
+    std::string token;
+    std::string fname;
+
+    while (std::getline(stream, token, ',')) {
+    	std::vector<unsigned int> lines;
+		if (!parseNameLineOption(token, fname, lines)) {
+			klee_error("error-location option: invalid parameter: %s", token.c_str());
+		}
+		result.insert(std::pair<std::string, std::vector<unsigned> >(fname, lines));
     }
 }
 
@@ -1474,6 +1492,9 @@ int main(int argc, char **argv, char **envp) {
   std::vector<std::string> inlinedFunctions;
   parseInlinedFunctions(mainModule, InlinedFunctions, inlinedFunctions);
 
+  std::map<std::string, std::vector<unsigned> > errorLocationOptions;
+  parseErrorLocationParameter(ErrorLocation, errorLocationOptions);
+
   // FIXME: Change me to std types.
   int pArgc;
   char **pArgv;
@@ -1523,6 +1544,7 @@ int main(int argc, char **argv, char **envp) {
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   IOpts.skippedFunctions = slicingOptions;
   IOpts.inlinedFunctions = inlinedFunctions;
+  IOpts.errorLocation = errorLocationOptions;
   IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
