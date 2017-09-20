@@ -103,10 +103,12 @@ public:
     /// A frequency at which to make concrete reads return constrained
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
+    typedef std::map<std::string, std::vector<unsigned> > ErrorLocations;
+
     unsigned MakeConcreteSymbolic;
     std::vector<SkippedFunctionOption> skippedFunctions;
     std::vector<std::string> inlinedFunctions;
-    std::map<std::string, std::vector<unsigned> > errorLocation;
+    ErrorLocations errorLocations;
     unsigned int maxErrorCount;
 
     InterpreterOptions() : 

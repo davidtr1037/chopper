@@ -3233,24 +3233,26 @@ void Executor::terminateStateOnError(ExecutionState &state,
   if (shouldExitOn(termReason)) {
     unsigned int maxCount = interpreterOpts.maxErrorCount;
 
-    if (interpreterOpts.errorLocation.empty()) {
+    if (interpreterOpts.errorLocations.empty()) {
       if (maxCount == 0 || maxCount == errorCount) {
         haltExecution = true;
       }
     } else if (ii.file != "") {
-    	for (std::vector<ErrorLocationOption>::size_type i = 0; i < interpreterOpts.errorLocation.size(); ++i) {
-    		std::map<std::string, std::vector<unsigned> >::iterator itFilenames = interpreterOpts.errorLocation.find(ii.file.substr(ii.file.find_last_of("/\\") + 1));
-    		if (itFilenames != interpreterOpts.errorLocation.end()) {
-    			(*itFilenames).second.erase(std::remove((*itFilenames).second.begin(), (*itFilenames).second.end(), ii.line), (*itFilenames).second.end());
-    			if ((*itFilenames).second.empty()) {
-                  interpreterOpts.errorLocation.erase(itFilenames);
-    			}
-    			break;
-    		}
-    	}
-    	if (interpreterOpts.errorLocation.empty()) {
-    		haltExecution = true;
-    	}
+      InterpreterOptions::ErrorLocations &errorLocations = interpreterOpts.errorLocations;
+      for (std::vector<ErrorLocationOption>::size_type i = 0; i < errorLocations.size(); ++i) {
+        std::string basename = ii.file.substr(ii.file.find_last_of("/\\") + 1);
+        InterpreterOptions::ErrorLocations::iterator entry = errorLocations.find(basename);
+        if (entry != errorLocations.end()) {
+          entry->second.erase(std::remove(entry->second.begin(), entry->second.end(), ii.line), entry->second.end());
+          if (entry->second.empty()) {
+            errorLocations.erase(entry);
+          }
+          break;
+        }
+      }
+      if (errorLocations.empty()) {
+        haltExecution = true;
+      }
     }
   }
 }
