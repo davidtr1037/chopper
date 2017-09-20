@@ -109,7 +109,7 @@ namespace {
 
   cl::opt<bool>
   UseSVFPTA("use-svf-analysis",
-            cl::desc("Use SVF pointer analysis for slicing (default=on)"),
+            cl::desc("Use SVF pointer analysis for reachability analysis (default=on)"),
             cl::init(true));
 }
 
