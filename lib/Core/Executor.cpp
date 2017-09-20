@@ -131,11 +131,6 @@ namespace {
   DumpStatesOnHalt("dump-states-on-halt",
                    cl::init(true),
 		   cl::desc("Dump test cases for all active states on exit (default=on)"));
-  
-  cl::opt<bool>
-  PrintFunctionCalls("print-functions",
-                     cl::init(false),
-                     cl::desc("Print function calls (default=off)"));
 
   cl::opt<bool>
   AllowExternalSymCalls("allow-external-sym-calls",
@@ -338,6 +333,16 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
             cl::init(true));
+
+  // CHASER options
+
+  cl::opt<bool>
+  PrintFunctionCalls("print-functions", cl::init(false),
+                     cl::desc("Print function calls (default=off)"));
+
+  cl::opt<bool>
+  LazySlicing("lazy-slicing", cl::init(true),
+              cl::desc("Lazy slicing of skipped functions (default=on)"));
 }
 
 
@@ -462,7 +467,7 @@ const Module *Executor::setModule(llvm::Module *module,
 
     mra = new ModRefAnalysis(kmodule->module, ra, aa, opts.EntryPoint, targets, *logFile);
     cloner = new Cloner(module, ra, *logFile);
-    sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, true);
+    sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, LazySlicing);
   }
 
   kmodule->prepare(opts, interpreterOpts.skippedFunctions, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
