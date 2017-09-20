@@ -1248,7 +1248,7 @@ bool parseNameLineOption(
     return true;
 }
 
-void parseSlicingParameter(
+void parseSkippingParameter(
     Module *module,
     std::string parameter,
     std::vector<Interpreter::SkippedFunctionOption> &result
@@ -1485,8 +1485,8 @@ int main(int argc, char **argv, char **envp) {
     klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
-  std::vector<Interpreter::SkippedFunctionOption> slicingOptions;
-  parseSlicingParameter(mainModule, SkippedFunctions, slicingOptions);
+  std::vector<Interpreter::SkippedFunctionOption> skippingOptions;
+  parseSkippingParameter(mainModule, SkippedFunctions, skippingOptions);
 
   std::vector<std::string> inlinedFunctions;
   parseInlinedFunctions(mainModule, InlinedFunctions, inlinedFunctions);
@@ -1541,7 +1541,7 @@ int main(int argc, char **argv, char **envp) {
 
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
-  IOpts.skippedFunctions = slicingOptions;
+  IOpts.skippedFunctions = skippingOptions;
   IOpts.inlinedFunctions = inlinedFunctions;
   IOpts.errorLocation = errorLocationOptions;
   IOpts.maxErrorCount = MaxErrorCount;
