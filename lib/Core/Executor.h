@@ -229,6 +229,7 @@ private:
   unsigned int errorCount;
 
   llvm::raw_ostream *logFile;
+  llvm::raw_ostream *callgraph;
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);

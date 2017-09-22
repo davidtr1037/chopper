@@ -13,6 +13,8 @@
 #include <llvm/Support/InstIterator.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include "klee/util/ExprPPrinter.h"
+
 #include "klee/Internal/Analysis/AAPass.h"
 #include "klee/Internal/Analysis/ReachabilityAnalysis.h"
 
@@ -421,4 +423,43 @@ void ReachabilityAnalysis::dumpReachableFunctions() {
     debugs << "    " << f->getName() << "\n";
   }
   debugs << "\n";
+
+  dumpCallGraph();
+}
+
+void ReachabilityAnalysis::dumpCallGraph() {
+	klee::ExprPPrinter *pp = klee::ExprPPrinter::create(callgraph);
+	pp->setNewline("\\l");
+	callgraph << "digraph G {\n";
+	callgraph << "\tsize=\"10,7.5\";\n";
+	callgraph << "\tratio=fill;\n";
+	callgraph << "\trotate=90;\n";
+	callgraph << "\tcenter = \"true\";\n";
+	callgraph << "\tnode [style=\"filled\",width=1,height=1,fontname=\"Terminus\"]\n";
+	callgraph << "\tedge [arrowsize=.8]\n";
+
+	for (CallMap::iterator i = callMap.begin(); i != callMap.end(); i++) {
+	  Instruction *inst = i->first;
+	  set<Function *> functions = i->second;
+	  if (inst->getParent()->getParent()) {
+		  dumpFunctionToCallGraph(inst->getParent()->getParent());
+	  }
+	  for (FunctionSet::iterator i = functions.begin(); i != functions.end(); i++) {
+		Function *f = *i;
+		if (f) {
+		  dumpFunctionToCallGraph(f);
+	    }
+		callgraph << "\tn" << inst->getParent()->getParent() << " -> n" << f << ";\n";
+	  }
+	}
+	callgraph << "}\n";
+	delete pp;
+}
+
+void ReachabilityAnalysis::dumpFunctionToCallGraph(llvm::Function *f) {
+	if (f) {
+	  callgraph << "\tn" << f;
+	  callgraph << " [label=\"" << f->getName() << "\"";
+	  callgraph << "];\n";
+    }
 }

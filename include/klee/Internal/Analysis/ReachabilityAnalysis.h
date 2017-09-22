@@ -24,9 +24,9 @@ public:
 
   ReachabilityAnalysis(llvm::Module *module, std::string entry,
                        std::vector<std::string> targets,
-                       llvm::raw_ostream &debugs)
+                       llvm::raw_ostream &debugs, llvm::raw_ostream &callgraph)
       : module(module), entry(entry), targets(targets), entryFunction(NULL),
-        aa(NULL), debugs(debugs) {}
+        aa(NULL), debugs(debugs), callgraph(callgraph) {}
 
   ~ReachabilityAnalysis() {};
 
@@ -48,6 +48,8 @@ public:
   void getCallTargets(llvm::Instruction *inst, FunctionSet &result);
 
   void dumpReachableFunctions();
+  void dumpCallGraph();
+  void dumpFunctionToCallGraph(llvm::Function *f);
 
 private:
   void removeUnusedValues();
@@ -82,6 +84,7 @@ private:
   CallMap callMap;
   RetMap retMap;
   llvm::raw_ostream &debugs;
+  llvm::raw_ostream &callgraph;
 };
 
 #endif /* REACHABILITYANALYSIS_H */

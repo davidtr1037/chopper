@@ -383,7 +383,7 @@ Executor::Executor(InterpreterOptions &opts, InterpreterHandler *ih)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
       debugInstFile(0), debugLogBuffer(debugBufferString),
       errorCount(0),
-      logFile(0) {
+      logFile(0), callgraph(0) {
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
@@ -465,8 +465,9 @@ const Module *Executor::setModule(llvm::Module *module,
     }
 
     logFile = interpreterHandler->openOutputFile("sa.log");
+    callgraph  = interpreterHandler->openOutputFile("callgraph.dot");
 
-    ra = new ReachabilityAnalysis(module, opts.EntryPoint, targets, *logFile);
+    ra = new ReachabilityAnalysis(module, opts.EntryPoint, targets, *logFile, *callgraph);
     inliner = new Inliner(module, ra, targets, interpreterOpts.inlinedFunctions, *logFile);
     aa = new AAPass();
     aa->setPAType(PointerAnalysis::Andersen_WPA);
@@ -518,6 +519,9 @@ Executor::~Executor() {
   }
   if (logFile) {
     delete logFile;
+  }
+  if (callgraph) {
+	delete callgraph;
   }
 }
 
