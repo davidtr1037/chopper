@@ -343,6 +343,10 @@ namespace {
   cl::opt<bool>
   LazySlicing("lazy-slicing", cl::init(true),
               cl::desc("Lazy slicing of skipped functions (default=on)"));
+
+  llvm::cl::opt<bool> UseSlicer("use-slicer",
+                                llvm::cl::desc("Slice skipped functions"),
+                                llvm::cl::init(true));
 }
 
 
@@ -467,7 +471,9 @@ const Module *Executor::setModule(llvm::Module *module,
 
     mra = new ModRefAnalysis(kmodule->module, ra, aa, opts.EntryPoint, targets, *logFile);
     cloner = new Cloner(module, ra, *logFile);
-    sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, LazySlicing);
+    if (UseSlicer) {
+      sliceGenerator = new SliceGenerator(module, ra, aa, mra, cloner, *logFile, LazySlicing);
+    }
   }
 
   kmodule->prepare(opts, interpreterOpts.skippedFunctions, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
@@ -1469,19 +1475,27 @@ void Executor::executeCall(ExecutionState &state,
     /* inject the sliced function if needed */
     if (state.isRecoveryState()) {
       ref<RecoveryInfo> recoveryInfo = state.getRecoveryInfo();
-      f = getSlice(f, recoveryInfo->sliceId, ModRefAnalysis::Modifier);
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message("injecting slice: %s", f->getName().data())
-      );
-
-      /* handle fully sliced functions */
-      if (f->isDeclaration()) {
+      if (UseSlicer) {
+        f = getSlice(f, recoveryInfo->sliceId, ModRefAnalysis::Modifier);
         DEBUG_WITH_TYPE(
           DEBUG_BASIC,
-          klee_message("ignoring fully sliced function: %s", f->getName().data())
+          klee_message("injecting slice: %s", f->getName().data())
         );
-        return;
+
+        /* handle fully sliced functions */
+        if (f->isDeclaration()) {
+          DEBUG_WITH_TYPE(
+            DEBUG_BASIC,
+            klee_message("ignoring fully sliced function: %s", f->getName().data())
+          );
+          return;
+        }
+      } else {
+        /* we do it for consistent debugging... */
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message("injecting: %s", f->getName().data())
+        );
       }
     }
 

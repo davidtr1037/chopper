@@ -20,9 +20,6 @@ using namespace std;
 using namespace llvm;
 using namespace dg;
 
-llvm::cl::opt<bool> UseSlicer("use-slicer",
-                              llvm::cl::desc("Slice skipped functions"),
-                              llvm::cl::init(true));
 
 void SliceGenerator::generate() {
 	/* add annotations for slicing */
@@ -78,12 +75,10 @@ void SliceGenerator::generateSlice(Function *f, uint32_t sliceId, ModRefAnalysis
     cloner->clone(f, sliceId);
 
     /* generate slice */
-    if (UseSlicer) {
-      string entryName = f->getName().data();
-      Slicer slicer(module, 0, entryName, criterions, llvmpta, cloner);
-      slicer.setSliceId(sliceId);
-      slicer.run();
-    }
+    string entryName = f->getName().data();
+    Slicer slicer(module, 0, entryName, criterions, llvmpta, cloner);
+    slicer.setSliceId(sliceId);
+    slicer.run();
 
     markAsSliced(f, sliceId);
 }

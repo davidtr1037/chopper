@@ -473,8 +473,10 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     klee_message("Runnining mod-ref analysis...");
     mra->run();
 
-    /* TODO: rename... */
-    sliceGenerator->generate();
+    if (sliceGenerator) {
+      /* TODO: rename... */
+      sliceGenerator->generate();
+    }
   }
 
   /* Build shadow structures */
