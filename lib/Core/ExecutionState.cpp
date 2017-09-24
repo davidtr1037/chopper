@@ -81,6 +81,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     dependentState(0),
     originatingState(0),
     recoveryInfo(0),
+    level(0),
     priority(PRIORITY_LOW),
 
     pc(kf->instructions),
@@ -138,6 +139,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     originatingState(state.originatingState),
     recoveryInfo(state.recoveryInfo),
     guidingAllocationRecord(state.guidingAllocationRecord),
+    level(state.level),
     priority(state.priority),
 
     pc(state.pc),
