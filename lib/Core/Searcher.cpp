@@ -814,13 +814,16 @@ void OptimizedSplittedSearcher::update(
     if (es->isRecoveryState()) {
       if (es->getPriority() == PRIORITY_HIGH) {
         highPrioritySearcher->removeState(es);
-        int count = 0;
-        while (!highPrioritySearcher->empty()) {
-          ExecutionState &rs = highPrioritySearcher->selectState();
-          highPrioritySearcher->removeState(&rs);
-          rs.setPriority(PRIORITY_LOW);
-          recoverySearcher->addState(&rs);
-          count++;
+        /* flush the high priority recovery states, only when a root recovery state terminates */
+        if ((es->isResumed() && es->getLevel() == 0)) {
+          int count = 0;
+          while (!highPrioritySearcher->empty()) {
+            ExecutionState &rs = highPrioritySearcher->selectState();
+            highPrioritySearcher->removeState(&rs);
+            rs.setPriority(PRIORITY_LOW);
+            recoverySearcher->addState(&rs);
+            count++;
+          }
         }
       } else {
         removedRecoveryStates.push_back(es);
