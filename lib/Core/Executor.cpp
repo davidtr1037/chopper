@@ -4411,12 +4411,18 @@ void Executor::notifyDependentState(ExecutionState &recoveryState) {
 void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recoveryInfo) {
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
-    klee_message("starting recovery for function %s, load address %#lx", recoveryInfo->f->getName().str().c_str(), recoveryInfo->loadAddr)
+    klee_message(
+      "starting recovery for function %s, load address %#lx",
+      recoveryInfo->f->getName().str().c_str(),
+      recoveryInfo->loadAddr
+    )
   );
+
   ref<ExecutionState> snapshotState = recoveryInfo->snapshotState;
 
-  /* initialize recovery state */
   /* TODO: non-first snapshots hold normal state properties! */
+
+  /* initialize recovery state */
   ExecutionState *recoveryState = new ExecutionState(*snapshotState);
   if (recoveryInfo->snapshotIndex == 0) {
     /* a recovery state which is created from the first snapshot has no dependencies */
@@ -4427,6 +4433,7 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
 
     /* initialize... */
     recoveryState->setResumed();
+    /* not linked to any recovery state at this point */
     recoveryState->setRecoveryState(0);
     /* TODO: we need only a prefix of the snapshots... */
     recoveryState->markLoadAsRecovered();
@@ -4442,6 +4449,9 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
     assert(recoveryState->getPendingRecoveryInfos().empty());
   }
 
+  /* set exit instruction */
+  recoveryState->setExitInst(snapshotState->pc->inst);
+
   /* set dependent state */
   recoveryState->setDependentState(&state);
 
@@ -4453,19 +4463,17 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
     /* this must be the originating state */
     originatingState = &state;
   }
-  assert(originatingState);
   recoveryState->setOriginatingState(originatingState);
 
-  recoveryState->setExitInst(snapshotState->pc->inst);
+  /* set recovery information */
+  recoveryState->setRecoveryInfo(recoveryInfo);
 
   /* pass allocation record to recovery state */
   recoveryState->setGuidingAllocationRecord(state.getAllocationRecord());
 
-  /* TODO: update prevPC? */
-  recoveryState->pc = recoveryState->prevPC;
-
-  /* set recovery information */
-  recoveryState->setRecoveryInfo(recoveryInfo);
+  /* recursion level */
+  unsigned int level = state.isRecoveryState() ? state.getLevel() + 1 : 0;
+  recoveryState->setLevel(level);
 
   /* add the guiding constraints to the recovery state */
   std::set< ref<Expr> > &constraints = originatingState->getGuidingConstraints();
@@ -4477,21 +4485,29 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
     klee_message("adding %lu guiding constraints", constraints.size())
   );
 
-  state.setRecoveryState(recoveryState);
+  /* TODO: update prevPC? */
+  recoveryState->pc = recoveryState->prevPC;
 
-  /* add state */
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message(
-      "adding recovery state: %p (snapshot index = %u)",
+      "adding recovery state: %p (snapshot index = %u, level = %u)",
       recoveryState,
-      recoveryInfo->snapshotIndex
+      recoveryInfo->snapshotIndex,
+      recoveryState->getLevel()
     )
   );
+
+  /* link the current state to it's recovery state */
+  state.setRecoveryState(recoveryState);
+
+  /* update process tree */
   state.ptreeNode->data = 0;
   std::pair<PTree::Node*, PTree::Node*> res = processTree->split(state.ptreeNode, recoveryState, &state);
   recoveryState->ptreeNode = res.first;
   state.ptreeNode = res.second;
+
+  /* add the recovery state to the searcher */
   recoveryState->setPriority(PRIORITY_HIGH);
   addedStates.push_back(recoveryState);
 
