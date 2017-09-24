@@ -189,6 +189,8 @@ private:
   ref<RecoveryInfo> recoveryInfo;
   /* we use this record while executing a recovery state  */
   AllocationRecord guidingAllocationRecord;
+  /* recursion level */
+  unsigned int level;
   /* search priority */
   int priority;
 
@@ -570,14 +572,23 @@ public:
     return !pendingRecoveryInfos.empty();
   }
 
+  unsigned int getLevel() {
+    assert(isRecoveryState());
+    return level;
+  }
+
+  void setLevel(unsigned int level) {
+    this->level = level;
+  }
+
   int getPriority() {
     assert(isRecoveryState());
     return priority;
   }
 
-  void setPriority(int _priority) {
+  void setPriority(int priority) {
     assert(isRecoveryState());
-    priority = _priority;
+    this->priority = priority;
   }
 
 };
