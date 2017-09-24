@@ -840,6 +840,10 @@ void Executor::branch(ExecutionState &state,
       if (current->isRecoveryState()) {
         if (i != 0) {
           /* here we must fork the dependent state */
+          DEBUG_WITH_TYPE(
+            DEBUG_BASIC,
+            klee_message("forked recovery state (switch): %p", current)
+          );
           ExecutionState *prev = result[i - 1];
           forkDependentStates(prev, current);
         }
