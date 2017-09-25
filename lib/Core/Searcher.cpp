@@ -738,6 +738,71 @@ bool SplittedSearcher::empty() {
   return baseSearcher->empty() && recoverySearcher->empty();
 }
 
+/* random-path searcher for the recovery model */
+RandomRecoveryPath::RandomRecoveryPath(Executor &executor)
+  : executor(executor)
+{
+
+}
+
+RandomRecoveryPath::~RandomRecoveryPath() {
+
+}
+
+ExecutionState &RandomRecoveryPath::selectState() {
+  unsigned int flips = 0;
+  unsigned int bits = 0;
+
+  /* select the root */
+  errs() << "RRP select: stack size: " << treeStack.size() << "\n";
+  PTree::Node *n = treeStack.top();
+
+  while (!n->data) {
+    if (!n->left) {
+      n = n->right;
+    } else if (!n->right) {
+      n = n->left;
+    } else {
+      if (bits==0) {
+        flips = theRNG.getInt32();
+        bits = 32;
+      }
+      --bits;
+      n = (flips&(1<<bits)) ? n->left : n->right;
+    }
+  }
+
+  ExecutionState *es = n->data;
+  return *es;
+}
+
+void RandomRecoveryPath::update(
+  ExecutionState *current,
+  const std::vector<ExecutionState *> &addedStates,
+  const std::vector<ExecutionState *> &removedStates
+) {
+  for (auto i = addedStates.begin(); i != addedStates.end(); i++) {
+    ExecutionState *es = *i;
+    if (es->getLevel() == treeStack.size()) {
+      /* this state has a higher level, so we push it as a root */
+      treeStack.push(es->ptreeNode);
+      errs() << "RRP update: adding root: " << es << " level: " << es->getLevel() << "\n";
+    }
+  }
+  for (auto i = removedStates.begin(); i != removedStates.end(); i++) {
+    ExecutionState *es = *i;
+    /* a top level recovery state terminated, so we pop it's root from the stack */
+    if (es->isResumed() && es->getLevel() == treeStack.size() - 1) {
+      errs() << "RRP update: removing root: " << es << " level: " << es->getLevel() << "\n";
+      treeStack.pop();
+    }
+  }
+}
+
+bool RandomRecoveryPath::empty() {
+  return treeStack.empty();
+}
+
 /* optimized splitted searcher */
 OptimizedSplittedSearcher::OptimizedSplittedSearcher(
   Searcher *baseSearcher,

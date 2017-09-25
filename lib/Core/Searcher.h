@@ -10,6 +10,8 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "PTree.h"
+
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
 #include <set>
@@ -318,6 +320,29 @@ namespace klee {
       baseSearcher->printName(os);
       os << "\n";
     }
+  };
+
+  class RandomRecoveryPath : public Searcher {
+    Executor &executor;
+    std::stack<PTree::Node *> treeStack;
+
+  public:
+    RandomRecoveryPath(Executor &executor);
+
+    ~RandomRecoveryPath();
+
+    ExecutionState &selectState();
+
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+
+    bool empty();
+
+    void printName(llvm::raw_ostream &os) {
+      os << "RandomRecoveryPath\n";
+    }
+
   };
 
   class OptimizedSplittedSearcher : public Searcher {

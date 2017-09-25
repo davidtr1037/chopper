@@ -147,7 +147,10 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   if (UseOptimizedSplittedSearcher) {
     /* TODO: the recovery searchers (log/high) should be configurable */
-    searcher = new OptimizedSplittedSearcher(searcher, new DFSSearcher(), new DFSSearcher(), SplitRatio);
+    searcher = new OptimizedSplittedSearcher(searcher,
+                                             new DFSSearcher(),
+                                             new RandomRecoveryPath(executor),
+                                             SplitRatio);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();
