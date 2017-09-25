@@ -91,6 +91,7 @@ class Executor : public Interpreter {
   friend class RandomPathSearcher;
   friend class OwningSearcher;
   friend class WeightedRandomSearcher;
+  friend class RandomRecoveryPath;
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
 
