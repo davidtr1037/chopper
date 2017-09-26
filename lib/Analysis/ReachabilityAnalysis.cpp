@@ -16,6 +16,10 @@
 using namespace std;
 using namespace llvm;
 
+llvm::cl::opt<bool> DumpCallGraph("dump-callgraph",
+    llvm::cl::desc("Dump callgraph in graphviz format"),
+                   llvm::cl::init(false));
+
 void ReachabilityAnalysis::prepare() {
   /* remove unused functions using fixpoint */
   removeUnusedValues();
@@ -114,6 +118,9 @@ bool ReachabilityAnalysis::run(bool usePA) {
 
   /* debug */
   dumpReachableFunctions();
+
+  if (DumpCallGraph)
+	  dumpCallGraph();
 
   return true;
 }
@@ -418,8 +425,6 @@ void ReachabilityAnalysis::dumpReachableFunctions() {
     debugs << "    " << f->getName() << "\n";
   }
   debugs << "\n";
-
-  dumpCallGraph();
 }
 
 void ReachabilityAnalysis::dumpCallGraph() {
