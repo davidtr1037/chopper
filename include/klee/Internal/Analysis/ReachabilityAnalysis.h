@@ -5,16 +5,32 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <bits/stdc++.h>
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
 
 #include "AAPass.h"
 
 class ReachabilityAnalysis {
 public:
+  typedef llvm::Function* vertex_t;
+  typedef double weight_t;
+
+  struct neighbor {
+    vertex_t target;
+    weight_t weight;
+    neighbor(vertex_t arg_target, weight_t arg_weight)
+	    : target(arg_target), weight(arg_weight) { }
+  };
+
+  typedef std::map<vertex_t, std::vector<neighbor> > adjacency_list_t;
+  typedef std::pair<weight_t, vertex_t> weight_vertex_pair_t;
+
   typedef std::set<llvm::Function *> FunctionSet;
   typedef std::set<llvm::Instruction *> InstructionSet;
   typedef std::map<llvm::Function *, FunctionSet> ReachabilityMap;
@@ -39,6 +55,8 @@ public:
 
   void computeReachableFunctions(llvm::Function *entry, bool usePA,
                                  FunctionSet &results);
+
+  void computeShortestPath(llvm::Function *entry, llvm::Function *target);
 
   FunctionSet &getReachableFunctions(llvm::Function *f);
 
@@ -73,6 +91,7 @@ private:
 
   llvm::Function *extractFunction(llvm::ConstantExpr *ce);
 
+  const weight_t max_weight = std::numeric_limits<double>::infinity();
   llvm::Module *module;
   std::string entry;
   std::vector<std::string> targets;

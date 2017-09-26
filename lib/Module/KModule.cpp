@@ -111,6 +111,13 @@ namespace {
   UseSVFPTA("use-svf-analysis",
             cl::desc("Use SVF pointer analysis for reachability analysis (default=on)"),
             cl::init(true));
+
+
+  llvm::cl::opt<std::string>
+  TargetFunction("target-function",
+                 llvm::cl::desc("Target function to reach"));
+
+
 }
 
 KModule::KModule(Module *_module) 
@@ -468,6 +475,13 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     klee_message("Runnining reachability analysis...");
     ra->usePA(aa);
     ra->run(UseSVFPTA);
+    if (!TargetFunction.empty()) {
+      Function *entry = module->getFunction(opts.EntryPoint);
+      Function *target = module->getFunction(TargetFunction);
+      if (!entry || !target)
+        klee_error("Could not find entry and/or target functions");
+      ra->computeShortestPath(entry, target);
+    }
 
     /* run mod-ref analysis */
     klee_message("Runnining mod-ref analysis...");

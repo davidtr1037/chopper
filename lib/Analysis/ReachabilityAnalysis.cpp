@@ -4,12 +4,7 @@
 #include <stack>
 #include <set>
 
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/IR/Instruction.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Constants.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InstIterator.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -449,7 +444,7 @@ void ReachabilityAnalysis::dumpCallGraph() {
 		if (f) {
 		  dumpFunctionToCallGraph(f);
 	    }
-		callgraph << "\tn" << inst->getParent()->getParent() << " -> n" << f << ";\n";
+		callgraph << "\tn" << inst->getParent()->getParent() << " -> n" << f << " [label=\"" << *inst << "\"];\n";
 	  }
 	}
 	callgraph << "}\n";
@@ -462,4 +457,71 @@ void ReachabilityAnalysis::dumpFunctionToCallGraph(llvm::Function *f) {
 	  callgraph << " [label=\"" << f->getName() << "\"";
 	  callgraph << "];\n";
     }
+}
+
+void ReachabilityAnalysis::computeShortestPath(llvm::Function* entry, llvm::Function *target) {
+	adjacency_list_t adjacency_list;
+	std::map<vertex_t, weight_t> min_distance;
+	std::map<vertex_t, vertex_t> previous;
+
+	// creating the adjacency list
+	for (CallMap::iterator i = callMap.begin(); i != callMap.end(); i++) {
+	  Instruction *inst = i->first;
+	  set<Function *> functions = i->second;
+	  min_distance[inst->getParent()->getParent()] = max_weight;
+	  previous[inst->getParent()->getParent()] = nullptr;
+
+	  for (FunctionSet::iterator i = functions.begin(); i != functions.end(); i++) {
+		Function *f = *i;
+		adjacency_list[inst->getParent()->getParent()].push_back(neighbor(f,1));
+		min_distance[f] = max_weight;
+		previous[f] = nullptr;
+	  }
+	}
+
+	min_distance[entry] = 0;
+
+	// we use greater instead of less to turn max-heap into min-heap
+	std::priority_queue<weight_vertex_pair_t, std::vector<weight_vertex_pair_t>, std::greater<weight_vertex_pair_t> > vertex_queue;
+	vertex_queue.push(std::make_pair(min_distance[entry], entry));
+
+	while (!vertex_queue.empty()) {
+		weight_t dist = vertex_queue.top().first;
+		vertex_t u = vertex_queue.top().second;
+		vertex_queue.pop();
+
+		if (u == target)
+			break;
+
+		// Because we leave old copies of the vertex in the priority queue
+		// (with outdated higher distances), we need to ignore it when we come
+		// across it again, by checking its distance against the minimum distance
+		if (dist > min_distance[u])
+			continue;
+
+		// Visit each edge exiting u
+		const std::vector<neighbor> &neighbors = adjacency_list[u];
+		for (std::vector<neighbor>::const_iterator neighbor_iter = neighbors.begin();
+				neighbor_iter != neighbors.end();
+				neighbor_iter++) {
+			vertex_t v = neighbor_iter->target;
+			weight_t weight = neighbor_iter->weight;
+			weight_t distance_through_u = dist + weight;
+			if (distance_through_u < min_distance[v]) {
+				min_distance[v] = distance_through_u;
+				previous[v] = u;
+				vertex_queue.push(std::make_pair(min_distance[v], v));
+			}
+		}
+	}
+
+	errs() << "Shortest call chain invocations to reach function " << target->getName() << ": \n";
+	std::list<vertex_t> path;
+	vertex_t vertex = target;
+	for (; vertex != nullptr; vertex = previous[vertex])
+		path.push_front(vertex);
+	for(auto short_el : path) {
+		errs() << " -> " << short_el->getName();
+	}
+	errs() << "\n";
 }
