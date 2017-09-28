@@ -257,7 +257,8 @@ void KModule::addInternalFunction(const char* functionName){
 }
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
-		              const std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions,
+		              std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions,
+					  const std::map<std::string, std::vector<unsigned> > &targetLocation,
                       InterpreterHandler *ih,
                       ReachabilityAnalysis *ra,
                       Inliner *inliner,
@@ -321,7 +322,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // optimize is seeing what is as close as possible to the final
   // module.
   PassManager pm;
-  pm.add(new ReturnToVoidFunctionPass(skippedFunctions));
+  if (!skippedFunctions.empty())
+	  pm.add(new ReturnToVoidFunctionPass(skippedFunctions));
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
@@ -458,7 +460,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
   kleeMergeFn = module->getFunction("klee_merge");
 
-  if (!skippedFunctions.empty()) {
+  if (!skippedFunctions.empty() || !targetLocation.empty()) {
     /* prepare reachability analysis */
     ra->prepare();
 
@@ -466,25 +468,58 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     inliner->run();
 
     /* run pointer analysis */
-    klee_message("Runnining pointer analysis...");
+    klee_message("Running pointer analysis...");
     PassManager passManager;
     passManager.add(aa);
     passManager.run(*module);
 
     /* run reachability analysis */
-    klee_message("Runnining reachability analysis...");
+    klee_message("Running reachability analysis...");
     ra->usePA(aa);
     ra->run(UseSVFPTA);
-    if (!TargetFunction.empty()) {
+
+    if (!targetLocation.empty()) {
+      TargetFinderPass *tfpass = new TargetFinderPass(targetLocation);
+      PassManager pmChaser;
+      pmChaser.add(tfpass);
+      pmChaser.run(*module);
       Function *entry = module->getFunction(opts.EntryPoint);
-      Function *target = module->getFunction(TargetFunction);
-      if (!entry || !target)
-        klee_error("Could not find entry and/or target functions");
-      ra->computeShortestPath(entry, target);
+      if (!entry || tfpass->targetInstructions.empty()) {
+        klee_warning("Could not find entry and/or target functions");
+      } else {
+    	std::set<Function*> retainFunctions;
+    	for (std::map<Function*, std::vector<Instruction*> >::iterator I = tfpass->targetInstructions.begin(), E = tfpass->targetInstructions.end(); I != E; ++I) {
+    	  errs() << (*I).first->getName() << "\n";
+    	  std::list<Function*> path;
+    	  ra->computeShortestPath(entry, (*I).first, path);
+    	  for (auto patEl : path) {
+    		  errs() << "->" << patEl->getName();
+    	  }
+    	  errs() << "\n";
+    	  retainFunctions.insert(path.begin(), path.end());
+    	}
+
+    	std::vector<std::string> targets;
+    	for (auto f : ra->functions) {
+    	  if (retainFunctions.find(f) == retainFunctions.end()) {
+    		std::vector<unsigned> lines;
+    	    skippedFunctions.push_back(Interpreter::SkippedFunctionOption(f->getName().str(), lines));
+    	    targets.push_back(f->getName().str());
+    	  }
+    	}
+
+    	PassManager pm4;
+    	pm4.add(new ReturnToVoidFunctionPass(skippedFunctions));
+    	pm4.run(*module);
+
+    	ra->setTargets(targets);
+    	mra->setTargets(targets);
+    	ra->run(true);
+      }
     }
 
     /* run mod-ref analysis */
-    klee_message("Runnining mod-ref analysis...");
+    klee_message("Running mod-ref analysis...");
     mra->run();
 
     /* prepare slice generator for slicing */

@@ -347,6 +347,10 @@ namespace {
   llvm::cl::opt<bool> UseSlicer("use-slicer",
                                 llvm::cl::desc("Slice skipped functions"),
                                 llvm::cl::init(true));
+  cl::opt<std::string>
+  PatchDiffFile("patch-diff-file",
+                cl::init(""),
+                cl::desc("Specify a patch description"));
 }
 
 
@@ -430,6 +434,11 @@ Executor::Executor(InterpreterOptions &opts, InterpreterHandler *ih)
     }
   }
 
+
+  if (!PatchDiffFile.empty() && !patchContainer.Load(PatchDiffFile)) {
+    klee_warning("Unable to load patch file \"%s\"", PatchDiffFile.c_str());
+  }
+
   ra = NULL;
   inliner = NULL;
   aa = NULL;
@@ -457,7 +466,7 @@ const Module *Executor::setModule(llvm::Module *module,
   specialFunctionHandler = new SpecialFunctionHandler(*this);
   specialFunctionHandler->prepare();
 
-  if (!interpreterOpts.skippedFunctions.empty()) {
+  if (!interpreterOpts.targetLocation.empty() || !interpreterOpts.skippedFunctions.empty()) {
     /* build target functions */
     std::vector<std::string> targets;
     for (auto i = interpreterOpts.skippedFunctions.begin(), e = interpreterOpts.skippedFunctions.end(); i != e; i++) {
@@ -479,7 +488,7 @@ const Module *Executor::setModule(llvm::Module *module,
     }
   }
 
-  kmodule->prepare(opts, interpreterOpts.skippedFunctions, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
+  kmodule->prepare(opts, interpreterOpts.skippedFunctions, interpreterOpts.targetLocation, interpreterHandler, ra, inliner, aa, mra, cloner, sliceGenerator);
 
   specialFunctionHandler->bind();
 

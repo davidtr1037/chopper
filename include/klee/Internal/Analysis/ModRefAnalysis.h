@@ -73,6 +73,8 @@ public:
 
   llvm::Function *getEntry();
 
+  void setTargets(std::vector<std::string> &_targets) { targets = _targets; }
+
   std::vector<llvm::Function *> getTargets();
 
   void run();

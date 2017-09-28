@@ -28,6 +28,7 @@ klee_add_component(kleeCore
   UserSearcher.cpp
   ASContext.cpp
   AllocationRecord.cpp
+  Patch.cpp
 )
 
 # TODO: Work out what the correct LLVM components are for

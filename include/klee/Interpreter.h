@@ -108,7 +108,8 @@ public:
     unsigned MakeConcreteSymbolic;
     std::vector<SkippedFunctionOption> skippedFunctions;
     std::vector<std::string> inlinedFunctions;
-    ErrorLocations errorLocations;
+    std::map<std::string, std::vector<unsigned> > errorLocation;
+    std::map<std::string, std::vector<unsigned> > targetLocation;
     unsigned int maxErrorCount;
 
     InterpreterOptions() : 

@@ -134,7 +134,8 @@ namespace klee {
     //
     // FIXME: ihandler should not be here
     void prepare(const Interpreter::ModuleOptions &opts,
-                 const std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions,
+                 std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions,
+				 const std::map<std::string, std::vector<unsigned> > &targetLocation,
                  InterpreterHandler *ihandler,
                  ReachabilityAnalysis *ra,
                  Inliner *inliner,

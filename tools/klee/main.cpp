@@ -79,26 +79,6 @@ namespace {
   cl::opt<std::string>
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
-  cl::opt<std::string> SkippedFunctions(
-      "skip-functions",
-      cl::desc("Comma-separated list of functions to skip. "
-               "Optionally, a line number can be specified to choose a specific call site "
-               "(e.g. <function1>[:line],<function2>[:line],..)"));
-
-  cl::opt<std::string>
-  InlinedFunctions("inline",
-                   cl::desc("Comma-separated list of functions to be inlined (e.g. <function1>,<function2>,..)"),
-                   cl::init(""));
-
-  cl::opt<unsigned int>
-  MaxErrorCount("max-error-count",
-                cl::desc("max error count before exit"),
-                cl::init(0));
-
-  cl::opt<std::string>
-  ErrorLocation("error-location",
-                cl::desc("Comma-separated list of locations where a failure is expected (e.g. <file1>[:line],<file2>[:line],..)"));
-
   cl::opt<std::string>
   EntryPoint("entry-point",
              cl::desc("Consider the function with the given name as the entrypoint"),
@@ -175,11 +155,6 @@ namespace {
 		cl::init(false));
 
   cl::opt<bool>
-  WithSymArgsRuntime("sym-arg-runtime",
-		cl::desc("Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len>"),
-		cl::init(false));
-
-  cl::opt<bool>
   OptimizeModule("optimize",
                  cl::desc("Optimize before execution"),
 		 cl::init(false));
@@ -246,6 +221,40 @@ namespace {
   Watchdog("watchdog",
            cl::desc("Use a watchdog process to enforce --max-time."),
            cl::init(0));
+
+  // Chaser options
+
+  cl::opt<std::string>
+  SkippedFunctions("skip-functions",
+                   cl::desc("Comma-separated list of functions to skip. "
+                            "Optionally, a line number can be specified to choose a specific call site "
+                            "(e.g. <function1>[:line],<function2>[:line],..)"),
+				   cl::init(""));
+
+  cl::opt<std::string>
+  InlinedFunctions("inline",
+                   cl::desc("Comma-separated list of functions to be inlined "
+                            "(e.g. <function1>,<function2>,..)"),
+                   cl::init(""));
+
+  cl::opt<unsigned int>
+  MaxErrorCount("max-error-count",
+               cl::desc("max error count before exit"),
+               cl::init(0));
+
+  cl::opt<std::string>
+  ErrorLocation("error-location",
+               cl::desc("Comma-separated list of locations where a failure is expected (e.g. <file1>[:line],<file2>[:line],..)"));
+
+  cl::opt<std::string>
+  TargetLocation("target-location",
+                 cl::desc("Comma-separated list of locations to reach (e.g. <file1>[:line],<file2>[:line],..)"));
+
+  cl::opt<bool>
+  WithSymArgsRuntime("sym-arg-runtime",
+		cl::desc("Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len>"),
+		cl::init(false));
+
 }
 
 extern cl::opt<double> MaxTime;
@@ -1291,17 +1300,17 @@ void parseInlinedFunctions(
     }
 }
 
-void parseErrorLocationParameter(std::string parameter, std::map<std::string, std::vector<unsigned> > &result) {
+void parseLocationParameter(std::string parameter, std::map<std::string, std::vector<unsigned> > &result) {
     std::istringstream stream(parameter);
     std::string token;
     std::string fname;
 
     while (std::getline(stream, token, ',')) {
-        std::vector<unsigned int> lines;
-        if (!parseNameLineOption(token, fname, lines)) {
-            klee_error("error-location option: invalid parameter: %s", token.c_str());
-        }
-        result.insert(std::pair<std::string, std::vector<unsigned> >(fname, lines));
+    	std::vector<unsigned int> lines;
+		if (!parseNameLineOption(token, fname, lines)) {
+			klee_error("location option: invalid parameter: %s", token.c_str());
+		}
+		result.insert(std::pair<std::string, std::vector<unsigned> >(fname, lines));
     }
 }
 
@@ -1492,7 +1501,10 @@ int main(int argc, char **argv, char **envp) {
   parseInlinedFunctions(mainModule, InlinedFunctions, inlinedFunctions);
 
   std::map<std::string, std::vector<unsigned> > errorLocationOptions;
-  parseErrorLocationParameter(ErrorLocation, errorLocationOptions);
+  parseLocationParameter(ErrorLocation, errorLocationOptions);
+
+  std::map<std::string, std::vector<unsigned> > targetLocationOptions;
+  parseLocationParameter(TargetLocation, targetLocationOptions);
 
   // FIXME: Change me to std types.
   int pArgc;
@@ -1544,6 +1556,7 @@ int main(int argc, char **argv, char **envp) {
   IOpts.skippedFunctions = skippingOptions;
   IOpts.inlinedFunctions = inlinedFunctions;
   IOpts.errorLocations = errorLocationOptions;
+  IOpts.targetLocation = targetLocationOptions;
   IOpts.maxErrorCount = MaxErrorCount;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =

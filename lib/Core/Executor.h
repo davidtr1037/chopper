@@ -15,6 +15,8 @@
 #ifndef KLEE_EXECUTOR_H
 #define KLEE_EXECUTOR_H
 
+#include "Patch.h"
+
 #include "klee/ExecutionState.h"
 #include "klee/Interpreter.h"
 #include "klee/Internal/Module/Cell.h"
@@ -225,6 +227,8 @@ private:
   ModRefAnalysis *mra;
   Cloner *cloner;
   SliceGenerator *sliceGenerator;
+  /// patch information
+  Patch patchContainer;
 
   unsigned int errorCount;
 

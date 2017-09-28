@@ -56,7 +56,8 @@ public:
   void computeReachableFunctions(llvm::Function *entry, bool usePA,
                                  FunctionSet &results);
 
-  void computeShortestPath(llvm::Function *entry, llvm::Function *target);
+  void computeShortestPath(llvm::Function *entry, llvm::Function *target,
+                           std::list<llvm::Function*> &result);
 
   FunctionSet &getReachableFunctions(llvm::Function *f);
 
@@ -68,6 +69,10 @@ public:
   void dumpReachableFunctions();
   void dumpCallGraph();
   void dumpFunctionToCallGraph(llvm::Function *f);
+
+  void setTargets(std::vector<std::string>& _targets) { targets = _targets; }
+
+  std::set<llvm::Function*> functions;
 
 private:
   void removeUnusedValues();
@@ -96,7 +101,6 @@ private:
   std::string entry;
   std::vector<std::string> targets;
   llvm::Function *entryFunction;
-  std::vector<llvm::Function *> targetFunctions;
   AAPass *aa;
   FunctionTypeMap functionTypeMap;
   ReachabilityMap reachabilityMap;

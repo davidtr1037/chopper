@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
+// RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f,g,h -target-function=h %t.bc > %t.out 2>&1
 

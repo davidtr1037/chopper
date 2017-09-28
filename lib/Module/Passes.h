@@ -194,11 +194,27 @@ public:
 
   }
   virtual bool runOnModule(llvm::Module &module);
-  virtual bool runOnFunction(llvm::Function &f, llvm::Module &modue);
+  virtual bool runOnFunction(llvm::Function &f, llvm::Module &module);
   llvm::Function *createWrapperFunction(llvm::Function &f, llvm::Module &module);
   void replaceCalls(llvm::Function *f, llvm::Function *wrapper, const std::vector<unsigned int> &lines);
   void replaceCall(llvm::CallInst *origCallInst, llvm::Function *f, llvm::Function *wrapper);
 };
+
+class TargetFinderPass : public llvm::BasicBlockPass {
+  static char ID;
+  const std::map<std::string, std::vector<unsigned> > &targetLocation;
+
+public:
+  std::map<llvm::Function*, std::vector<llvm::Instruction*> > targetInstructions;
+  std::set<llvm::Function*> functions;
+
+  TargetFinderPass(const std::map<std::string, std::vector<unsigned> > &targetLocation) :
+    BasicBlockPass(ID),
+	targetLocation(targetLocation)
+  { }
+  virtual bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
 
 }
 

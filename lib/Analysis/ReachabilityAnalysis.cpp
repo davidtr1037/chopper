@@ -16,7 +16,7 @@
 using namespace std;
 using namespace llvm;
 
-llvm::cl::opt<bool> DumpCallGraph("dump-callgraph",
+llvm::cl::opt<bool> DumpCallGraph("dump-dot-callgraph",
     llvm::cl::desc("Dump callgraph in graphviz format"),
                    llvm::cl::init(false));
 
@@ -107,7 +107,6 @@ bool ReachabilityAnalysis::run(bool usePA) {
       errs() << "function '" << name << "' is not found\n";
       return false;
     }
-    targetFunctions.push_back(f);
     all.push_back(f);
   }
 
@@ -313,6 +312,7 @@ Function *ReachabilityAnalysis::extractFunction(ConstantExpr *ce) {
 void ReachabilityAnalysis::updateCallMap(Instruction *callInst,
                                          FunctionSet &targets) {
   callMap[callInst].insert(targets.begin(), targets.end());
+  functions.insert(targets.begin(), targets.end());
 }
 
 void ReachabilityAnalysis::updateRetMap(Instruction *callInst,
@@ -464,7 +464,7 @@ void ReachabilityAnalysis::dumpFunctionToCallGraph(llvm::Function *f) {
     }
 }
 
-void ReachabilityAnalysis::computeShortestPath(llvm::Function* entry, llvm::Function *target) {
+void ReachabilityAnalysis::computeShortestPath(llvm::Function* entry, llvm::Function *target, std::list<Function*> &path) {
 	adjacency_list_t adjacency_list;
 	std::map<vertex_t, weight_t> min_distance;
 	std::map<vertex_t, vertex_t> previous;
@@ -520,13 +520,7 @@ void ReachabilityAnalysis::computeShortestPath(llvm::Function* entry, llvm::Func
 		}
 	}
 
-	errs() << "Shortest call chain invocations to reach function " << target->getName() << ": \n";
-	std::list<vertex_t> path;
 	vertex_t vertex = target;
 	for (; vertex != nullptr; vertex = previous[vertex])
 		path.push_front(vertex);
-	for(auto short_el : path) {
-		errs() << " -> " << short_el->getName();
-	}
-	errs() << "\n";
 }
