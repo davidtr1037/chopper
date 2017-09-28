@@ -25,7 +25,11 @@ public:
 
   ~SliceGenerator();
 
-  void generate();
+  bool isLazySlicing() { return lazyMode; }
+
+  void prepareSlicer();
+
+  void generateAllSlices();
 
   void generateSlice(llvm::Function *f, uint32_t sliceId,
                      ModRefAnalysis::SideEffectType type);

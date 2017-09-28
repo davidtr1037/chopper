@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace dg;
 
 
-void SliceGenerator::generate() {
+void SliceGenerator::prepareSlicer() {
 	/* add annotations for slicing */
 	annotator = new Annotator(module, mra);
 	annotator->annotate();
@@ -36,11 +36,9 @@ void SliceGenerator::generate() {
     /* translate the results of SVF to DG */
     SVFPointerAnalysis svfpa(module, llvmpta, aa);
     svfpa.run();
+}
 
-    if (lazyMode) {
-        return;
-    }
-
+void SliceGenerator::generateAllSlices() {
     /* generate all the slices... */
     ModRefAnalysis::SideEffects &sideEffects = mra->getSideEffects();
     for (ModRefAnalysis::SideEffects::iterator i = sideEffects.begin(); i != sideEffects.end(); i++) {

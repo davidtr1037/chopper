@@ -487,10 +487,10 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     klee_message("Runnining mod-ref analysis...");
     mra->run();
 
-    if (sliceGenerator) {
-      /* TODO: rename... */
-      sliceGenerator->generate();
-    }
+    /* prepare slice generator for slicing */
+    sliceGenerator->prepareSlicer();
+    if (!sliceGenerator->isLazySlicing())
+    	sliceGenerator->generateAllSlices();
   }
 
   /* Build shadow structures */
