@@ -78,7 +78,11 @@ void PTree::dump(llvm::raw_ostream &os) {
     if (n->data) {
       ExecutionState *es = n->data;
       if (es->isNormalState()) {
-        os << ",fillcolor=green";
+        if (es->isRecoveryState()) {
+          os << ",fillcolor=orange";
+        } else {
+          os << ",fillcolor=green";
+        }
       } else if (es->isRecoveryState()) {
         os << ",fillcolor=blue";
       }
