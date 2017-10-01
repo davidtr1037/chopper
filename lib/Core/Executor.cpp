@@ -4150,10 +4150,9 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
 
   /* TODO: decide which value to pass (original, cloned) */
   loadInst = ki->getOrigInst();
-  DEBUG_WITH_TYPE(
-    DEBUG_BASIC,
-    errs() << "KLEE: may-blocking load: "; loadInst->print(errs()); errs() << "\n"
-  );
+  DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: may-blocking load:", &state));
+  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "- instruction:" << *loadInst << "\n");
+  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "- stack trace:\n");
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
   if (!getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite))
