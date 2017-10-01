@@ -777,6 +777,9 @@ ExecutionState &RandomRecoveryPath::selectState() {
   }
 
   ExecutionState *es = n->data;
+  while (es->isSuspended()) {
+    es = es->getRecoveryState();
+  }
   return *es;
 }
 
