@@ -750,11 +750,15 @@ RandomRecoveryPath::~RandomRecoveryPath() {
 }
 
 ExecutionState &RandomRecoveryPath::selectState() {
+  if (treeStack.empty()) {
+    /* as this point, the order of selection does not matter */
+    return *states.front();
+  }
+
   unsigned int flips = 0;
   unsigned int bits = 0;
 
   /* select the root */
-  errs() << "RRP select: stack size: " << treeStack.size() << "\n";
   PTree::Node *n = treeStack.top();
 
   while (!n->data) {
@@ -786,21 +790,30 @@ void RandomRecoveryPath::update(
     if (es->getLevel() == treeStack.size()) {
       /* this state has a higher level, so we push it as a root */
       treeStack.push(es->ptreeNode);
-      errs() << "RRP update: adding root: " << es << " level: " << es->getLevel() << "\n";
     }
+
+    /* add state */
+    states.push_back(es);
   }
   for (auto i = removedStates.begin(); i != removedStates.end(); i++) {
     ExecutionState *es = *i;
     /* a top level recovery state terminated, so we pop it's root from the stack */
     if (es->isResumed() && es->getLevel() == treeStack.size() - 1) {
-      errs() << "RRP update: removing root: " << es << " level: " << es->getLevel() << "\n";
       treeStack.pop();
+    }
+
+    /* remove state */
+    for (auto j = states.begin(); j != states.end(); j++) {
+      if (es == *j) {
+        states.erase(j);
+        break;
+      }
     }
   }
 }
 
 bool RandomRecoveryPath::empty() {
-  return treeStack.empty();
+  return treeStack.empty() && states.empty();
 }
 
 /* optimized splitted searcher */

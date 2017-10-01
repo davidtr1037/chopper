@@ -325,6 +325,7 @@ namespace klee {
   class RandomRecoveryPath : public Searcher {
     Executor &executor;
     std::stack<PTree::Node *> treeStack;
+    std::vector<ExecutionState *> states;
 
   public:
     RandomRecoveryPath(Executor &executor);
