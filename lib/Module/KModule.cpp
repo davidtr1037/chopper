@@ -489,14 +489,14 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       } else {
     	std::set<Function*> retainFunctions;
     	for (std::map<Function*, std::vector<Instruction*> >::iterator I = tfpass->targetInstructions.begin(), E = tfpass->targetInstructions.end(); I != E; ++I) {
-    	  errs() << (*I).first->getName() << "\n";
-    	  std::list<Function*> path;
+          DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << (*I).first->getName() << "\n");
+          std::list<Function*> path;
     	  ra->computeShortestPath(entry, (*I).first, path);
     	  for (auto patEl : path) {
-    		  errs() << "->" << patEl->getName();
-    	  }
-    	  errs() << "\n";
-    	  retainFunctions.insert(path.begin(), path.end());
+            DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "->" << patEl->getName());
+          }
+          DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "\n");
+          retainFunctions.insert(path.begin(), path.end());
     	}
 
     	std::vector<std::string> targets;
@@ -505,7 +505,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     		std::vector<unsigned> lines;
     	    skippedFunctions.push_back(Interpreter::SkippedFunctionOption(f->getName().str(), lines));
     	    targets.push_back(f->getName().str());
-    	  }
+            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Skipping function %s", f->getName().str().c_str()));
+          }
     	}
 
     	PassManager pm4;
