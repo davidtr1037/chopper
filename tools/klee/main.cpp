@@ -1734,7 +1734,7 @@ int main(int argc, char **argv, char **envp) {
         << handler->getNumTestCases() << "\n";
 
   /* these are relevant only when we have a slicing option */
-  if (!IOpts.skippedFunctions.empty()) {
+  if (!IOpts.skippedFunctions.empty() || !IOpts.targetLocation.empty()) {
     stats << "KLEE: done: recovery states = "
           << handler->getRecoveryStatesCount() << "\n";
     stats << "KLEE: done: generated slices = "
