@@ -512,9 +512,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     	pm4.add(new ReturnToVoidFunctionPass(skippedFunctions));
     	pm4.run(*module);
 
-    	ra->setTargets(targets);
     	mra->setTargets(targets);
-    	ra->run(true);
+        ra->runOnTargets(true, targets);
       }
     }
 

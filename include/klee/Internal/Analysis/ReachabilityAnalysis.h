@@ -52,6 +52,7 @@ public:
   void usePA(AAPass *aa) { this->aa = aa; }
 
   bool run(bool usePA);
+  bool runOnTargets(bool usePA, std::vector<std::string> &targets);
 
   void computeReachableFunctions(llvm::Function *entry, bool usePA,
                                  FunctionSet &results);
@@ -75,6 +76,8 @@ public:
   std::set<llvm::Function*> functions;
 
 private:
+  void addReachableFunctions(bool usePA, std::vector<llvm::Function *> &all);
+
   void removeUnusedValues();
 
   void computeFunctionTypeMap();

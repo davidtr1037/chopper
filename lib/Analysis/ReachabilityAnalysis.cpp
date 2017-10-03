@@ -99,7 +99,24 @@ bool ReachabilityAnalysis::run(bool usePA) {
     return false;
   }
   all.push_back(entryFunction);
+  addReachableFunctions(usePA, all);
 
+  if (!targets.empty()) {
+    if (!runOnTargets(usePA, targets))
+      return false;
+  }
+
+  /* debug */
+  dumpReachableFunctions();
+
+  if (DumpCallGraph)
+    dumpCallGraph();
+
+  return true;
+}
+
+bool ReachabilityAnalysis::runOnTargets(bool usePA, vector<string> &targets) {
+  vector<Function *> all;
   for (vector<string>::iterator i = targets.begin(); i != targets.end(); i++) {
     string name = *i;
     Function *f = module->getFunction(name);
@@ -110,18 +127,23 @@ bool ReachabilityAnalysis::run(bool usePA) {
     all.push_back(f);
   }
 
-  /* build reachability map */
-  for (vector<Function *>::iterator i = all.begin(); i != all.end(); i++) {
-    updateReachabilityMap(*i, usePA);
-  }
+  addReachableFunctions(usePA, all);
 
   /* debug */
   dumpReachableFunctions();
 
   if (DumpCallGraph)
-	  dumpCallGraph();
+    dumpCallGraph();
 
   return true;
+}
+
+void ReachabilityAnalysis::addReachableFunctions(bool usePA,
+                                                 vector<Function *> &all) {
+  /* build reachability map */
+  for (vector<Function *>::iterator i = all.begin(); i != all.end(); i++) {
+    updateReachabilityMap(*i, usePA);
+  }
 }
 
 void ReachabilityAnalysis::updateReachabilityMap(Function *f, bool usePA) {
