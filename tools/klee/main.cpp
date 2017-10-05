@@ -1005,9 +1005,11 @@ void externalsAndGlobalsCheck(const Module *m) {
       if (unsafe.count(ext)) {
         foundUnsafe.insert(*it);
       } else {
-        klee_warning("undefined reference to %s: %s",
-                     it->second ? "variable" : "function",
-                     ext.c_str());
+        if (ext.compare(0, 7, "__crit_")) {
+          klee_warning("undefined reference to %s: %s",
+                       it->second ? "variable" : "function",
+                       ext.c_str());
+        }
       }
     }
   }
