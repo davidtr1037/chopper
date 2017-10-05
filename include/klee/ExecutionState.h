@@ -150,6 +150,8 @@ private:
 
   unsigned int type;
 
+  std::list<llvm::Function*> path;
+
   /* normal state properties */
 
   typedef std::map<uint32_t, RecoveryResult> SnapshotCache;
@@ -282,6 +284,10 @@ public:
   ~ExecutionState();
 
   ExecutionState *branch();
+
+  void setPath(std::list<llvm::Function*> path) {
+    this->path = path;
+  }
 
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();

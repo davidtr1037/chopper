@@ -227,6 +227,7 @@ private:
   ModRefAnalysis *mra;
   Cloner *cloner;
   SliceGenerator *sliceGenerator;
+  std::list<llvm::Function*> path;
   /// patch information
   Patch patchContainer;
 

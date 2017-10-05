@@ -70,6 +70,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     /* TODO: fix? */
     refCount(0),
     type(NORMAL_STATE),
+	path(0),
 
     /* state properties */
     suspendStatus(false),
@@ -119,6 +120,8 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     fnAliases(state.fnAliases),
 
     type(state.type),
+
+	path(state.path),
 
     /* state properties */
     suspendStatus(state.suspendStatus),

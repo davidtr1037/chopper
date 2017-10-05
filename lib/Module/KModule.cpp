@@ -494,8 +494,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                  I = tfpass->targetInstructions.begin(),
                  E = tfpass->targetInstructions.end();
              I != E; ++I) {
-          std::list<Function *> path =
-              computeRetainFunctionsOnCallgraph(ra, entry, (*I).first);
+          // FIXME: should be extended to support multiple paths
+          path = computeRetainFunctionsOnCallgraph(ra, entry, (*I).first);
           retainFunctions.insert(path.begin(), path.end());
         }
         for (auto retain : retainFunctions) {
