@@ -206,7 +206,6 @@ class TargetFinderPass : public llvm::BasicBlockPass {
 
 public:
   std::map<llvm::Function*, std::vector<llvm::Instruction*> > targetInstructions;
-  std::set<llvm::Function*> functions;
 
   TargetFinderPass(const std::map<std::string, std::vector<unsigned> > &targetLocation) :
     BasicBlockPass(ID),
