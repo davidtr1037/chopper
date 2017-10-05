@@ -126,6 +126,15 @@ namespace klee {
     // Mark function with functionName as part of the KLEE runtime
     void addInternalFunction(const char* functionName);
 
+    std::list<llvm::Function *>
+    computeRetainFunctionsOnCallgraph(ReachabilityAnalysis *ra,
+                                      llvm::Function *entry,
+                                      llvm::Function *target);
+    void computeSkippedFunctions(
+        ModRefAnalysis *mra, std::set<llvm::Function *> &functions,
+        std::set<llvm::Function *> &retainFunctions,
+        std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions);
+
   public:
     KModule(llvm::Module *_module);
     ~KModule();

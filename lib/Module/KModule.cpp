@@ -22,6 +22,7 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/DebugInfo.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -479,6 +480,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     ra->run(UseSVFPTA);
 
     if (!targetLocation.empty()) {
+      klee_message("Running callgraph analysis...");
       TargetFinderPass *tfpass = new TargetFinderPass(targetLocation);
       PassManager pmChaser;
       pmChaser.add(tfpass);
@@ -487,33 +489,32 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       if (!entry || tfpass->targetInstructions.empty()) {
         klee_warning("Could not find entry and/or target functions");
       } else {
-    	std::set<Function*> retainFunctions;
-    	for (std::map<Function*, std::vector<Instruction*> >::iterator I = tfpass->targetInstructions.begin(), E = tfpass->targetInstructions.end(); I != E; ++I) {
-          DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << (*I).first->getName() << "\n");
-          std::list<Function*> path;
-    	  ra->computeShortestPath(entry, (*I).first, path);
-    	  for (auto patEl : path) {
-            DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "->" << patEl->getName());
-          }
-          DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "\n");
+        std::set<Function *> retainFunctions;
+        for (std::map<Function *, std::vector<Instruction *> >::iterator
+                 I = tfpass->targetInstructions.begin(),
+                 E = tfpass->targetInstructions.end();
+             I != E; ++I) {
+          std::list<Function *> path =
+              computeRetainFunctionsOnCallgraph(ra, entry, (*I).first);
           retainFunctions.insert(path.begin(), path.end());
-    	}
+        }
+        for (auto retain : retainFunctions) {
+          errs() << "Retain: " << retain->getName() << "\n";
+        }
+        errs() << "\n";
+        computeSkippedFunctions(mra, ra->functions, retainFunctions,
+                                skippedFunctions);
 
-    	std::vector<std::string> targets;
-    	for (auto f : ra->functions) {
-    	  if (retainFunctions.find(f) == retainFunctions.end()) {
-    		std::vector<unsigned> lines;
-    	    skippedFunctions.push_back(Interpreter::SkippedFunctionOption(f->getName().str(), lines));
-    	    targets.push_back(f->getName().str());
-            DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("Skipping function %s", f->getName().str().c_str()));
-          }
-    	}
-
-    	PassManager pm4;
+        PassManager pm4;
     	pm4.add(new ReturnToVoidFunctionPass(skippedFunctions));
     	pm4.run(*module);
 
-    	mra->setTargets(targets);
+        std::vector<std::string> targets;
+        for (auto toSkip : skippedFunctions) {
+          targets.push_back(toSkip.name);
+        }
+
+        mra->setTargets(targets);
         ra->runOnTargets(true, targets);
       }
     }
@@ -580,6 +581,47 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
       llvm::errs() << (*it)->getName() << ", ";
     }
     llvm::errs() << "]\n";
+  }
+}
+
+std::list<Function *>
+KModule::computeRetainFunctionsOnCallgraph(ReachabilityAnalysis *ra,
+                                           Function *entry, Function *target) {
+  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << target->getName() << "\n");
+  std::list<Function *> path;
+  ra->computeShortestPath(entry, target, path);
+  for (auto patEl : path) {
+    DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "->" << patEl->getName());
+  }
+  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "\n");
+  return path;
+}
+
+void KModule::computeSkippedFunctions(
+    ModRefAnalysis *mra, std::set<llvm::Function *> &functions,
+    std::set<Function *> &retainFunctions,
+    std::vector<Interpreter::SkippedFunctionOption> &skippedFunctions) {
+  for (auto f : functions) {
+    if (f->isDeclaration()) {
+      continue;
+    } else {
+      if (MDNode *N = f->getEntryBlock().getFirstNonPHI()->getMetadata("dbg")) {
+        DILocation Loc(N);
+        if (Loc.getFilename().str().find("libc") != std::string::npos ||
+            Loc.getFilename().str().find("klee") != std::string::npos ||
+            Loc.getFilename().str().find("include/sys") != std::string::npos) {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+    if (retainFunctions.find(f) == retainFunctions.end()) {
+      std::vector<unsigned> lines;
+      skippedFunctions.push_back(
+          Interpreter::SkippedFunctionOption(f->getName().str(), lines));
+      klee_message("Skipping function %s", f->getName().str().c_str());
+    }
   }
 }
 
