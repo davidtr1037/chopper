@@ -324,7 +324,11 @@ namespace klee {
 
   class RandomRecoveryPath : public Searcher {
     Executor &executor;
+    /* a stack of recovery states,
+     * where each state is the root of a recovery tree
+     */
     std::stack<PTree::Node *> treeStack;
+    /* this is a simple way to keep track of the states of the recovery trees */
     std::vector<ExecutionState *> states;
 
   public:
