@@ -149,7 +149,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   }
 
   if (UseSplittedSearcher) {
-    /* TODO: the recovery searcher should be configurable */
+    /* TODO: Should both of the searchers be of the same type? */
     searcher = new SplittedSearcher(searcher, new DFSSearcher(), SplitRatio);
   }
 
