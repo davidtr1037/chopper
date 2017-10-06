@@ -80,6 +80,11 @@ namespace klee {
       NURS_CPICnt,
       NURS_QC
     };
+
+    enum RecoverySearchType {
+      RS_DFS,
+      RS_RandomPath,
+    };
   };
 
   class DFSSearcher : public Searcher {
