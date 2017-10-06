@@ -64,6 +64,15 @@ namespace {
   cl::opt<bool> UseSplittedSearcher("split-search", cl::desc("..."));
 
   cl::opt<bool> UseOptimizedSplittedSearcher("opt-split-search", cl::desc("..."));
+  cl::list<Searcher::RecoverySearchType> RecoverySearch(
+    "recovery-search",
+    cl::desc("Specify the recovery search heuristic (disabled by default)"),
+	  cl::values(
+      clEnumValN(Searcher::RS_DFS, "dfs", "use Depth First Search (DFS)"),
+      clEnumValN(Searcher::RS_RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
+      clEnumValEnd
+    )
+  );
 
   cl::opt<unsigned int>
   SplitRatio("split-ratio",
@@ -145,11 +154,25 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = new SplittedSearcher(searcher, new DFSSearcher(), SplitRatio);
   }
 
-  if (UseOptimizedSplittedSearcher) {
-    /* TODO: the recovery searchers (log/high) should be configurable */
+  if (!RecoverySearch.empty()) {
+    Searcher *recoverySearcher = NULL;
+    switch (RecoverySearch[0]) {
+    case Searcher::RS_DFS:
+        recoverySearcher = new DFSSearcher();
+        break;
+
+    case Searcher::RS_RandomPath:
+        recoverySearcher = new RandomRecoveryPath(executor);
+        break;
+    }
+
+    if (recoverySearcher == NULL) {
+      klee_error("invalid recovery search heuristic");
+    }
+
     searcher = new OptimizedSplittedSearcher(searcher,
                                              new DFSSearcher(),
-                                             new DFSSearcher(),
+                                             recoverySearcher,
                                              SplitRatio);
   }
 
