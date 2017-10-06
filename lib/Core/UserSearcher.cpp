@@ -63,13 +63,12 @@ namespace {
 
   cl::opt<bool> UseSplittedSearcher("split-search", cl::desc("..."));
 
-  cl::opt<bool> UseOptimizedSplittedSearcher("opt-split-search", cl::desc("..."));
   cl::list<Searcher::RecoverySearchType> RecoverySearch(
     "recovery-search",
     cl::desc("Specify the recovery search heuristic (disabled by default)"),
 	  cl::values(
-      clEnumValN(Searcher::RS_DFS, "dfs", "use Depth First Search (DFS)"),
-      clEnumValN(Searcher::RS_RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
+      clEnumValN(Searcher::RS_DFS, "dfs", "use depth first search"),
+      clEnumValN(Searcher::RS_RandomPath, "random-path", "use random path selection"),
       clEnumValEnd
     )
   );
