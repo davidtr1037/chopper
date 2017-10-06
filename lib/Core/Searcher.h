@@ -321,9 +321,10 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates);
     bool empty();
     void printName(llvm::raw_ostream &os) {
-      os << "SplittedSearcher (ratio = " << ratio << ")" << ", base searcher:\n";
-      baseSearcher->printName(os);
-      os << "\n";
+      os << "SplittedSearcher\n";
+      os << "- base searcher: "; baseSearcher->printName(os);
+      os << "- recovery searcher: "; recoverySearcher->printName(os);
+      os << "- ratio = " << ratio << "\n";
     }
   };
 
@@ -376,9 +377,11 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates);
     bool empty();
     void printName(llvm::raw_ostream &os) {
-      os << "OptimizedSplittedSearcher (ratio = " << ratio << ")" << ", base searcher:\n";
-      baseSearcher->printName(os);
-      os << "\n";
+      os << "OptimizedSplittedSearcher\n";
+      os << "- base searcher: "; baseSearcher->printName(os);
+      os << "- low priority searcher: "; recoverySearcher->printName(os);
+      os << "- high priority searcher: "; highPrioritySearcher->printName(os);
+      os << "- ratio = " << ratio << "\n";
     }
   };
 }
