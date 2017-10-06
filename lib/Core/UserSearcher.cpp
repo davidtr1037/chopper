@@ -149,7 +149,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     /* TODO: the recovery searchers (log/high) should be configurable */
     searcher = new OptimizedSplittedSearcher(searcher,
                                              new DFSSearcher(),
-                                             new RandomRecoveryPath(executor),
+                                             new DFSSearcher(),
                                              SplitRatio);
   }
 
