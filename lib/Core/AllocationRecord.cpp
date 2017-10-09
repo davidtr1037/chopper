@@ -40,6 +40,10 @@ void AllocationRecord::incRefCount() {
         std::list<MemoryObject *> &memoryObjects = entry.second;
         for (std::list<MemoryObject *>::iterator j = memoryObjects.begin(); j != memoryObjects.end(); j++) {
             MemoryObject *mo = *j;
+            if (!mo) {
+                continue;
+            }
+
             mo->refCount++;
         }
     }
@@ -51,6 +55,10 @@ void AllocationRecord::decRefCount() {
         std::list<MemoryObject *> &memoryObjects = entry.second;
         for (std::list<MemoryObject *>::iterator j = memoryObjects.begin(); j != memoryObjects.end(); j++) {
             MemoryObject *mo = *j;
+            if (!mo) {
+                continue;
+            }
+
             assert(mo->refCount > 0);
             mo->refCount--;
             if (mo->refCount == 0) {
@@ -72,7 +80,9 @@ void AllocationRecord::addAddr(ASContext &context, MemoryObject *mo) {
         q.push_back(mo);
     }
 
-    mo->refCount++;
+    if (mo) {
+        mo->refCount++;
+    }
 }
 
 MemoryObject *AllocationRecord::getAddr(ASContext &context) {
@@ -89,8 +99,10 @@ MemoryObject *AllocationRecord::getAddr(ASContext &context) {
     MemoryObject *mo = q.front();
     q.pop_front();
 
-    /* TODO: check reference count... */
-    mo->refCount--;
+    if (mo) {
+        /* TODO: check reference count... */
+        mo->refCount--;
+    }
 
     return mo;
 }
@@ -127,7 +139,11 @@ void AllocationRecord::dump() {
             DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("memory objects:"));
             for (MemoryObjectList::iterator j = memoryObjects.begin(); j != memoryObjects.end(); j++) {
                 MemoryObject *mo = *j;
-                DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("-- %lx", mo->address));
+                if (mo) {
+                    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("-- %lx", mo->address));
+                } else {
+                    DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("-- null"));
+                }
             }
         }
     }
