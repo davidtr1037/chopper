@@ -3431,7 +3431,12 @@ void Executor::executeAlloc(ExecutionState &state,
     if (state.isRecoveryState() && isDynamicAlloc(state.prevPC->inst)) {
       mo = onExecuteAlloc(state, CE->getZExtValue(), isLocal, state.prevPC->inst, zeroMemory);
     } else {
-      mo = memory->allocate(CE->getZExtValue(), isLocal, false, state.prevPC->inst);
+      if (CE->getZExtValue() < HUGE_ALLOC_SIZE) {
+        mo = memory->allocate(CE->getZExtValue(), isLocal, false, state.prevPC->inst);
+      } else {
+        klee_message("NOTE: found huge concrete malloc (size = %ld), returning 0",
+                     CE->getZExtValue());
+      }
     }
     if (!mo) {
       bindLocal(target, state, 
@@ -4657,16 +4662,31 @@ MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, boo
     if (guidingAllocationRecord.exists(context)) {
         /* the address should be already bound */
         mo = guidingAllocationRecord.getAddr(context);
-        DEBUG_WITH_TYPE(
-            DEBUG_BASIC,
-            klee_message("%p: reusing allocated address: %lx, size: %lu", &state, mo->address, size)
-        );
+        if (mo) {
+            DEBUG_WITH_TYPE(
+                DEBUG_BASIC,
+                klee_message("%p: reusing allocated address: %lx, size: %lu", &state, mo->address, size)
+            );
+        } else {
+            DEBUG_WITH_TYPE(
+                DEBUG_BASIC,
+                klee_message("%p: reusing null address", &state)
+            );
+        }
     } else {
-        mo = memory->allocate(size, isLocal, false, allocInst);
-        DEBUG_WITH_TYPE(
-            DEBUG_BASIC,
-            klee_message("%p: allocating new address: %lx, size: %lu", &state, mo->address, size)
-        );
+        if (size < HUGE_ALLOC_SIZE) {
+            mo = memory->allocate(size, isLocal, false, allocInst);
+            DEBUG_WITH_TYPE(
+                DEBUG_BASIC,
+                klee_message("%p: allocating new address: %lx, size: %lu", &state, mo->address, size)
+            );
+        } else {
+            mo = NULL;
+            DEBUG_WITH_TYPE(
+                DEBUG_BASIC,
+                klee_message("%p: allocating null address", &state)
+            );
+        }
 
         /* TODO: do we need to add the MemoryObject here? */
         allocationRecord.addAddr(context, mo);
