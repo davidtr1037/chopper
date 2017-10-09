@@ -4695,8 +4695,10 @@ MemoryObject *Executor::onExecuteAlloc(ExecutionState &state, uint64_t size, boo
         }
     }
 
-    /* bind the address to the dependent states */
-    bindAll(dependentState, mo, isLocal, zeroMemory);
+    if (mo) {
+        /* bind the address to the dependent states */
+        bindAll(dependentState, mo, isLocal, zeroMemory);
+    }
 
     return mo;
 }
