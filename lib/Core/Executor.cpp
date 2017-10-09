@@ -369,6 +369,8 @@ const char *Executor::TerminateReasonNames[] = {
   [ Unhandled ] = "xxx",
 };
 
+#define HUGE_ALLOC_SIZE (1U << 31)
+
 Executor::Executor(InterpreterOptions &opts, InterpreterHandler *ih)
     : Interpreter(opts), kmodule(0), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher()), statsTracker(0),
@@ -3502,7 +3504,7 @@ void Executor::executeAlloc(ExecutionState &state,
         // malloc will fail for it, so lets fork and return 0.
         StatePair hugeSize = 
           fork(*fixedSize.second, 
-               UltExpr::create(ConstantExpr::alloc(1<<31, W), size), 
+               UltExpr::create(ConstantExpr::alloc(HUGE_ALLOC_SIZE, W), size),
                true);
         if (hugeSize.first) {
           klee_message("NOTE: found huge malloc, returning 0");
