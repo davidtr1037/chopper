@@ -104,7 +104,7 @@ public:
     virtual ~Timer();
 
     /// The event callback.
-    virtual void run() = 0;
+    virtual void run(ExecutionState *es) = 0;
   };
 
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;

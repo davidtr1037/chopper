@@ -122,14 +122,14 @@ namespace klee {
     // Functions which are part of KLEE runtime
     std::set<const llvm::Function*> internalFunctions;
 
-    std::list<llvm::Function*> path;
+    std::list<std::pair<llvm::Function *, llvm::Instruction *> > path;
 
   private:
 
     // Mark function with functionName as part of the KLEE runtime
     void addInternalFunction(const char* functionName);
 
-    std::list<llvm::Function *>
+    std::list<std::pair<llvm::Function *, llvm::Instruction *> >
     computeRetainFunctionsOnCallgraph(ReachabilityAnalysis *ra,
                                       llvm::Function *entry,
                                       llvm::Function *target);

@@ -439,6 +439,8 @@ Executor::Executor(InterpreterOptions &opts, InterpreterHandler *ih)
     klee_warning("Unable to load patch file \"%s\"", PatchDiffFile.c_str());
   }
 
+  initializeSearcher();
+
   ra = NULL;
   inliner = NULL;
   aa = NULL;
@@ -1389,6 +1391,14 @@ void Executor::executeCall(ExecutionState &state,
                            Function *f,
                            std::vector< ref<Expr> > &arguments) {
   Instruction *i = ki->inst;
+
+  // Remove from path the front vertex
+  if (!state.path.empty() && state.path.front().second &&
+      i == state.path.front().second) {
+    state.path.pop_front();
+    if (!state.path.empty())
+      statsTracker->computeDistToCall(&state);
+  }
 
   if (f && PrintFunctionCalls)
     klee_message("Function: %s", f->getName().str().c_str());
@@ -3876,6 +3886,10 @@ void Executor::runFunctionAsMain(Function *f,
 
   if (statsTracker)
     statsTracker->framePushed(*state, 0);
+
+  if (statsTracker && userSearcherRequiresMD2U()) {
+    statsTracker->computeDistances(state);
+  }
 
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)

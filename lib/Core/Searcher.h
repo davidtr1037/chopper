@@ -73,6 +73,7 @@ namespace klee {
       BFS,
       RandomState,
       RandomPath,
+      NURS_PatchTesting,
       NURS_CovNew,
       NURS_MD2U,
       NURS_Depth,
@@ -137,7 +138,8 @@ namespace klee {
       InstCount,
       CPInstCount,
       MinDistToUncovered,
-      CoveringNew
+      CoveringNew,
+      PatchTesting
     };
 
   private:

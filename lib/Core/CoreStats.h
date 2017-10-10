@@ -44,6 +44,11 @@ namespace stats {
   extern Statistic minDistToUncovered;
 
   /// Instruction level statistic tracking the minimum intraprocedural
+  /// distance to a call instruction; this is only periodically
+  /// updated.
+  extern Statistic minDistToCall;
+
+  /// Instruction level statistic tracking the minimum intraprocedural
   /// distance to a function return.
   extern Statistic minDistToReturn;
 

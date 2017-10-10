@@ -21,6 +21,7 @@ Statistic stats::instructionTime("InstructionTimes", "Itime");
 Statistic stats::instructions("Instructions", "I");
 Statistic stats::minDistToReturn("MinDistToReturn", "Rdist");
 Statistic stats::minDistToUncovered("MinDistToUncovered", "UCdist");
+Statistic stats::minDistToCall("MinDistToCall", "CLdist");
 Statistic stats::reachableUncovered("ReachableUncovered", "IuncovReach");
 Statistic stats::resolveTime("ResolveTime", "Rtime");
 Statistic stats::solverTime("SolverTime", "Stime");

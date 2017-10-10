@@ -19,13 +19,15 @@
 class ReachabilityAnalysis {
 public:
   typedef llvm::Function* vertex_t;
+  typedef std::pair<vertex_t, llvm::Instruction *> augmented_vertex_t;
   typedef double weight_t;
 
   struct neighbor {
     vertex_t target;
+    llvm::Instruction *edge;
     weight_t weight;
-    neighbor(vertex_t arg_target, weight_t arg_weight)
-	    : target(arg_target), weight(arg_weight) { }
+    neighbor(vertex_t arg_target, llvm::Instruction *_edge, weight_t arg_weight)
+        : target(arg_target), edge(_edge), weight(arg_weight) {}
   };
 
   typedef std::map<vertex_t, std::vector<neighbor> > adjacency_list_t;
@@ -57,8 +59,9 @@ public:
   void computeReachableFunctions(llvm::Function *entry, bool usePA,
                                  FunctionSet &results);
 
-  void computeShortestPath(llvm::Function *entry, llvm::Function *target,
-                           std::list<llvm::Function*> &result);
+  void computeShortestPath(
+      llvm::Function *entry, llvm::Function *target,
+      std::list<std::pair<llvm::Function *, llvm::Instruction *> > &result);
 
   FunctionSet &getReachableFunctions(llvm::Function *f);
 

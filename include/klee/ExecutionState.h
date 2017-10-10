@@ -142,6 +142,8 @@ public:
   /* the reference count is used only for snapshot states */
   unsigned int refCount;
 
+  std::list<std::pair<llvm::Function *, llvm::Instruction *> > path;
+
 private:
   // unsupported, use copy constructor
   ExecutionState &operator=(const ExecutionState &);
@@ -149,8 +151,6 @@ private:
   std::map<std::string, std::string> fnAliases;
 
   unsigned int type;
-
-  std::list<llvm::Function*> path;
 
   /* normal state properties */
 
@@ -285,7 +285,8 @@ public:
 
   ExecutionState *branch();
 
-  void setPath(std::list<llvm::Function*> path) {
+  void
+  setPath(std::list<std::pair<llvm::Function *, llvm::Instruction *> > path) {
     this->path = path;
   }
 

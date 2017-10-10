@@ -195,6 +195,7 @@ WeightedRandomSearcher::WeightedRandomSearcher(WeightType _type)
   case QueryCost:
   case MinDistToUncovered:
   case CoveringNew:
+  case PatchTesting:
     updateWeights = true;
     break;
   default:
@@ -235,7 +236,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
                                               es->stack.back().minDistToUncoveredOnReturn);
 
     double invMD2U = 1. / (md2u ? md2u : 10000);
-    if (type==CoveringNew) {
+    if (type == CoveringNew || type == PatchTesting) {
       double invCovNew = 0.;
       if (es->instsSinceCovNew)
         invCovNew = 1. / std::max(1, (int) es->instsSinceCovNew - 1000);
@@ -243,6 +244,16 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     } else {
       return invMD2U * invMD2U;
     }
+  }
+  case PatchTesting: {
+    uint64_t md2u = computeMinDistToCall(
+        es->pc, es->stack.back().minDistToUncoveredOnReturn);
+
+    double invMD2U = 1. / (md2u ? md2u : 10000);
+    double invCovNew = 0.;
+    if (es->instsSinceCovNew)
+      invCovNew = 1. / std::max(1, (int)es->instsSinceCovNew - 1000);
+    return (invCovNew * invCovNew + invMD2U * invMD2U);
   }
   }
 }

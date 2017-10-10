@@ -486,24 +486,29 @@ void ReachabilityAnalysis::dumpFunctionToCallGraph(llvm::Function *f) {
     }
 }
 
-void ReachabilityAnalysis::computeShortestPath(llvm::Function* entry, llvm::Function *target, std::list<Function*> &path) {
-	adjacency_list_t adjacency_list;
+void ReachabilityAnalysis::computeShortestPath(
+    llvm::Function *entry, llvm::Function *target,
+    std::list<std::pair<Function *, Instruction *> > &path) {
+        adjacency_list_t adjacency_list;
 	std::map<vertex_t, weight_t> min_distance;
-	std::map<vertex_t, vertex_t> previous;
+        std::map<vertex_t, augmented_vertex_t> previous;
 
-	// creating the adjacency list
+        // creating the adjacency list
 	for (CallMap::iterator i = callMap.begin(); i != callMap.end(); i++) {
 	  Instruction *inst = i->first;
 	  set<Function *> functions = i->second;
 	  min_distance[inst->getParent()->getParent()] = max_weight;
-	  previous[inst->getParent()->getParent()] = nullptr;
+          previous[inst->getParent()->getParent()] =
+              std::pair<vertex_t, llvm::Instruction *>(nullptr, nullptr);
 
-	  for (FunctionSet::iterator i = functions.begin(); i != functions.end(); i++) {
+          for (FunctionSet::iterator i = functions.begin(); i != functions.end(); i++) {
 		Function *f = *i;
-		adjacency_list[inst->getParent()->getParent()].push_back(neighbor(f,1));
-		min_distance[f] = max_weight;
-		previous[f] = nullptr;
-	  }
+                adjacency_list[inst->getParent()->getParent()]
+                    .push_back(neighbor(f, inst, 1));
+                min_distance[f] = max_weight;
+                previous[f] =
+                    std::pair<vertex_t, llvm::Instruction *>(nullptr, nullptr);
+          }
 	}
 
 	min_distance[entry] = 0;
@@ -532,17 +537,21 @@ void ReachabilityAnalysis::computeShortestPath(llvm::Function* entry, llvm::Func
 				neighbor_iter != neighbors.end();
 				neighbor_iter++) {
 			vertex_t v = neighbor_iter->target;
-			weight_t weight = neighbor_iter->weight;
+                        llvm::Instruction *inst = neighbor_iter->edge;
+                        weight_t weight = neighbor_iter->weight;
 			weight_t distance_through_u = dist + weight;
 			if (distance_through_u < min_distance[v]) {
 				min_distance[v] = distance_through_u;
-				previous[v] = u;
-				vertex_queue.push(std::make_pair(min_distance[v], v));
+                                previous[v] =
+                                    std::pair<vertex_t, llvm::Instruction *>(
+                                        u, inst);
+                                vertex_queue.push(std::make_pair(min_distance[v], v));
 			}
 		}
 	}
 
-	vertex_t vertex = target;
-	for (; vertex != nullptr; vertex = previous[vertex])
-		path.push_front(vertex);
+        augmented_vertex_t vertex =
+            std::pair<vertex_t, llvm::Instruction *>(target, nullptr);
+        for (; vertex.first != nullptr; vertex = previous[vertex.first])
+                path.push_front(vertex);
 }

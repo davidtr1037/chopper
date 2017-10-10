@@ -69,8 +69,8 @@ StackFrame::~StackFrame() {
 ExecutionState::ExecutionState(KFunction *kf) :
     /* TODO: fix? */
     refCount(0),
-    type(NORMAL_STATE),
 	path(0),
+    type(NORMAL_STATE),
 
     /* state properties */
     suspendStatus(false),
@@ -117,11 +117,10 @@ ExecutionState::~ExecutionState() {
 
 ExecutionState::ExecutionState(const ExecutionState& state):
     refCount(0),
+	path(state.path),
     fnAliases(state.fnAliases),
 
     type(state.type),
-
-	path(state.path),
 
     /* state properties */
     suspendStatus(state.suspendStatus),

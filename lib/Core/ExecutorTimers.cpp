@@ -51,7 +51,7 @@ public:
   HaltTimer(Executor *_executor) : executor(_executor) {}
   ~HaltTimer() {}
 
-  void run() {
+  void run(ExecutionState *es) {
     klee_message("HaltTimer invoked");
     executor->setHaltExecution(true);
   }
@@ -194,7 +194,7 @@ void Executor::processTimers(ExecutionState *current,
         TimerInfo *ti = *it;
         
         if (time >= ti->nextFireTime) {
-          ti->timer->run();
+          ti->timer->run(current);
           ti->nextFireTime = time + ti->rate;
         }
       }

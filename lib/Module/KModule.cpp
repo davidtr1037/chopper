@@ -496,7 +496,9 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
              I != E; ++I) {
           // FIXME: should be extended to support multiple paths
           path = computeRetainFunctionsOnCallgraph(ra, entry, (*I).first);
-          retainFunctions.insert(path.begin(), path.end());
+          for (auto pathNode : path) {
+            retainFunctions.insert(pathNode.first);
+          }
         }
         for (auto retain : retainFunctions) {
           errs() << "Retain: " << retain->getName() << "\n";
@@ -584,14 +586,14 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   }
 }
 
-std::list<Function *>
+std::list<std::pair<Function *, Instruction *> >
 KModule::computeRetainFunctionsOnCallgraph(ReachabilityAnalysis *ra,
                                            Function *entry, Function *target) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << target->getName() << "\n");
-  std::list<Function *> path;
+  std::list<std::pair<Function *, Instruction *> > path;
   ra->computeShortestPath(entry, target, path);
   for (auto patEl : path) {
-    DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "->" << patEl->getName());
+    DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "->" << patEl.first->getName());
   }
   DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "\n");
   return path;
