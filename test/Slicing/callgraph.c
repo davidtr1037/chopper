@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -search=dfs -skip-functions=f,g,h -target-function=h %t.bc > %t.out 2>&1
+// RUN: %klee --output-dir=%t.klee-out -search=nurs:patch -target-location=callgraph.c:15 -target-function=h %t.bc > %t.out 2>&1
 
 #include <stdio.h>
 #include <klee/klee.h>
@@ -33,7 +33,6 @@ int main(int argc, char *argv[], char *envp[]) {
     klee_make_symbolic(&a, sizeof(a), "a");
     klee_make_symbolic(&b, sizeof(b), "b");
 
-    f(&o);
     if (a == 3) {
     	printf("a is 3\n");
     } else {
@@ -42,6 +41,7 @@ int main(int argc, char *argv[], char *envp[]) {
     		printf("b is 2\n");
     		if (o.z > 0) {
     			printf("z is gt 3\n");
+                f(&o);
     		}
     	} else {
     		printf("b is not 2\n");
