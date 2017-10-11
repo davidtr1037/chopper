@@ -657,25 +657,9 @@ uint64_t klee::computeMinDistToUncovered(const KInstruction *ki,
   }
 }
 
-uint64_t klee::computeMinDistToCall(const KInstruction *ki,
-                                    uint64_t minDistAtRA) {
+uint64_t klee::computeMinDistToCall(const KInstruction *ki) {
   StatisticManager &sm = *theStatisticManager;
-  if (minDistAtRA == 0) { // unreachable on return, best is local
-    return sm.getIndexedValue(stats::minDistToCall, ki->info->id);
-  } else {
-    uint64_t minDistLocal =
-        sm.getIndexedValue(stats::minDistToCall, ki->info->id);
-    uint64_t distToReturn =
-        sm.getIndexedValue(stats::minDistToReturn, ki->info->id);
-
-    if (distToReturn == 0) { // return unreachable, best is local
-      return minDistLocal;
-    } else if (!minDistLocal) { // no local reachable
-      return distToReturn + minDistAtRA;
-    } else {
-      return std::min(minDistLocal, distToReturn + minDistAtRA);
-    }
-  }
+  return sm.getIndexedValue(stats::minDistToCall, ki->info->id);
 }
 
 void StatsTracker::computeDistances(ExecutionState *es) {
@@ -964,9 +948,7 @@ void StatsTracker::computeDistToCall(ExecutionState *es) {
              it != ie; ++it) {
           unsigned id = infos.getInfo(it).id;
           instructions.push_back(&*it);
-          sm.setIndexedValue(
-              stats::minDistToCall, id,
-              (*it).getParent()->getParent() == es->path.front().first ? 1 : 0);
+          sm.setIndexedValue(stats::minDistToCall, id, (&*bbIt) == es->path.front().second->getParent());
         }
       }
     }
@@ -982,21 +964,24 @@ void StatsTracker::computeDistToCall(ExecutionState *es) {
                                                 ie = instructions.end();
            it != ie; ++it) {
         Instruction *inst = *it;
-        if (!found && *it != es->path.front().second) {
-          sm.setIndexedValue(stats::minDistToCall, infos.getInfo(inst).id, 0);
-          continue;
-        } else {
-          found = true;
+        if (!found) {
+        	if (*it != es->path.front().second) {
+              sm.setIndexedValue(stats::minDistToCall, infos.getInfo(inst).id, 0);
+              continue;
+            } else  {
+              sm.setIndexedValue(stats::minDistToCall, infos.getInfo(inst).id, 1);
+              found = true;
+              continue;
+            }
         }
 
         uint64_t best, cur = best = sm.getIndexedValue(stats::minDistToCall,
                                                        infos.getInfo(inst).id);
         std::vector<Instruction *> succs = getSuccs(inst);
         for (std::vector<Instruction *>::iterator it2 = succs.begin(),
-                                                  ie = succs.end();
-             it2 != ie; ++it2) {
-          uint64_t dist =
-              sm.getIndexedValue(stats::minDistToCall, infos.getInfo(*it2).id);
+                                                  ie2 = succs.end();
+             it2 != ie2; ++it2) {
+          uint64_t dist = sm.getIndexedValue(stats::minDistToCall, infos.getInfo(*it2).id);
           if (dist) {
             uint64_t val = 1 + dist;
             if (best == 0 || val < best)
@@ -1011,12 +996,5 @@ void StatsTracker::computeDistToCall(ExecutionState *es) {
         }
       }
     } while (changed);
-
-    //    for (std::vector<Instruction *>::iterator it = instructions.begin(),
-    // ie = instructions.end(); it != ie; ++it) {
-    //    	errs() << infos.getInfo(*it).file << ":" << infos.getInfo(*it).line
-    // << " - distance: " << sm.getIndexedValue(stats::minDistToCall,
-    // infos.getInfo(*it).id) << "\n";
-    //    }
   }
 }

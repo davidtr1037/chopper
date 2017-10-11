@@ -236,7 +236,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
                                               es->stack.back().minDistToUncoveredOnReturn);
 
     double invMD2U = 1. / (md2u ? md2u : 10000);
-    if (type == CoveringNew || type == PatchTesting) {
+    if (type == CoveringNew) {
       double invCovNew = 0.;
       if (es->instsSinceCovNew)
         invCovNew = 1. / std::max(1, (int) es->instsSinceCovNew - 1000);
@@ -246,14 +246,9 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     }
   }
   case PatchTesting: {
-    uint64_t md2u = computeMinDistToCall(
-        es->pc, es->stack.back().minDistToUncoveredOnReturn);
-
-    double invMD2U = 1. / (md2u ? md2u : 10000);
-    double invCovNew = 0.;
-    if (es->instsSinceCovNew)
-      invCovNew = 1. / std::max(1, (int)es->instsSinceCovNew - 1000);
-    return (invCovNew * invCovNew + invMD2U * invMD2U);
+    uint64_t md2c = computeMinDistToCall(es->pc);
+    double invMD2C = 1. / (md2c ? md2c : 10000);
+    return invMD2C * invMD2C;
   }
   }
 }

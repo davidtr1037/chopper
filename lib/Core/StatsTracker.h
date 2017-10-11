@@ -90,7 +90,7 @@ namespace klee {
 
   uint64_t computeMinDistToUncovered(const KInstruction *ki,
                                      uint64_t minDistAtRA);
-  uint64_t computeMinDistToCall(const KInstruction *ki, uint64_t minDistAtRA);
+  uint64_t computeMinDistToCall(const KInstruction *ki);
 }
 
 #endif

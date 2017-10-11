@@ -167,6 +167,7 @@ namespace klee {
       case CPInstCount        : os << "CPInstCount\n"; return;
       case MinDistToUncovered : os << "MinDistToUncovered\n"; return;
       case CoveringNew        : os << "CoveringNew\n"; return;
+      case PatchTesting       : os << "PatchTesting\n"; return;
       default                 : os << "<unknown type>\n"; return;
       }
     }
