@@ -110,6 +110,7 @@ public:
     std::vector<std::string> inlinedFunctions;
     std::map<std::string, std::vector<unsigned> > errorLocation;
     std::map<std::string, std::vector<unsigned> > targetLocation;
+    ErrorLocations errorLocations;
     unsigned int maxErrorCount;
 
     InterpreterOptions() : 
