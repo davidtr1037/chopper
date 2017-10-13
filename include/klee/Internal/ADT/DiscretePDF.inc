@@ -162,7 +162,7 @@ void DiscretePDF<T>::update(T item, weight_type weight) {
 
 template <class T>
 T DiscretePDF<T>::choose(double p) {
-  if ((p < 0.0) || (p >= 1.0))
+  if ((p < 0.0) || (p > 1.0))
     assert(0 && "choose: argument(p) outside valid range");
 
   if (!m_root)

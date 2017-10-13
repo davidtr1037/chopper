@@ -132,7 +132,7 @@ namespace klee {
     std::list<std::pair<llvm::Function *, llvm::Instruction *> >
     computeRetainFunctionsOnCallgraph(ReachabilityAnalysis *ra,
                                       llvm::Function *entry,
-                                      llvm::Function *target);
+                                      std::pair<llvm::Function* const, std::vector<llvm::Instruction*> > *target);
     void computeSkippedFunctions(
         ModRefAnalysis *mra, std::set<llvm::Function *> &functions,
         std::set<llvm::Function *> &retainFunctions,

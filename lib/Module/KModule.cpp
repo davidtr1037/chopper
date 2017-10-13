@@ -495,15 +495,15 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                  E = tfpass->targetInstructions.end();
              I != E; ++I) {
           // FIXME: should be extended to support multiple paths
-          path = computeRetainFunctionsOnCallgraph(ra, entry, (*I).first);
+          path = computeRetainFunctionsOnCallgraph(ra, entry, &(*I));
           for (auto pathNode : path) {
             retainFunctions.insert(pathNode.first);
           }
         }
-        for (auto retain : retainFunctions) {
-          errs() << "Retain: " << retain->getName() << "\n";
-        }
-        errs() << "\n";
+//        for (auto retain : retainFunctions) {
+//          errs() << "Retain: " << retain->getName() << "\n";
+//        }
+//        errs() << "\n";
         computeSkippedFunctions(mra, ra->functions, retainFunctions,
                                 skippedFunctions);
 
@@ -588,8 +588,9 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 
 std::list<std::pair<Function *, Instruction *> >
 KModule::computeRetainFunctionsOnCallgraph(ReachabilityAnalysis *ra,
-                                           Function *entry, Function *target) {
-  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << target->getName() << "\n");
+                                           Function *entry,
+                                           std::pair<Function* const, std::vector<Instruction*> > *target) {
+  DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << target->first->getName() << "\n");
   std::list<std::pair<Function *, Instruction *> > path;
   ra->computeShortestPath(entry, target, path);
   for (auto patEl : path) {

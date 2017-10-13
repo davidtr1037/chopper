@@ -927,16 +927,19 @@ void StatsTracker::computeDistToCall(ExecutionState *es) {
     return;
   }
 
+  static bool init = true;
+  if (init) {
+    init = false;
+    es->path.pop_front();
+  }
+
   KModule *km = executor.kmodule;
   Module *m = km->module;
   const InstructionInfoTable &infos = *km->infos;
   StatisticManager &sm = *theStatisticManager;
 
-  if (!es->path.front().second) {
-    es->path.pop_front();
-  }
   std::pair<Function *, Instruction *> target = es->path.front();
-  if (target.first) {
+  if (target.first && target.second) {
     // compute minDistToCall, 0 is unreachable
     std::vector<Instruction *> instructions;
     for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); fnIt != fn_ie;
@@ -996,5 +999,10 @@ void StatsTracker::computeDistToCall(ExecutionState *es) {
         }
       }
     } while (changed);
+//    for (std::vector<Instruction *>::iterator it = instructions.begin(),
+//                                              ie = instructions.end();
+//         it != ie; ++it) {
+//    	errs() << infos.getInfo(*it).file << ":" << infos.getInfo(*it).line << "-" << sm.getIndexedValue(stats::minDistToCall, infos.getInfo(*it).id) << "\n";
+//    }
   }
 }

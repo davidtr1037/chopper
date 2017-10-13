@@ -60,7 +60,7 @@ public:
                                  FunctionSet &results);
 
   void computeShortestPath(
-      llvm::Function *entry, llvm::Function *target,
+      llvm::Function *entry, std::pair<llvm::Function* const, std::vector<llvm::Instruction*> > *target,
       std::list<std::pair<llvm::Function *, llvm::Instruction *> > &result);
 
   FunctionSet &getReachableFunctions(llvm::Function *f);

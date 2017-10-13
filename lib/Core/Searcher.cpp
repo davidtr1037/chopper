@@ -208,7 +208,10 @@ WeightedRandomSearcher::~WeightedRandomSearcher() {
 }
 
 ExecutionState &WeightedRandomSearcher::selectState() {
-  return *states->choose(theRNG.getDoubleL());
+  if (type == PatchTesting)
+    return *states->choose(1.0);
+  else
+    return *states->choose(theRNG.getDoubleL());
 }
 
 double WeightedRandomSearcher::getWeight(ExecutionState *es) {

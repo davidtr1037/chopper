@@ -487,7 +487,7 @@ void ReachabilityAnalysis::dumpFunctionToCallGraph(llvm::Function *f) {
 }
 
 void ReachabilityAnalysis::computeShortestPath(
-    llvm::Function *entry, llvm::Function *target,
+    llvm::Function *entry, std::pair<Function* const, std::vector<Instruction*> > *target,
     std::list<std::pair<Function *, Instruction *> > &path) {
         adjacency_list_t adjacency_list;
 	std::map<vertex_t, weight_t> min_distance;
@@ -522,7 +522,7 @@ void ReachabilityAnalysis::computeShortestPath(
 		vertex_t u = vertex_queue.top().second;
 		vertex_queue.pop();
 
-		if (u == target)
+		if (u == target->first)
 			break;
 
 		// Because we leave old copies of the vertex in the priority queue
@@ -551,7 +551,7 @@ void ReachabilityAnalysis::computeShortestPath(
 	}
 
         augmented_vertex_t vertex =
-            std::pair<vertex_t, llvm::Instruction *>(target, nullptr);
+            std::pair<vertex_t, llvm::Instruction *>(target->first, target->second.front());
         for (; vertex.first != nullptr; vertex = previous[vertex.first])
                 path.push_front(vertex);
 }
