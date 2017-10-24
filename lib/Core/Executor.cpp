@@ -3051,10 +3051,14 @@ void Executor::run(ExecutionState &initialState) {
 
     executeInstruction(state, ki);
     processTimers(&state, MaxInstructionTime);
+    patchContainer.covered(ki->info->file, ki->info->line, ki->info->assemblyLine);
 
     checkMemoryUsage();
 
     updateStates(&state);
+
+    if (patchContainer.anythingCovered())
+      break;
   }
 
   delete searcher;
