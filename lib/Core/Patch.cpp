@@ -1,5 +1,4 @@
 #include "Patch.h"
-
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -91,24 +90,41 @@ bool Patch::inPatch(const string& file, int line, int assemblyLine /* = 0 */)
   return false;
 }
 
-void Patch::covered(const string& file, int line, int assemblyLine /* = 0 */)
+bool Patch::coveredCP(const string& file, int line, int assemblyLine /* = 0 */)
 {
   if ((!file.size() || !line) && !assemblyLine)
-    return;
+    return false;
   if (!stackAssemblyLines.empty()) {
     if (assemblyLine == stackAssemblyLines.top()) {
       lineCovered = true;
+      return true;
     }
-    return;
+    return false;
   }
   size_t i;
   for (i = 0; i < pathFilesCnt; ++i) {
     if (file.find(patchFiles[i]) != string::npos && patchLines[i].find(line) != patchLines[i].end()) {
       coveredCPPatchLines[i].insert(line);
       lineCovered = true;
+      return true;
     }
   }
-  return;
+  return false;
+}
+
+void Patch::covered(const string& file, int line, int assemblyLine /* = 0 */)
+{
+  if (!file.size() || !line)
+    return;
+  size_t i;
+  for (i = 0; i < pathFilesCnt; ++i) {
+    if (file.find(patchFiles[i]) != string::npos &&
+        patchLines[i].find(line) != patchLines[i].end() &&
+        coveredCPPatchLines[i].find(line) == coveredCPPatchLines[i].end()) {
+      coveredPatchLines[i].insert(line);
+      lineCovered = true;
+    }
+  }
 }
 
 bool Patch::anythingCovered()

@@ -1,5 +1,5 @@
-#ifndef KLEE_PATCH_H
-#define KLEE_PATCH_H
+#ifndef ZEST_PATCH_H
+#define ZEST_PATCH_H
 
 #include <vector>
 #include <set>
@@ -15,13 +15,13 @@ public:
   bool Load(const std::string& path);
   bool Save(const std::string& path, const std::string& pathCP);
   bool inPatch(const std::string& file, int line, int assemblyLine = 0);
+  bool coveredCP(const std::string& file, int line, int assemblyLine = 0);
   void covered(const std::string& file, int line, int assemblyLine = 0);
   bool anythingCovered();
 
   void push(int assemblyLine) { stackAssemblyLines.push(assemblyLine); stackLineCovered.push(lineCovered); lineCovered = false; }
   void pop() { stackAssemblyLines.pop(); lineCovered = stackLineCovered.top(); stackLineCovered.pop(); }
   int top() { assert(stackAssemblyLines.size()); return stackAssemblyLines.top(); }
-  int size() { return stackAssemblyLines.size(); }
 private:
   size_t pathFilesCnt;
   std::vector<std::string> patchFiles;
