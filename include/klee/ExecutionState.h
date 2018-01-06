@@ -69,37 +69,8 @@ struct StackFrame {
 #define NORMAL_STATE (1 << 0)
 #define RECOVERY_STATE (1 << 1)
 
-struct RecoveryInfo {
-    unsigned int refCount;
-
-    /* TODO: is it required? */
-    llvm::Instruction *loadInst;
-    uint64_t loadAddr;
-    uint64_t loadSize;
-    /* TODO: a bit strange that it is here, will be fixed later */
-    llvm::Function *f;
-    uint32_t sliceId;
-    /* TODO: a bit strange that it is here, will be fixed later */
-    ref<ExecutionState> snapshotState;
-    unsigned int snapshotIndex;
-
-    RecoveryInfo() :
-        refCount(0),
-        loadInst(0),
-        loadAddr(0),
-        loadSize(0),
-        f(0),
-        sliceId(0),
-        snapshotState(0),
-        snapshotIndex(0)
-    {
-
-    }
-
-};
-
 struct Snapshot {
-    /* TODO: should be ref<ExecutionState *> */
+    unsigned int refCount;
     ref<ExecutionState> state;
     llvm::Function *f;
 
@@ -112,11 +83,41 @@ struct Snapshot {
     };
 
     Snapshot(ref<ExecutionState> state, llvm::Function *f) :
+        refCount(0),
         state(state),
         f(f)
     {
 
     };
+};
+
+struct RecoveryInfo {
+    unsigned int refCount;
+
+    /* TODO: is it required? */
+    llvm::Instruction *loadInst;
+    uint64_t loadAddr;
+    uint64_t loadSize;
+    /* TODO: a bit strange that it is here, will be fixed later */
+    llvm::Function *f;
+    uint32_t sliceId;
+    /* TODO: a bit strange that it is here, will be fixed later */
+    ref<Snapshot> snapshot;
+    unsigned int snapshotIndex;
+
+    RecoveryInfo() :
+        refCount(0),
+        loadInst(0),
+        loadAddr(0),
+        loadSize(0),
+        f(0),
+        sliceId(0),
+        snapshot(0),
+        snapshotIndex(0)
+    {
+
+    }
+
 };
 
 struct WrittenAddressInfo {
@@ -159,7 +160,7 @@ private:
   /* a normal state has a suspend status */
   bool suspendStatus;
   /* history of taken snapshots, which are uses to create recovery states */
-  std::vector<Snapshot> snapshots;
+  std::vector< ref<Snapshot> > snapshots;
   /* a normal state has a unique recovery state */
   ExecutionState *recoveryState;
   /* TODO: rename/re-implement */
@@ -330,12 +331,12 @@ public:
     suspendStatus = false;
   }
 
-  std::vector<Snapshot> &getSnapshots() {
+  std::vector< ref<Snapshot> > &getSnapshots() {
     assert(isNormalState());
     return snapshots;
   }
 
-  void addSnapshot(Snapshot snapshot) {
+  void addSnapshot(ref<Snapshot> snapshot) {
     assert(isNormalState());
     snapshots.push_back(snapshot);
   }

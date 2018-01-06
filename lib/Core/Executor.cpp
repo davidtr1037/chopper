@@ -1464,7 +1464,8 @@ void Executor::executeCall(ExecutionState &state,
           klee_message("%p: adding snapshot (index = %u)", &state, index)
         );
         ref<ExecutionState> snapshotState(createSnapshotState(state));
-        state.addSnapshot(Snapshot(snapshotState, f));
+        ref<Snapshot> snapshot(new Snapshot(snapshotState, f));
+        state.addSnapshot(snapshot);
         interpreterHandler->incSnapshotsCount();
 
         /* TODO: will be replaced later... */
@@ -4172,7 +4173,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
   /* all the recovery information which may be required  */
   std::list< ref<RecoveryInfo> > required;
   /* the snapshots of the state */
-  std::vector<Snapshot> &snapshots = state.getSnapshots();
+  std::vector< ref<Snapshot> > &snapshots = state.getSnapshots();
   /* we start from the last snapshot which is not affected by an overwrite */
   unsigned int startIndex = state.getStartingIndex(loadAddr, loadSize);
 
@@ -4184,8 +4185,8 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
       }
     }
 
-    Snapshot &snapshot = snapshots[index];
-    Function *snapshotFunction = snapshot.f;
+    ref<Snapshot> snapshot = snapshots[index];
+    Function *snapshotFunction = snapshot->f;
 
     for (std::set<ModRefAnalysis::ModInfo>::iterator j = approximateModInfos.begin(); j != approximateModInfos.end(); j++) {
       ModRefAnalysis::ModInfo modInfo = *j;
@@ -4210,7 +4211,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
       recoveryInfo->loadSize = loadSize;
       recoveryInfo->f = modInfo.first;
       recoveryInfo->sliceId = sliceId;
-      recoveryInfo->snapshotState = snapshot.state;
+      recoveryInfo->snapshot = snapshot;
       recoveryInfo->snapshotIndex = index;
 
       required.push_back(recoveryInfo);
@@ -4424,7 +4425,7 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
     )
   );
 
-  ref<ExecutionState> snapshotState = recoveryInfo->snapshotState;
+  ref<ExecutionState> snapshotState = recoveryInfo->snapshot->state;
 
   /* TODO: non-first snapshots hold normal state properties! */
 
