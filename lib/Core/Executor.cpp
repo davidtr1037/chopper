@@ -3660,7 +3660,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           if (state.isNormalState()) {
             onNormalStateWrite(state, address, value);
           }
-        }          
+        }
       } else {
         ref<Expr> result = os->read(offset, type);
         if (state.isNormalState()) {

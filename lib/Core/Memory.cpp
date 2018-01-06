@@ -444,7 +444,7 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
   if (size>4096) {
     std::string allocInfo;
     object->getAllocInfo(allocInfo);
-    klee_warning_once(0, "flushing %d bytes on read, may be slow and/or crash: %s", 
+    klee_warning_once(0, "flushing %d bytes on write, may be slow and/or crash: %s",
                       size,
                       allocInfo.c_str());
   }
