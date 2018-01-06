@@ -70,25 +70,55 @@ struct StackFrame {
 #define RECOVERY_STATE (1 << 1)
 
 struct Snapshot {
-    unsigned int refCount;
-    ref<ExecutionState> state;
-    llvm::Function *f;
+  typedef std::map<uint64_t, ref<Expr> > RecoveredValues;
+  typedef std::map<uint32_t, RecoveredValues> ValueCache;
 
-    /* TODO: is it required? */
-    Snapshot() :
-        state(0),
-        f(0)
-    {
+  unsigned int refCount;
+  ref<ExecutionState> state;
+  llvm::Function *f;
+  ValueCache valueCache;
 
-    };
+  /* TODO: is it required? */
+  Snapshot() :
+    state(0),
+    f(0)
+  {
 
-    Snapshot(ref<ExecutionState> state, llvm::Function *f) :
-        refCount(0),
-        state(state),
-        f(f)
-    {
+  };
 
-    };
+  Snapshot(ref<ExecutionState> state, llvm::Function *f) :
+    refCount(0),
+    state(state),
+    f(f)
+  {
+
+  };
+
+  void updateRecoveredValue(unsigned int sliceId, uint64_t address, ref<Expr> expr) {
+    RecoveredValues &recoveredValues = valueCache[sliceId];
+    recoveredValues[address] = expr;
+  };
+
+  bool getRecoveredValue(
+    unsigned int sliceId,
+    uint64_t address,
+    ref<Expr> &expr
+  ) {
+    ValueCache::iterator i = valueCache.find(sliceId);
+    if (i == valueCache.end()) {
+      return false;
+    }
+
+    RecoveredValues &recoveredValues = i->second;
+    RecoveredValues::iterator j = recoveredValues.find(address);
+    if (j == recoveredValues.end()) {
+      return false;
+    }
+
+    expr = j->second;
+    return true;
+  };
+
 };
 
 struct RecoveryInfo {
