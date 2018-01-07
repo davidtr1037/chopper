@@ -4239,27 +4239,42 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
       )
     );
 
-    RecoveryResult recoveryResult;
-    if (state.getRecoveryResult(index, sliceId, recoveryResult)) {
-      /* the slice was executed... */
-      DEBUG_WITH_TYPE(
-        DEBUG_BASIC,
-        klee_message(
-          "%p: recovery result (index = %u, slice id = %u, %s)",
-          &state,
-          index,
-          sliceId,
-          recoveryResult.modified ? "modified" : "unmodified"
-        )
-      );
+    ref<Expr> expr;
+    if (recoveryInfo->snapshot->getRecoveredValue(sliceId, loadAddr, expr)) {
+      /* this slice was already executed from this snapshot,
+         and we know which value was written (or not) */
+      state.addRecoveredAddress(loadAddr);
 
-      if (recoveryResult.modified) {
-        /*
-          this is the latest slice which has real side effects,
-          so there is no need to recover the previous skipped functions
-        */
-        result.push_front(recoveryInfo);
+      if (!expr.isNull()) {
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message(
+            "%p: cached recovered value (index = %u, slice id = %u, addr = %lx)",
+            &state,
+            index,
+            sliceId,
+            loadAddr
+          )
+        );
+
+        /* execute write without recovering */
+        ref<Expr> base = eval(ki, 0, state).value;
+        executeMemoryOperation(state, true, base, expr, 0);
+
+        /* TODO: add docs */
         break;
+
+      } else {
+        DEBUG_WITH_TYPE(
+          DEBUG_BASIC,
+          klee_message(
+            "%p: ignoring non-modifying slice (index = %u, slice id = %u, addr = %lx)",
+            &state,
+            index,
+            sliceId,
+            loadAddr
+          )
+        );
       }
     } else {
       /* the slice was never executed, so we must add it */
@@ -4272,6 +4287,8 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
           sliceId
         )
       );
+      /* TODO: add docs */
+      recoveryInfo->snapshot->updateRecoveredValue(sliceId, loadAddr, NULL);
       result.push_front(recoveryInfo);
     }
   }
@@ -4561,18 +4578,22 @@ void Executor::onRecoveryStateWrite(
     klee_message("copying from %p to %p", &state, dependentState)
   );
 
-  /* TODO: update recovery cache */
+  /* TODO: ... */
   DEBUG_WITH_TYPE(
     DEBUG_BASIC,
     klee_message(
-      "%p: updating cache for %p (index = %u, slice id = %u)",
+      "%p: updating recovered value for %p (index = %u, slice id = %u)",
       &state,
       dependentState,
       recoveryInfo->snapshotIndex,
       recoveryInfo->sliceId
     )
   );
-  dependentState->updateRecoveryCache(recoveryInfo->snapshotIndex, recoveryInfo->sliceId);
+  recoveryInfo->snapshot->updateRecoveredValue(
+    recoveryInfo->sliceId,
+    storeAddr,
+    value
+  );
 }
 
 void Executor::onNormalStateWrite(
