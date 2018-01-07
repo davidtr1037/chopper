@@ -83,6 +83,8 @@ public:
 
   bool hasSideEffects(llvm::Function *f);
 
+  bool getSideEffects(llvm::Function *f, InstructionSet &modSet);
+
   InstructionSet &getOverridingStores();
 
   ModInfoToIdMap &getModInfoToIdMap();

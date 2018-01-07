@@ -113,6 +113,16 @@ bool ModRefAnalysis::hasSideEffects(Function *f) {
     return !modSet.empty();
 }
 
+bool ModRefAnalysis::getSideEffects(Function *f, InstructionSet &modSet) {
+    ModSetMap::iterator i = modSetMap.find(f);
+    if (i == modSetMap.end()) {
+        return false;
+    }
+
+    modSet = i->second;
+    return true;
+}
+
 ModRefAnalysis::InstructionSet &ModRefAnalysis::getOverridingStores() {
     return overridingStores;
 }
