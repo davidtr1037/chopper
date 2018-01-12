@@ -126,7 +126,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     recoveryState(state.recoveryState),
     blockingLoadStatus(state.blockingLoadStatus),
     recoveredLoads(state.recoveredLoads),
-    recoveryCache(state.recoveryCache),
     allocationRecord(state.allocationRecord),
     /* TODO: copy only for originating states */
     //guidingConstraints(state.guidingConstraints),

@@ -4465,8 +4465,6 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
     /* TODO: we need only a prefix of the snapshots... */
     recoveryState->markLoadAsRecovered();
     recoveryState->clearRecoveredAddresses();
-    /* TODO: we need only a prefix of the cache... */
-    recoveryState->setRecoveryCache(state.getRecoveryCache());
     /* this state may create another recovery state, so it must hold the allocation record */
     recoveryState->setAllocationRecord(state.getAllocationRecord());
     /* make sure it is empty... */

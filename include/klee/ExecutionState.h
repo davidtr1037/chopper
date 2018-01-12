@@ -190,8 +190,6 @@ private:
 
   /* normal state properties */
 
-  typedef std::map<uint32_t, RecoveryResult> SnapshotCache;
-  typedef std::map<uint32_t, SnapshotCache> RecoveryCache;
   typedef std::map<uint64_t, WrittenAddressInfo> WrittenAddresses;
 
   /* a normal state has a suspend status */
@@ -204,8 +202,6 @@ private:
   bool blockingLoadStatus;
   /* resloved load addresses */
   std::set<uint64_t> recoveredLoads;
-  /* TODO: add doc... */
-  RecoveryCache recoveryCache;
   /* we have to remember which allocations were executed */
   AllocationRecord allocationRecord;
   /* used for guiding multiple recovery states */
@@ -433,43 +429,6 @@ public:
   void clearRecoveredAddresses() {
     assert(isNormalState());
     recoveredLoads.clear();
-  }
-
-  RecoveryCache &getRecoveryCache() {
-    assert(isNormalState());
-    return recoveryCache;
-  }
-
-  void setRecoveryCache(RecoveryCache &cache) {
-    assert(isNormalState());
-    recoveryCache = cache;
-  }
-
-  void updateRecoveryCache(unsigned int snapshotIndex, unsigned int sliceId) {
-    assert(isNormalState());
-    SnapshotCache &snapshotCache = recoveryCache[snapshotIndex];
-    RecoveryResult &result = snapshotCache[sliceId];
-    result.modified = true;
-  }
-
-  bool getRecoveryResult(
-    unsigned int snapshotIndex,
-    unsigned int sliceId,
-    RecoveryResult &result
-  ) {
-    RecoveryCache::iterator i = recoveryCache.find(snapshotIndex);
-    if (i == recoveryCache.end()) {
-      return false;
-    }
-
-    SnapshotCache &snapshotCache = i->second;
-    SnapshotCache::iterator j = snapshotCache.find(sliceId);
-    if (j == snapshotCache.end()) {
-      return false;
-    }
-
-    result = j->second;
-    return true;
   }
 
   llvm::Instruction *getExitInst() {
