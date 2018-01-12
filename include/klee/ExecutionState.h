@@ -77,11 +77,13 @@ struct Snapshot {
   ref<ExecutionState> state;
   llvm::Function *f;
   ValueCache valueCache;
+  bool canUseCache;
 
   /* TODO: is it required? */
   Snapshot() :
     state(0),
-    f(0)
+    f(0),
+    canUseCache(false)
   {
 
   };
@@ -89,7 +91,8 @@ struct Snapshot {
   Snapshot(ref<ExecutionState> state, llvm::Function *f) :
     refCount(0),
     state(state),
-    f(f)
+    f(f),
+    canUseCache(false)
   {
 
   };
@@ -104,6 +107,10 @@ struct Snapshot {
     uint64_t address,
     ref<Expr> &expr
   ) {
+    if (!canUseCache) {
+      return false;
+    }
+
     ValueCache::iterator i = valueCache.find(sliceId);
     if (i == valueCache.end()) {
       return false;

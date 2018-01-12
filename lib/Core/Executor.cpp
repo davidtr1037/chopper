@@ -4403,6 +4403,9 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
 void Executor::onRecoveryStateExit(ExecutionState &state) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: recovery state reached exit instruction", &state));
 
+  /* ... */
+  //state.getRecoveryInfo()->snapshot->canUseCache = true;
+
   ExecutionState *dependentState = state.getDependentState();
   //dumpConstrains(*dependentState);
 
