@@ -10,7 +10,7 @@
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-X3ONE
 
 // CHECK-PATHS: KLEE: done: completed paths = 4
-// CHECK-STATES: KLEE: done: recovery states = 7
+// CHECK-STATES: KLEE: done: recovery states = 5
 // CHECK-SLICES: KLEE: done: generated slices = 2
 // CHECK-SNAPSHOTS: KLEE: done: created snapshots = 3
 

@@ -6,7 +6,7 @@
 // RUN: FileCheck %s -input-file=%t.out -check-prefix=CHECK-B
 
 // CHECK-PATHS: KLEE: done: completed paths = 2
-// CHECK-STATES: KLEE: done: recovery states = 6
+// CHECK-STATES: KLEE: done: recovery states = 4
 // CHECK-SLICES: KLEE: done: generated slices = 2
 // CHECK-SNAPSHOTS: KLEE: done: created snapshots = 2
 
