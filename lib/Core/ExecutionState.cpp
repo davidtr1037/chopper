@@ -131,6 +131,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     //guidingConstraints(state.guidingConstraints),
     writtenAddresses(state.writtenAddresses),
     pendingRecoveryInfos(state.pendingRecoveryInfos),
+    recoveryCache(state.recoveryCache),
 
     /* recovery state properties */
     exitInst(state.exitInst),

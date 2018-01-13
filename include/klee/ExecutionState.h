@@ -70,20 +70,14 @@ struct StackFrame {
 #define RECOVERY_STATE (1 << 1)
 
 struct Snapshot {
-  typedef std::map<uint64_t, ref<Expr> > RecoveredValues;
-  typedef std::map<uint32_t, RecoveredValues> ValueCache;
-
   unsigned int refCount;
   ref<ExecutionState> state;
   llvm::Function *f;
-  ValueCache valueCache;
-  bool canUseCache;
 
   /* TODO: is it required? */
   Snapshot() :
     state(0),
-    f(0),
-    canUseCache(false)
+    f(0)
   {
 
   };
@@ -91,39 +85,9 @@ struct Snapshot {
   Snapshot(ref<ExecutionState> state, llvm::Function *f) :
     refCount(0),
     state(state),
-    f(f),
-    canUseCache(false)
+    f(f)
   {
 
-  };
-
-  void updateRecoveredValue(unsigned int sliceId, uint64_t address, ref<Expr> expr) {
-    RecoveredValues &recoveredValues = valueCache[sliceId];
-    recoveredValues[address] = expr;
-  };
-
-  bool getRecoveredValue(
-    unsigned int sliceId,
-    uint64_t address,
-    ref<Expr> &expr
-  ) {
-    if (!canUseCache) {
-      return false;
-    }
-
-    ValueCache::iterator i = valueCache.find(sliceId);
-    if (i == valueCache.end()) {
-      return false;
-    }
-
-    RecoveredValues &recoveredValues = i->second;
-    RecoveredValues::iterator j = recoveredValues.find(address);
-    if (j == recoveredValues.end()) {
-      return false;
-    }
-
-    expr = j->second;
-    return true;
   };
 
 };
@@ -191,6 +155,8 @@ private:
   /* normal state properties */
 
   typedef std::map<uint64_t, WrittenAddressInfo> WrittenAddresses;
+  typedef std::map<uint64_t, ref<Expr> > ValuesCache;
+  typedef std::map< std::pair<uint32_t, uint32_t>, ValuesCache> RecoveryCache;
 
   /* a normal state has a suspend status */
   bool suspendStatus;
@@ -210,6 +176,8 @@ private:
   WrittenAddresses writtenAddresses;
   /* we use this to determine which recovery states must be run */
   std::list< ref<RecoveryInfo> > pendingRecoveryInfos;
+  /* TODO: add docs */
+  RecoveryCache recoveryCache;
 
   /* recovery state properties */
 
@@ -568,6 +536,49 @@ public:
   bool hasPendingRecoveryInfo() {
     return !pendingRecoveryInfos.empty();
   }
+
+  RecoveryCache &getRecoveryCache() {
+    assert(isNormalState());
+    return recoveryCache;
+  }
+
+  void setRecoveryCache(RecoveryCache &cache) {
+    assert(isNormalState());
+    recoveryCache = cache;
+  }
+
+  void updateRecoveredValue(
+    unsigned int index,
+    unsigned int sliceId,
+    uint64_t address,
+    ref<Expr> expr
+  ) {
+    auto key = std::make_pair(index, sliceId);
+    ValuesCache &valuesCache = recoveryCache[key];
+    valuesCache[address] = expr;
+  };
+
+  bool getRecoveredValue(
+    unsigned int index,
+    unsigned int sliceId,
+    uint64_t address,
+    ref<Expr> &expr
+  ) {
+    auto key = std::make_pair(index, sliceId);
+    RecoveryCache::iterator i = recoveryCache.find(key);
+    if (i == recoveryCache.end()) {
+      return false;
+    }
+
+    ValuesCache &valuesCache = i->second;
+    ValuesCache::iterator j = valuesCache.find(address);
+    if (j == valuesCache.end()) {
+      return false;
+    }
+
+    expr = j->second;
+    return true;
+  };
 
   unsigned int getLevel() {
     assert(isRecoveryState());

@@ -4240,7 +4240,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
     );
 
     ref<Expr> expr;
-    if (recoveryInfo->snapshot->getRecoveredValue(sliceId, loadAddr, expr)) {
+    if (state.getRecoveredValue(index, sliceId, loadAddr, expr)) {
       /* this slice was already executed from this snapshot,
          and we know which value was written (or not) */
       state.addRecoveredAddress(loadAddr);
@@ -4288,7 +4288,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
         )
       );
       /* TODO: add docs */
-      recoveryInfo->snapshot->updateRecoveredValue(sliceId, loadAddr, NULL);
+      state.updateRecoveredValue(index, sliceId, loadAddr, NULL);
       result.push_front(recoveryInfo);
     }
   }
@@ -4403,9 +4403,6 @@ void Executor::resumeState(ExecutionState &state, bool implicitlyCreated) {
 void Executor::onRecoveryStateExit(ExecutionState &state) {
   DEBUG_WITH_TYPE(DEBUG_BASIC, klee_message("%p: recovery state reached exit instruction", &state));
 
-  /* ... */
-  //state.getRecoveryInfo()->snapshot->canUseCache = true;
-
   ExecutionState *dependentState = state.getDependentState();
   //dumpConstrains(*dependentState);
 
@@ -4465,6 +4462,8 @@ void Executor::startRecoveryState(ExecutionState &state, ref<RecoveryInfo> recov
     /* TODO: we need only a prefix of the snapshots... */
     recoveryState->markLoadAsRecovered();
     recoveryState->clearRecoveredAddresses();
+    /* TODO: we actually need only a prefix of that */
+    recoveryState->setRecoveryCache(state.getRecoveryCache());
     /* this state may create another recovery state, so it must hold the allocation record */
     recoveryState->setAllocationRecord(state.getAllocationRecord());
     /* make sure it is empty... */
@@ -4590,7 +4589,8 @@ void Executor::onRecoveryStateWrite(
       recoveryInfo->sliceId
     )
   );
-  recoveryInfo->snapshot->updateRecoveredValue(
+  dependentState->updateRecoveredValue(
+    recoveryInfo->snapshotIndex,
     recoveryInfo->sliceId,
     storeAddr,
     value
