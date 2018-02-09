@@ -97,5 +97,4 @@ More verbose debug messages can be produced using the following option:
 ```
 
 ## Notes:
-* Currently, the supported search heuristics are: dfs, bfs, random-state, nurs:covnew.
 * When using klee-libc, some files (memcpy.c, memset.c) should be recompiled with `-O1` to avoid vector instructions.
