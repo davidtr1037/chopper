@@ -90,6 +90,20 @@ Functions can be inlined using the following option:
 ```
 -inline=<function1>,<function2>,...
 ```
+### Search Heuristic
+The chopping-aware search heuristic can be used using the following option:
+```
+-split-search
+```
+and the ratio can be set by:
+```
+-split-ratio=<uint> // ratio for choosing recovery states (default = 20)
+```
+### Slicing
+Slicing for skipped functions can be disabled using the following option:
+```
+-use-slicer=0
+```
 ### Debugging
 More verbose debug messages can be produced using the following option:
 ```
