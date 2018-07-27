@@ -4335,6 +4335,7 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
 
     /* get allocation site value and offset */
     const MemoryObject *mo = op.first;
+    /* TODO: we don't actually need the offset... */
     ref<Expr> offsetExpr = mo->getOffsetExpr(address);
     offsetExpr = toConstant(state, offsetExpr, "...");
     ce = dyn_cast<ConstantExpr>(offsetExpr);
