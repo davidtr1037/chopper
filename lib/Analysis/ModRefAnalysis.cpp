@@ -82,7 +82,7 @@ void ModRefAnalysis::run() {
     computeModInfoToStoreMap();
 
     /* debug */
-    dumpModSetMap();
+    //dumpModSetMap();
     //dumpLoadToStoreMap();
     //dumpLoadToModInfoMap();
     //dumpModInfoToStoreMap();
