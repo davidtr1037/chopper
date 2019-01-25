@@ -3,6 +3,13 @@ KLEE/CSE Project
 An extension of KLEE (http://klee.github.io).
 
 ## Build
+Build LLVM (3.4)
+```
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON <LLVM_SRC>
+make
+```
 Build SVF (Pointer Analysis)
 * https://github.com/davidtr1037/SVF/tree/master
 
