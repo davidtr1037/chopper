@@ -16,7 +16,7 @@ Build SVF (Pointer Analysis)
 Build DG (Static Slicing)
 * https://github.com/davidtr1037/dg/tree/master
 
-Build KLEE:
+Build Chopper:
 ```
 git checkout master
 mkdir klee_build
