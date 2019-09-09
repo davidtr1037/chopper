@@ -4152,6 +4152,7 @@ bool Executor::handleMayBlockingLoad(ExecutionState &state, KInstruction *ki,
 bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
                                   std::list<ref<RecoveryInfo> > &result) {
   Instruction *loadInst;
+  uint64_t loadBase;
   uint64_t loadAddr;
   uint64_t loadSize;
   ModRefAnalysis::AllocSite preciseAllocSite;
@@ -4163,7 +4164,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
   DEBUG_WITH_TYPE(DEBUG_BASIC, errs() << "- stack trace:\n");
   DEBUG_WITH_TYPE(DEBUG_BASIC, state.dumpStack(errs()));
 
-  if (!getLoadInfo(state, ki, loadAddr, loadSize, preciseAllocSite))
+  if (!getLoadInfo(state, ki, loadBase, loadAddr, loadSize, preciseAllocSite))
     return false;
 
   /* get the allocation site computed by static analysis */
@@ -4207,6 +4208,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
       /* initialize... */
       ref<RecoveryInfo> recoveryInfo(new RecoveryInfo());
       recoveryInfo->loadInst = loadInst;
+      recoveryInfo->loadBase = loadBase;
       recoveryInfo->loadAddr = loadAddr;
       recoveryInfo->loadSize = loadSize;
       recoveryInfo->f = modInfo.first;
@@ -4296,7 +4298,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
 }
 
 bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
-                           uint64_t &loadAddr, uint64_t &loadSize,
+                           uint64_t &loadBase, uint64_t &loadAddr, uint64_t &loadSize,
                            ModRefAnalysis::AllocSite &allocSite) {
   ObjectPair op;
   bool success;
@@ -4327,6 +4329,7 @@ bool Executor::getLoadInfo(ExecutionState &state, KInstruction *ki,
       llvm_unreachable("getLoadInfo() does not support symbolic addresses");
     }
 
+    loadBase = op.first->address;
     loadAddr = ce->getZExtValue();
 
     /* get load size */
@@ -4548,6 +4551,11 @@ void Executor::onRecoveryStateWrite(
   ref<Expr> offset,
   ref<Expr> value
 ) {
+  ref<RecoveryInfo> recoveryInfo = state.getRecoveryInfo();
+  if (recoveryInfo->loadBase != mo->address) {
+    return;
+  }
+
   assert(isa<ConstantExpr>(address));
   assert(isa<ConstantExpr>(offset));
 
@@ -4564,7 +4572,6 @@ void Executor::onRecoveryStateWrite(
   );
 
   uint64_t storeAddr = dyn_cast<ConstantExpr>(address)->getZExtValue();
-  ref<RecoveryInfo> recoveryInfo = state.getRecoveryInfo();
   if (storeAddr != recoveryInfo->loadAddr) {
     return;
   }

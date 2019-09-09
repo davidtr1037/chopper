@@ -460,7 +460,7 @@ private:
   bool getAllRecoveryInfo(ExecutionState &state, KInstruction *kinst,
                           std::list<ref<RecoveryInfo> > &result);
   bool getLoadInfo(ExecutionState &state, KInstruction *kinst,
-                   uint64_t &loadAddr, uint64_t &loadSize,
+                   uint64_t &loadBase, uint64_t &loadAddr, uint64_t &loadSize,
                    ModRefAnalysis::AllocSite &allocSite);
   void suspendState(ExecutionState &state);
   void resumeState(ExecutionState &state, bool implicitlyCreated);
