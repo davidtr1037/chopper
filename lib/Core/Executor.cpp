@@ -347,6 +347,8 @@ namespace {
   llvm::cl::opt<bool> UseSlicer("use-slicer",
                                 llvm::cl::desc("Slice skipped functions"),
                                 llvm::cl::init(true));
+
+  llvm::cl::opt<bool> UseRecoveryCache("use-recovery-cache", cl::init(true), cl::desc(""));
 }
 
 
@@ -4242,7 +4244,7 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
     );
 
     ref<Expr> expr;
-    if (state.getRecoveredValue(index, sliceId, loadAddr, expr)) {
+    if (UseRecoveryCache && state.getRecoveredValue(index, sliceId, loadAddr, expr)) {
       /* this slice was already executed from this snapshot,
          and we know which value was written (or not) */
       state.addRecoveredAddress(loadAddr);
@@ -4290,7 +4292,9 @@ bool Executor::getAllRecoveryInfo(ExecutionState &state, KInstruction *ki,
         )
       );
       /* TODO: add docs */
-      state.updateRecoveredValue(index, sliceId, loadAddr, NULL);
+      if (UseRecoveryCache) {
+        state.updateRecoveredValue(index, sliceId, loadAddr, NULL);
+      }
       result.push_front(recoveryInfo);
     }
   }
@@ -4597,12 +4601,14 @@ void Executor::onRecoveryStateWrite(
       recoveryInfo->sliceId
     )
   );
-  dependentState->updateRecoveredValue(
-    recoveryInfo->snapshotIndex,
-    recoveryInfo->sliceId,
-    storeAddr,
-    value
-  );
+  if (UseRecoveryCache) {
+    dependentState->updateRecoveredValue(
+      recoveryInfo->snapshotIndex,
+      recoveryInfo->sliceId,
+      storeAddr,
+      value
+    );
+  }
 }
 
 void Executor::onNormalStateWrite(
