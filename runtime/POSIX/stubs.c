@@ -240,6 +240,7 @@ int strverscmp (__const char *__s1, __const char *__s2) {
   return strcmp(__s1, __s2); /* XXX no doubt this is bad */
 }
 
+/*
 unsigned int gnu_dev_major(unsigned long long int __dev) __attribute__((weak));
 unsigned int gnu_dev_major(unsigned long long int __dev) {
   return ((__dev >> 8) & 0xfff) | ((unsigned int) (__dev >> 32) & ~0xfff);
@@ -256,6 +257,7 @@ unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __mino
           | (((unsigned long long int) (__minor & ~0xff)) << 12)
           | (((unsigned long long int) (__major & ~0xfff)) << 32));
 }
+*/
 
 char *canonicalize_file_name (const char *name) __attribute__((weak));
 char *canonicalize_file_name (const char *name) {
