@@ -651,8 +651,10 @@ ExecutionState &InterleavedSearcher::selectState() {
   Searcher *s;
   do {
     s = searchers[--index];
-    if (index==0) index = searchers.size();
-  } while(s->empty());
+    if (index == 0) {
+      index = searchers.size();
+    }
+  } while (s->empty());
   return s->selectState();
 }
 

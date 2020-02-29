@@ -296,10 +296,11 @@ namespace klee {
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);
     bool empty() {
-      for (searchers_ty::iterator it = searchers.begin(), ie = searchers.end();
-           it != ie; ++it)
-        if(!(*it)->empty())
+      for (Searcher *s : searchers) {
+        if (!s->empty()) {
           return false;
+        }
+      }
       return true;
     }
     void printName(llvm::raw_ostream &os) {
